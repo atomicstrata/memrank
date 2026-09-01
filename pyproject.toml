@@ -1,0 +1,132 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memrank"
+version = "0.2.0"
+description = "Open, vendor-neutral benchmark suite for AI memory engines."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "AtomicStrata", email = "hello@atomicstrata.ai" }]
+keywords = ["memory", "benchmark", "ai", "agents", "llm", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# What `pip install memrank` gets: the CLI, and everything needed to run an evaluation -- locally
+# or by submitting it to the platform. The accounts API's own stack is NOT here; see the `api`
+# extra. A user installing the command should not download a web framework and a Postgres driver
+# to run `memrank submit`, and tests/repo/test_import_weight.py fails if one creeps back in.
+dependencies = [
+    "requests>=2.31",
+    "httpx>=0.26",          # the CLI's client for the memrank API
+    "typer>=0.12",
+    # The table/panel renderer behind `memrank/term/table.py`. Already ours: typer has
+    # required rich since 0.13, so naming it here adds nothing to an install -- it only
+    # stops a transitive dependency from being load-bearing without saying so.
+    "rich>=13",
+    "python-dotenv>=1.0",
+    "pyyaml>=6",
+    "keyring>=25",          # where the CLI session token lives, when the OS offers one
+    # [email] pulls email-validator, which backs EmailStr on the sign-in route. Hand-rolled
+    # address regexes are a well-known way to reject real addresses and accept bad ones.
+    "pydantic[email]>=2.5",
+    # The harness: running an eval on this machine, and reading back what a cloud run produced.
+    "numpy>=1.26",
+    "huggingface_hub>=0.20",
+    "tiktoken>=0.7",
+    "datasets>=4.8.5",
+    "boto3>=1.43.53",       # `submit --wait` downloads the run's artifacts
+    # NOT an extra. `--judge` defaults to on for locomo/longmemeval/beam, whose only quality metric
+    # is the judge's -- so the documented install plus the documented first command failed on a
+    # fresh machine, every time. The `dev` extra already learned this ("the kind of instruction
+    # that gets forgotten"); it was never extended to the people who install the tool. Two wheels
+    # on top of httpx/pydantic/anyio, which are already here.
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+# The accounts API service -- imported by memrank/api/** and memrank/accounts/store.py, never by
+# the CLI. Deployed with `uv sync --extra api` (deploy/api/Dockerfile).
+mem0 = ["mem0ai>=0.1.0"]
+benchmarks = ["datasets>=2.18"]
+mlflow = ["mlflow>=3"]  # 2.x pins pyarrow<20, incompatible with core's datasets>=4.8.5
+mcp = ["mcp>=2,<3"]
+# Jupyter, for the dataset-exploration notebooks in notebooks/. Deliberately its own extra rather
+# than part of `dev`: JupyterLab is a ~150 MB install with a front-end build, and a developer
+# running `uv run pytest` never touches a notebook. `datasets`, `huggingface_hub` and `numpy` are
+# already core, so the loaders themselves need nothing added here.
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "mypy>=1.8",
+    "ruff>=0.2",
+    "testcontainers[postgres]>=4.0",
+    "moto>=5.2.2",
+    # Streams and pub/sub in-process, so the event transport's retry/DLQ/teardown paths are
+    # exercised by `uv run pytest` with no server running. The consumer's correctness lives
+    # entirely in those paths, and a suite that skips them when Redis is absent would report
+    # green on the parts most likely to be wrong.
+    "fakeredis>=2.23",
+    # The suite exercises the API service too, so a developer install carries its stack. Written
+    # as a self-reference rather than a copy: two lists of the same dependencies drift, and the
+    # copy that drifts is the one nobody deploys.
+    # Read by the two boundary tests. Stdlib `tomllib` only exists from 3.11 and the
+    # supported floor is 3.10, so the backport is a dev dependency rather than a hope.
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.urls]
+Homepage = "https://github.com/atomicstrata/memrank"
+Repository = "https://github.com/atomicstrata/memrank"
+Documentation = "https://github.com/atomicstrata/memrank/tree/main/docs"
+Issues = "https://github.com/atomicstrata/memrank/issues"
+
+[project.scripts]
+memrank = "memrank.runner:main"
+memrank-mcp = "memrank.mcp_server:main"
+# The operator entrypoint, on PATH rather than reached by file path. Its commands were evicted
+# from `memrank` deliberately -- they operate the public product rather than evaluate anything --
+# but "de-exposed" was never meant to mean "hard to run", and a rescue command typed during an
+# outage is the worst time to remember where a script lives.
+
+[tool.setuptools.package-data]
+memrank = ["targets/builtin/*.yaml"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["memrank*"]
+exclude = ["tests*", "examples*", "docs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"memrank/runner.py" = ["B008"]  # typer.Option in defaults is idiomatic
+"memrank/cli/*.py" = ["B008"]  # typer.Option/Argument in defaults is idiomatic
+"tests/repo/test_doc_links.py" = ["F811"]  # imported pytest fixtures re-bind as params
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true
