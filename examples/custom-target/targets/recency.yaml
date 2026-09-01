@@ -1,0 +1,18 @@
+# A target for an engine memrank does not ship.
+#
+# `adapter: recency` is a name nothing in memrank defines. It resolves because
+# ../recency_plugin.py registers it, and because `adapters.plugins` names that module -- see
+# ../README.md. Without the plugin loaded this descriptor still LISTS: `memrank targets ls`
+# reads the file without building an adapter, and the failure waits until you submit.
+#
+# `kind: in-process` is the whole reason this descriptor is four lines. A stack target also
+# declares `engine`, `compose` and `service` (a container) or `binding`, `launch` and `network`
+# (a checkout memrank starts) -- none of which exist for an engine that runs inside memrank.
+#
+# No `components:` block either. A component is a knob the ENGINE exposes and the manifest
+# asserts -- an extractor, an embedder -- so declaring one here would promise a configuration
+# nothing reads. Absent is the honest statement, and the receipt says so.
+name: recency
+kind: in-process
+adapter: recency
+transport: in-process
