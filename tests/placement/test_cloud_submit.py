@@ -14,6 +14,7 @@ from botocore.stub import ANY, Stubber
 
 from memrank.placement import cloud_submit
 from memrank.placement.cloud_submit import CloudLaunchError, LaunchTarget, TaskOutcome
+from tests import withheld
 
 LAUNCH = LaunchTarget(region="us-east-1", cluster="memrank-bench-dev",
                       subnet="subnet-aaa", security_group="sg-bbb")
@@ -79,6 +80,7 @@ def test_a_real_rendered_taskdef_satisfies_the_ecs_service_model(ecs):
     from memrank.placement.cloud import AwsContext, render_taskdef
     from memrank.targets import resolve_target
 
+    withheld.require("mem0")
     taskdef = render_taskdef(
         resolve_target("mem0"),
         aws=AwsContext(family="memrank-bench-mem0", region="us-east-1", log_group="/ecs/x",

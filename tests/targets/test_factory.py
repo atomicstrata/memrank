@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from memrank.targets import factory, resolve_target
+from tests import withheld
 
 VOYAGE_ENV = {"MEM0_EMBEDDER_PROVIDER": "voyage", "MEM0_EMBEDDER_MODEL": "voyage-4-large",
               "MEM0_EMBEDDING_DIMS": "1024", "MEM0_LLM_PROVIDER": "anthropic",
@@ -18,6 +19,7 @@ def _voyage_target():
     manifest/env cross-check compares component values against MEM0_* variables, and the shipped
     `mem0` names OpenAI for both roles.
     """
+    withheld.require("mem0")
     return resolve_target("mem0", ["llm=anthropic/claude-sonnet-4-5-20250929",
                                    "embedder=voyage/voyage-4-large", "embedder.dims=1024"])
 

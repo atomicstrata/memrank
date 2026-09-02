@@ -14,6 +14,7 @@ import pytest
 
 from memrank.targets import catalog as c
 from memrank.targets.manifest import ManifestError
+from tests import withheld
 
 DESCRIPTOR = """\
 schema_version: 1
@@ -91,6 +92,7 @@ def test_an_unset_path_changes_nothing(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMRANK_CONFIG_DIR", str(tmp_path))
 
     assert c.path_dirs() == []
+    withheld.require("mem0")
     assert "mem0" in c.list_targets()
 
 
@@ -144,4 +146,5 @@ def test_origins_names_where_each_target_came_from(tmp_path, monkeypatch):
     where = c.origins()
 
     assert where["myengine:dev"] == directory
+    withheld.require("mem0")
     assert where["mem0"] == c.builtin_dir()

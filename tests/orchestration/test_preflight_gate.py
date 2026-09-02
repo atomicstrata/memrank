@@ -75,27 +75,56 @@ def test_the_message_names_both_ways_out():
     assert "--on local" in message
 
 
-def _submit(monkeypatch, tmp_path, factories, *args):
-    """Run `submit` with the target resolution stubbed to these factories."""
+#: Real refs for the stubbed factories to wear. `_validate_source_target` resolves every label
+#: against the catalog to decide placement, so a made-up one dies there as an unknown target --
+#: before the probe this module is about ever runs. The adapters below are still the fakes; only
+#: the label is real, and the probe reports `adapter.name`, not the ref.
+LABELS = ("word-overlap", "no-context")
+
+
+class _Ran:
+    """What `_submit` reports: the exit code and what the terminal actually showed."""
+
+    def __init__(self, exit_code: int, output: str) -> None:
+        self.exit_code = exit_code
+        self.output = output
+
+
+def _submit(monkeypatch, tmp_path, capsys, factories, *args):
+    """Run `submit` with the target resolution stubbed to these factories.
+
+    Driven through ``runner_module.main`` rather than ``CliRunner.invoke``, because the error
+    boundary lives on ``_BoundedTyper.__call__`` and CliRunner calls the click command underneath
+    it -- see tests/cli/test_cli_errors.py. A refusal reaches ``result.output`` only through the
+    boundary; under CliRunner it lands in ``result.exception`` and the terminal stays empty, which
+    is not what a user sees.
+    """
     from memrank import runner as runner_module
 
     monkeypatch.setenv("MEMRANK_RUNS_DIR", str(tmp_path / "runs"))
+    monkeypatch.setenv("MEMRANK_CONFIG_DIR", str(tmp_path / "cfg"))
     monkeypatch.setattr(runner_module, "_run_targets",
-                        lambda **kw: ("demo", factories))
-    return runner.invoke(app, ["submit", "x", "demo", "--output-dir", str(tmp_path / "out"),
-                               *args])
+                        lambda **kw: ("demo", [(LABELS[i], factory)
+                                               for i, (_, factory) in enumerate(factories)]))
+    monkeypatch.setattr("sys.argv", ["memrank", "submit", "x", "demo",
+                                     "--output-dir", str(tmp_path / "out"), *args])
+    with pytest.raises(SystemExit) as exited:
+        runner_module.main()
+    printed = capsys.readouterr()
+    return _Ran(exited.value.code, printed.err + printed.out)
 
 
-def test_an_unreachable_engine_stops_the_run_before_any_cell(monkeypatch, tmp_path):
+def test_an_unreachable_engine_stops_the_run_before_any_cell(monkeypatch, tmp_path, capsys):
     """The property the up-front gate buys over failing at first contact: nothing ran."""
-    result = _submit(monkeypatch, tmp_path, [("unreachable", Unreachable)])
+    result = _submit(monkeypatch, tmp_path, capsys, [("unreachable", Unreachable)])
 
     assert result.exit_code == 1
     assert "is not answering at http://localhost:9" in result.output
+    assert "Traceback" not in result.output
     assert not list(registry.runs_root().glob("*")), "no run may be recorded"
 
 
-def test_a_dead_second_target_fails_before_the_first_one_ingests(monkeypatch, tmp_path):
+def test_a_dead_second_target_fails_before_the_first_one_ingests(monkeypatch, tmp_path, capsys):
     """compare's stated reason, now true for submit: an earlier engine must not pay for a
     later engine's absence."""
     ingested: list[str] = []
@@ -112,7 +141,7 @@ def test_a_dead_second_target_fails_before_the_first_one_ingests(monkeypatch, tm
         def cleanup(self) -> None:
             return None
 
-    result = _submit(monkeypatch, tmp_path,
+    result = _submit(monkeypatch, tmp_path, capsys,
                      [("reachable", Reachable), ("unreachable", Unreachable)])
 
     assert result.exit_code == 1

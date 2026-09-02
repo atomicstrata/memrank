@@ -87,9 +87,9 @@ them, `runs ls` glances at them, `kill <id>` stops one.
 ## Finding your way around
 
 ```bash
-memrank targets ls          # what can be evaluated  (mem0, atomicmemory, word-overlap, ...)
-memrank evals ls            # what to evaluate against  (locomo, beam, longmemeval, demo)
-memrank targets show mem0   # the exact composition, and ✔/✘ per secret it needs
+memrank targets ls               # what can be evaluated  (hindsight, atomicmemory, word-overlap, ...)
+memrank evals ls                 # what to evaluate against  (locomo, beam, longmemeval, demo)
+memrank targets show hindsight   # the exact composition, and ✔/✘ per secret it needs
 memrank runs ls --live      # what's still going
 memrank submit --help       # every flag, grouped
 ```
@@ -110,9 +110,13 @@ on a fresh install.
 | `--on cloud` | submitted to the hosted memrank platform -- needs a signed-in session (below) |
 
 ```bash
-export MEM0_HTTP_URL=http://localhost:8888
-memrank submit mem0 locomo:smoke --on none
+export HINDSIGHT_API_URL=http://localhost:7000
+memrank submit hindsight locomo:smoke --on none
 ```
+
+The variable above points at an engine you started. Whether you can obtain that engine's image
+at all differs per target -- [engine images](engine-images.md) says which, and what to run for the
+two you cannot pull.
 
 Engine URL defaults, each overridable by its environment variable:
 

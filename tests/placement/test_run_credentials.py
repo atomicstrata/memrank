@@ -15,16 +15,22 @@ from __future__ import annotations
 
 from memrank.judging.client import JUDGE_SECRET
 from memrank.runner import run_credentials
+from tests import withheld
 
 
 def test_provisioning_needs_the_engine_key():
     """--on local: memrank starts the engine, so it must hold what the engine needs."""
+    withheld.require("mem0")
     assert run_credentials(["mem0"], judged=False, provisioning=True) == \
         ["OPENAI_API_KEY"]        # mem0's own configuration: OpenAI for both roles
 
 
 def test_not_provisioning_needs_nothing_from_the_engine():
-    """--on none / --on cloud: the engine already has its own credentials."""
+    """--on none / --on cloud: the engine already has its own credentials.
+
+    Guarded despite passing either way: an absent `mem0` also contributes nothing, so without
+    this the empty list would stop meaning what the name says."""
+    withheld.require("mem0")
     assert run_credentials(["mem0"], judged=False, provisioning=False) == []
 
 
@@ -35,6 +41,7 @@ def test_the_judge_key_is_needed_either_way():
 
 
 def test_a_judged_provisioned_run_needs_both():
+    withheld.require("mem0")
     got = run_credentials(["mem0"], judged=True, provisioning=True)
     assert JUDGE_SECRET in got
     assert "OPENAI_API_KEY" in got

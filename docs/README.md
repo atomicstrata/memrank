@@ -14,6 +14,7 @@ Everything memrank documents about itself, in reading order. The repository-root
 |---|---|
 | [Installing memrank](install.md) | install the CLI, run something, connect an agent |
 | [Methodology](methodology.md) | the four axes, the context-budget control, the control arms, evidence classes |
+| [Engine images](engine-images.md) | per target: whether you can obtain the engine, and what to run when you cannot |
 | [SPEC.md](SPEC.md) | the specification: what memrank measures, what it refuses to claim, and the governance the maintainer commits to |
 
 ## Contributing

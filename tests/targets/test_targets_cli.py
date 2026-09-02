@@ -6,6 +6,7 @@ import json
 from typer.testing import CliRunner
 
 from memrank.runner import app
+from tests import withheld
 
 runner = CliRunner()
 
@@ -45,6 +46,7 @@ def test_ls_lists_every_target():
 
 
 def test_show_json_emits_the_resolved_manifest():
+    withheld.require("mem0")
     result = runner.invoke(app, ["targets", "show", "mem0", "--json"])
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
@@ -80,6 +82,7 @@ def test_retired_submit_source_points_to_named_target(tmp_path):
 
 
 def test_show_applies_overrides():
+    withheld.require("mem0")
     result = runner.invoke(app, ["targets", "show", "mem0", "--json",
                                  "embedder=voyage/voyage-4-large", "embedder.dims=1024"])
     assert result.exit_code == 0
@@ -91,7 +94,11 @@ def test_show_unknown_target_exits_nonzero():
 
 
 def test_show_embedder_override_without_dims_exits_nonzero():
-    """The dims trap must be a loud CLI failure, not a plausible-looking manifest."""
+    """The dims trap must be a loud CLI failure, not a plausible-looking manifest.
+
+    Guarded even though an absent `mem0` also exits nonzero: that exit is "unknown target", so
+    without the guard this passes on a tree where the dims trap is never reached at all."""
+    withheld.require("mem0")
     result = runner.invoke(app, ["targets", "show", "mem0", "embedder=voyage/voyage-4-large"])
     assert result.exit_code != 0
 
@@ -109,6 +116,7 @@ def test_show_marks_which_required_secrets_are_present(monkeypatch):
     target declares what it needs, so the catalog is where "do I have it" is read."""
     monkeypatch.setenv("OPENAI_API_KEY", "x")
 
+    withheld.require("mem0")
     result = runner.invoke(app, ["targets", "show", "mem0"])
 
     assert result.exit_code == 0
@@ -122,6 +130,7 @@ def test_show_marks_a_missing_secret_without_failing(tmp_path, monkeypatch):
     monkeypatch.setenv("MEMRANK_CONFIG_DIR", str(tmp_path))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
+    withheld.require("mem0")
     result = runner.invoke(app, ["targets", "show", "mem0"])
 
     assert result.exit_code == 0
