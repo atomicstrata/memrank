@@ -36,6 +36,7 @@ from __future__ import annotations
 import pytest
 
 from memrank.core import Document
+from tests import withheld
 from tests.live.conformance.test_adapter_contract import _backend_reachable, _backend_url
 
 #: What the placeholder in supermemory.compose.yaml is worth: nothing. A run that authenticates
@@ -80,6 +81,7 @@ def test_the_graph_supplies_a_placeholder_rather_than_a_credential():
     from memrank.placement.local import render_compose
     from memrank.targets import resolve_target
 
+    withheld.require("supermemory")
     service = render_compose(resolve_target("supermemory"), project="p")["services"]["engine"]
 
     assert service["environment"]["ANTHROPIC_API_KEY"] == INVALID_KEY_MARKER

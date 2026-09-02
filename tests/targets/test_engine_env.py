@@ -13,12 +13,14 @@ import pytest
 from memrank.targets import list_targets, resolve_target
 from memrank.targets.engine_env import ENGINE_ENV, EngineEnvError, component_env
 from memrank.targets.manifest import Component, Manifest
+from tests import withheld
 
 
 def test_mem0_names_match_what_the_server_reads():
     """The env NAMES mem0's server reads, transcribed from the cloud taskdef template (retired in
     M6; see git history). Asserted against the shipped `mem0` -- the matched variants that used to
     stand in here moved to the research lane, and the names are the engine's, not a variant's."""
+    withheld.require("mem0")
     assert component_env(resolve_target("mem0")) == {
         "MEM0_LLM_PROVIDER": "openai",
         "MEM0_LLM_MODEL": "gpt-4o-mini",
@@ -50,6 +52,7 @@ def test_atomicmemory_uses_unprefixed_names():
 
 def test_supermemory_exposes_no_knobs():
     """An empty component env is a real answer, not a missing one."""
+    withheld.require("supermemory")
     assert component_env(resolve_target("supermemory")) == {}
 
 
@@ -119,6 +122,7 @@ def test_the_probe_targets_the_manifest_port():
     """A probe against the wrong port hangs exactly like a probe against the wrong path."""
     from memrank.targets.engine_env import readiness_probe
 
+    withheld.require("supermemory")
     command, _ = readiness_probe(resolve_target("supermemory"))
     assert ":6767/" in command
 

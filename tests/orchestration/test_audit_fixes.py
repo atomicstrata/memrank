@@ -482,10 +482,15 @@ class _SyntheticUnsupportedBench(_UnsupportedBench):
 
 
 def test_cli_run_zero_coverage_is_clean_typer_error(monkeypatch, tmp_path):
-    import memrank.runner as R
+    # Patched where the gate actually loads the benchmark. `question_gates` -- the refusal under
+    # test -- calls `sweep.get_benchmark`; `runner.get_benchmark` is a re-export nothing on this
+    # path reads, so patching it left the real `demo` loading and the gate never fired.
+    from memrank.orchestration import sweep
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")   # judged: the coverage gate must be
-    monkeypatch.setattr(R, "get_benchmark", lambda name, **kw: _SyntheticUnsupportedBench())
-    res = cli.invoke(app, ["submit", "word-overlap", "x", "--judge",
+    monkeypatch.setattr(sweep, "get_benchmark", lambda name, **kw: _SyntheticUnsupportedBench())
+    # A real eval ref: `parse_eval_ref` validates the name against the registry before anything
+    # loads a benchmark, so a placeholder now dies as an unknown eval, short of the gate.
+    res = cli.invoke(app, ["submit", "word-overlap", "demo", "--judge",
                            "--output-dir", str(tmp_path)])
     assert res.exit_code != 0
     assert not isinstance(res.exception, ValueError)

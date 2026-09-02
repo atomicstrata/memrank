@@ -42,6 +42,34 @@ pytest_plugins = [
 os.environ["MEMRANK_CONFIG_DIR"] = tempfile.mkdtemp(prefix="memrank-collect-")
 os.environ.pop("MEMRANK_TARGETS_PATH", None)
 
+# --- The rendering environment, pinned for the whole session -------------------------------
+#
+# Typer renders help and usage errors through rich, and decides ONCE, at
+# ``typer.rich_utils`` import time, whether it is writing to a terminal:
+#
+#     FORCE_TERMINAL = True if getenv("GITHUB_ACTIONS") or getenv("FORCE_COLOR")
+#                              or getenv("PY_COLORS") else None
+#
+# On a GitHub Actions runner that is True, so every CliRunner result carries ANSI escapes --
+# and thirteen tests that assert plain substrings on CLI output failed in CI while passing on
+# every developer's machine (ATO-1931). Rendering is presentation; it must not decide whether a
+# test passes.
+#
+# Pinned here rather than per test for two reasons. It has to be an ENVIRONMENT variable set
+# before ``typer.rich_utils`` is first imported, because the constant above is module level --
+# a fixture runs far too late. And a chokepoint in the root conftest covers every CLI test
+# there is and every one anyone adds later, which thirteen patched assertions would not.
+# ``tests/term/test_rendering_is_pinned.py`` is the guard that this is actually in effect.
+#
+# ``_TYPER_FORCE_DISABLE_TERMINAL`` is typer's own knob for exactly this and wins over all
+# three detections above. The two colour variables are dropped as well so that a developer who
+# exports them does not get a different answer from CI: rich consoles built elsewhere in
+# ``memrank.term`` consult them directly, where typer's knob does not reach. Nothing here
+# leaves the test session, so a real user's terminal renders exactly as before.
+os.environ["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
+os.environ.pop("FORCE_COLOR", None)
+os.environ.pop("PY_COLORS", None)
+
 
 @pytest.fixture(autouse=True, scope="session")
 def _isolate_run_registry():

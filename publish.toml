@@ -154,12 +154,20 @@ internal = [
   # fact: an address that identifies our infrastructure is exactly an address only our
   # infrastructure can resolve.
   #
-  # Withholding rather than repointing is deliberate and REVERSIBLE. Rewriting the address at
+  # Withholding rather than repointing is deliberate. Rewriting the address at
   # `ghcr.io/atomicstrata/...` would ship a reference that resolves for nobody, including us, until
-  # the images are actually pushed -- and pushing them is two open business decisions (publishing the
-  # mem0 fork; the supermemory Dockerfile's internal-only claim), not a boundary edit. When ATO-1831
-  # settles them these four entries come out together, and the three tests below with them --
-  # seven of this table's eight.
+  # the images are actually pushed.
+  #
+  # ATO-1831 SETTLED THIS ON 2026-09-02, AND THE ANSWER WAS THAT THEY STAY. Neither image is
+  # publishable: `mem0` runs a private fork, and `supermemory` wraps a closed vendor binary that is
+  # not ours to hand on. So these four entries are no longer pending a decision -- they record one,
+  # and `docs/engine-images.md` states it per target for the reader. What ships for supermemory
+  # instead is the build recipe, `examples/supermemory-image/`, which redistributes nothing.
+  #
+  # The public suite no longer fails on their absence: `tests/withheld.py` makes a test that needs
+  # one of these refs SKIP with the reason stated, the way `tests/live/` skips for an absent
+  # backend. The three tests below stay internal for their own reason -- they assert on an ECR
+  # address, which a public tree may not name whatever is decided about the images.
   #
   # The manifests go with the graphs: a target whose `compose:` file is absent resolves to a broken
   # catalog entry, which is worse than a catalog that does not offer it.

@@ -24,6 +24,7 @@ from memrank.targets.engine_env import (
     engine_command,
     harness_env,
 )
+from tests import withheld
 
 AWS = AwsContext(
     family="memrank-bench", region="us-east-1", log_group="/ecs/memrank-bench",
@@ -144,6 +145,7 @@ def test_the_variant_the_old_template_could_not_express():
     2026-08-19, so the variant is written here. What the gate protects is the renderer reading the
     MANIFEST, and that is now the only place it can be checked in this repo.
     """
+    withheld.require("mem0")
     cloud = _cloud_env(resolve_target("mem0", ["embedder=voyage/voyage-4-large",
                                                "embedder.dims=1024"]))
     assert cloud["MEM0_EMBEDDER_MODEL"] == "voyage-4-large"
@@ -152,6 +154,7 @@ def test_the_variant_the_old_template_could_not_express():
 
 def test_variants_of_one_engine_render_differently():
     """Two refs sharing an adapter must not collapse to one configuration."""
+    withheld.require("mem0")
     assert _cloud_env(resolve_target("mem0", ["embedder=voyage/voyage-4-large",
                                               "embedder.dims=1024"])) != \
         _cloud_env(resolve_target("mem0"))

@@ -38,7 +38,7 @@ The tree, in full:
 
 ```text
 tests/
-  __init__.py  conftest.py  fakes.py
+  __init__.py  conftest.py  fakes.py  withheld.py
   fixtures/                          static data, never collected
 
   adapters/  application/  benchmarks/  cli/  core/  instrumentation/  judging/
@@ -51,9 +51,15 @@ tests/
   internal/                          the publish.toml prefix
 ```
 
-`fixtures/` is static data and collects nothing. `conftest.py`, `fakes.py` and `__init__.py` stay at
-the root of `tests/`: the root conftest is the common ancestor of every test by construction, and
-`fakes.py` is imported absolutely (`from tests.fakes import FakeAdapter`), so it must not move.
+`fixtures/` is static data and collects nothing. `conftest.py`, `fakes.py`, `withheld.py` and
+`__init__.py` stay at the root of `tests/`: the root conftest is the common ancestor of every test
+by construction, and the other two are imported absolutely (`from tests.fakes import FakeAdapter`,
+`from tests import withheld`) from a dozen directories, so neither belongs under any one of them.
+
+`withheld.py` is the one way a test says "this tree does not carry that builtin target". `mem0` and
+`supermemory` name engine images no outsider can pull (`docs/engine-images.md`), so the published
+package ships neither manifest, and a test written against one skips there with the reason stated
+-- the same shape `live/` uses for an absent backend, and never a weakened assertion.
 
 ## The one carve-out: `live/`
 

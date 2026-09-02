@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 
 from memrank.runs.registry import mint_run_id
+from tests import withheld
 
 _SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
 
@@ -55,5 +56,6 @@ def test_the_engine_tag_recorded_is_the_one_the_graph_declares(monkeypatch):
 
     monkeypatch.setenv("MEMRANK_ENGINES_REGISTRY", "registry.example/engines")
     tag = lambda ref: reference_parts(engine_image(resolve_target(ref)))[1]  # noqa: E731
-    assert tag("mem0") == "mem0-server-mem0-poc-1"
     assert tag("hindsight") == "0.6.2"
+    withheld.require("mem0")
+    assert tag("mem0") == "mem0-server-mem0-poc-1"

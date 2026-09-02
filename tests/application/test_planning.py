@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from memrank.application.planning import plan_sweep
 from memrank.application.types import ModelRef, Routing, SweepAxes, SweepRequest
+from tests import withheld
 
 
 def test_model_axis_produces_distinct_stable_experiments(monkeypatch):
+    withheld.require("mem0")
     monkeypatch.setattr("memrank.application.planning.config.secret", lambda name: "set")
     request = SweepRequest(
         targets=["mem0"], evals=["demo"],
@@ -38,6 +40,7 @@ def test_routing_changes_plan_but_not_experiment_identity(monkeypatch):
 
 
 def test_cloud_credentials_are_org_scoped_and_revalidated_at_submission(monkeypatch):
+    withheld.require("mem0")
     monkeypatch.setattr("memrank.application.planning.config.secret", lambda name: None)
     request = SweepRequest(targets=["mem0"], evals=["demo"],
                            routing=Routing(placement="cloud", org="acme"))

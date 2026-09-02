@@ -1,4 +1,5 @@
 from memrank.provenance.receipt import build_receipt
+from tests import withheld
 
 
 def test_config_hash_differs_for_different_models():
@@ -122,6 +123,7 @@ def test_the_mem0_vendor_target_is_distinguishable_from_its_matched_variants(tmp
     """For hindsight the `:amb` suffix says which mode a number came from. mem0 has no such suffix
     -- the vendor configuration IS the bare ref -- so the receipt is the only carrier, and these
     three fields are what carry it."""
+    withheld.require("mem0")
     vendor = _receipt_for("mem0")
     matched = _receipt_for(_matched_mem0(tmp_path, monkeypatch))
 

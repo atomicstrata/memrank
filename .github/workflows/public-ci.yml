@@ -13,15 +13,16 @@
 # targeting: in this repository every job is skipped, deliberately and visibly. It is a target
 # selector, not a fallback mode -- nothing here degrades, it either runs or is not this repo.
 #
-# WHAT IS RED TODAY, AND WHY THAT IS THE POINT. Two surfaces are known-red in the public tree at
-# the time of writing (2026-08-31, ATO-1829). Neither is suppressed here: no skip-list, no
-# `continue-on-error`, no `|| true`. Each has its own job so the red is ATTRIBUTABLE to the ticket
-# that owns it rather than smeared across one opaque failure.
+# WHAT IS RED TODAY, AND WHY THAT IS THE POINT. Nothing is suppressed here: no skip-list, no
+# `continue-on-error`, no `|| true`. Each surface has its own job so the red is ATTRIBUTABLE to the
+# ticket that owns it rather than smeared across one opaque failure.
 #
-#   tests      64 failures across 17 files -- `mem0` and `supermemory` are withheld from the
-#              projection pending ATO-1831, and 17 test files name them as builtin refs. See
-#              `tech-debt.md`, "THE COST, MEASURED, AND IT IS NOT PAID". Plus 5 failures that are
-#              already red on `dev` and have nothing to do with the boundary.
+#   tests      4 failures, all of them already red on `dev` and none of them the projection's
+#              doing: they assert on CliRunner output that arrives empty or as a usage error under
+#              the locked click/typer. UNOWNED -- see `tech-debt.md`. The 64 boundary failures
+#              this job carried until 2026-09-02 are gone: ATO-1831 settled that `mem0` and
+#              `supermemory` stay withheld, and `tests/withheld.py` makes a test that needs one of
+#              those refs skip with the reason stated rather than fail.
 #   lint       22 ruff findings, 40 mypy findings -- ALL pre-existing on `dev` (53 and 75 there;
 #   types      the public subset is smaller only because internal files do not ship). Not caused
 #              by the projection, and not this ticket's to fix.

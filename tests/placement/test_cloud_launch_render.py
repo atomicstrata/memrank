@@ -23,6 +23,7 @@ from __future__ import annotations
 import pytest
 
 from memrank.placement import cloud_launch, cloud_submit, registry
+from tests import withheld
 
 CONTEXT = {
     "region": "us-east-1", "cluster": "memrank-bench-staging", "subnet": "subnet-aaa",
@@ -74,6 +75,7 @@ def test_an_in_process_target_gets_a_single_container_task(aws):
 
 
 def test_a_stack_target_gets_its_sidecars_and_bigger_sizing(aws):
+    withheld.require("mem0")
     _launch(aws, "mem0")
     taskdef = aws["taskdef"]
     assert {c["name"] for c in taskdef["containerDefinitions"]} == {"memrank", "engine",
@@ -83,6 +85,7 @@ def test_a_stack_target_gets_its_sidecars_and_bigger_sizing(aws):
 
 def test_the_manifest_decides_the_engine_environment(aws):
     """M6's defect, still closed: the embedder comes from the target, never a hardcode."""
+    withheld.require("mem0")
     _launch(aws, "mem0")
     env = {p["name"]: p["value"]
            for c in aws["taskdef"]["containerDefinitions"] if c["name"] == "engine"
@@ -119,6 +122,8 @@ def test_a_digest_that_cannot_be_resolved_refuses_the_launch(aws, monkeypatch):
     and a receipt that names an artifact nobody verified is worse than a run that did not happen --
     especially since the refusal costs nothing: it lands before any task is registered.
     """
+    withheld.require("mem0")
+
     def _boom(image, *, platform, client=None):
         raise registry.RegistryError(f"could not resolve {image!r}: ghcr flaked")
     monkeypatch.setattr(registry, "resolve", _boom)
