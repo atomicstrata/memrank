@@ -164,5 +164,7 @@ def read(path: Path) -> tuple[dict[str, Any], str]:
             f"Resuming across a format change would grade a run under assumptions it was not "
             f"written with.")
     cell = dict(data["cell"])
-    cell["per_query"] = unpack(data.get("documents") or {}, cell.get("per_query") or [])
+    # `or []`: the document table is a LIST (`pack` builds one, and `unpack` indexes into it).
+    # `or {}` was harmless only because an empty table means no row references anything.
+    cell["per_query"] = unpack(data.get("documents") or [], cell.get("per_query") or [])
     return cell, data["budget_mode"]

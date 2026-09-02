@@ -67,8 +67,13 @@ mcp = ["mcp>=2,<3"]
 dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
-    "mypy>=1.8",
-    "ruff>=0.2",
+    # EXACT pins, not floors. A floor means every fresh environment resolves whatever is newest,
+    # so the same commit yields different lint/type findings in a worktree, on a laptop and in
+    # public CI -- and a red job stops meaning "the code changed". That cost was paid twice
+    # (ATO-1887's 11-vs-15 baseline delta; the public repo's first CI run). Bump these
+    # deliberately, in a commit of their own, with the findings the new version reports.
+    "mypy==2.1.0",
+    "ruff==0.15.15",
     "testcontainers[postgres]>=4.0",
     "moto>=5.2.2",
     # Streams and pub/sub in-process, so the event transport's retry/DLQ/teardown paths are

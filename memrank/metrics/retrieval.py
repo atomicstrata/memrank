@@ -121,13 +121,13 @@ def retrieval_metrics(unit: BenchmarkUnit, responses: list[AdapterResponse],
     are computed only over `run_retrieval.py`'s ranked output, never over the long-context modes.
     """
     if not ranked:
-        out: dict[str, Any] = {"n_retrieval_scoreable": 0, "retrieval_metrics_apply": False,
-                               "evidence_matcher_version": EVIDENCE_MATCHER_VERSION,
-                               "per_query": []}
+        unscored: dict[str, Any] = {"n_retrieval_scoreable": 0, "retrieval_metrics_apply": False,
+                                    "evidence_matcher_version": EVIDENCE_MATCHER_VERSION,
+                                    "per_query": []}
         for k in ks:
-            out[f"recall_all@{k}"] = None
-            out[f"ndcg_any@{k}"] = None
-        return out
+            unscored[f"recall_all@{k}"] = None
+            unscored[f"ndcg_any@{k}"] = None
+        return unscored
     sessions = _session_texts(unit)
     retrieved_by_query: dict[str, list[str]] = {
         r.query_id: [_normalize(d.content or "") for d in (r.documents or [])]

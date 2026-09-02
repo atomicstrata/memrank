@@ -43,7 +43,12 @@ from typing import Any
 from memrank.judging.client import JUDGE_SECRET as _JUDGE_SECRET
 from memrank.placement.base import CloudRenderError
 from memrank.placement.ecs_compile import LOCALHOST, compile_service, runtime_platform
-from memrank.placement.graph import engine_image, load_graph, reference_parts
+from memrank.placement.graph import (
+    engine_image,
+    load_graph,
+    reference_parts,
+    service_name,
+)
 from memrank.targets.engine_env import (
     ENGINE_SETTINGS,
     HEALTHCHECK_INTERVAL_S,
@@ -215,7 +220,8 @@ def _memrank_container(target: Manifest, aws: AwsContext,
         # task will run as -- and from the declared reference otherwise, which is the inspection
         # path. Identical to what LocalPlacement.provision records, which is what makes two rows
         # comparable.
-        engine = (resolutions or {}).get(target.service)
+        service = service_name(target)
+        engine = (resolutions or {}).get(service)
         repository, tag = reference_parts(engine_image(target))
         container["environment"] = _as_pairs({
             **harness_env(
@@ -229,7 +235,7 @@ def _memrank_container(target: Manifest, aws: AwsContext,
             # happens to declare the same name -- the topology is the target's to describe, the
             # progress channel is not.
             **aws.harness_env_extra})
-        container["dependsOn"] = [{"containerName": target.service, "condition": "HEALTHY"}]
+        container["dependsOn"] = [{"containerName": service, "condition": "HEALTHY"}]
     return container
 
 

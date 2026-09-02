@@ -23,12 +23,9 @@ A slice's number is never a score (commit ec852c6), but a smoke slice that exerc
 graders does not smoke-test the benchmark -- and after M5 it would not reach the abstention path
 at all.
 """
-import json
-
 import pytest
 
 from memrank.benchmarks.longmemeval import _QUESTION_TYPES, LongMemEvalBenchmark
-
 from tests.benchmarks.test_longmemeval_methodology import _item, _write_fixture
 
 

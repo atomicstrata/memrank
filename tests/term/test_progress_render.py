@@ -212,8 +212,8 @@ def test_a_pipe_gets_one_line_per_change_and_nothing_when_unchanged(tmp_path, mo
     monkeypatch.setattr(watch_cli.progress, "supports_redraw", lambda stream: False)
     display = watch_cli.ProgressDisplay()
 
-    display.show(tmp_path, ["r1"], http=None, org=None)
-    display.show(tmp_path, ["r1"], http=None, org=None)
+    display.show(tmp_path, ["r1"], cloud=None)
+    display.show(tmp_path, ["r1"], cloud=None)
 
     assert capsys.readouterr().err.count("hindsight × locomo") == 1
 
@@ -232,10 +232,10 @@ def test_a_terminal_gets_a_block_that_erases_its_previous_draw(tmp_path, monkeyp
     monkeypatch.setattr(watch_cli.progress, "supports_redraw", lambda stream: True)
     display = watch_cli.ProgressDisplay()
 
-    display.show(tmp_path, ["r1"], http=None, org=None)
+    display.show(tmp_path, ["r1"], cloud=None)
     first = capsys.readouterr().err
     _run_dir_update(tmp_path, "r1", {**RECORD, "pct": 25})
-    display.show(tmp_path, ["r1"], http=None, org=None)
+    display.show(tmp_path, ["r1"], cloud=None)
     second = capsys.readouterr().err
 
     rows = len(render.block("t", RECORD))
@@ -256,9 +256,9 @@ def test_an_unchanged_block_is_not_rewritten(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(watch_cli.progress, "supports_redraw", lambda stream: True)
     display = watch_cli.ProgressDisplay()
 
-    display.show(tmp_path, ["r1"], http=None, org=None)
+    display.show(tmp_path, ["r1"], cloud=None)
     capsys.readouterr()
-    display.show(tmp_path, ["r1"], http=None, org=None)
+    display.show(tmp_path, ["r1"], cloud=None)
 
     assert capsys.readouterr().err == ""
 
@@ -271,7 +271,7 @@ def test_a_run_with_no_progress_draws_nothing(tmp_path, monkeypatch, capsys):
     _run_dir(tmp_path, "r1", {})
     monkeypatch.setattr(watch_cli.progress, "supports_redraw", lambda stream: False)
 
-    watch_cli.ProgressDisplay().show(tmp_path, ["r1"], http=None, org=None)
+    watch_cli.ProgressDisplay().show(tmp_path, ["r1"], cloud=None)
 
     assert capsys.readouterr().err == ""
 
@@ -284,7 +284,7 @@ def test_the_run_is_named_by_its_cell_not_its_id(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(watch_cli.progress, "supports_redraw", lambda stream: False)
 
     watch_cli.ProgressDisplay().show(
-        tmp_path, ["20260804-054835__locomo__smoke__ef5f43"], http=None, org=None)
+        tmp_path, ["20260804-054835__locomo__smoke__ef5f43"], cloud=None)
 
     assert "hindsight × locomo" in capsys.readouterr().err
 

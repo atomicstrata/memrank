@@ -159,7 +159,7 @@ class SupermemoryAdapter(MemoryAdapter):
     def latency_metrics(self) -> dict[str, float]:
         return self.latency.as_metrics()
 
-    def token_metrics(self) -> dict[str, float]:
+    def token_metrics(self) -> dict[str, float | None]:
         return self.tokens.as_metrics()
 
     def _effective_llm(self) -> dict:

@@ -210,6 +210,7 @@ def question_gates(*, benchmark: str, bench_kwargs: dict[str, Any], slice_: str 
         assert units is not None  # loaded above whenever `unit` is set
         units = _filter_units(units, unit)  # fails loud if nothing matches
     if judge_cfg is not None:  # refuse empty coverage AFTER filtering (reflects the run set)
+        assert bench is not None  # loaded above whenever `judge_cfg` is set
         try:
             # `bench` is loaded above whenever judge_cfg is set, so its shape is available --
             # and must be passed, exactly as the cost estimate below does. Omitting it was the

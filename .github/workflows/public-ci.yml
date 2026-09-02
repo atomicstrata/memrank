@@ -13,8 +13,8 @@
 # targeting: in this repository every job is skipped, deliberately and visibly. It is a target
 # selector, not a fallback mode -- nothing here degrades, it either runs or is not this repo.
 #
-# WHAT IS RED TODAY, AND WHY THAT IS THE POINT. Three surfaces are known-red in the public tree at
-# the time of writing (2026-08-31, ATO-1829). None of them is suppressed here: no skip-list, no
+# WHAT IS RED TODAY, AND WHY THAT IS THE POINT. Two surfaces are known-red in the public tree at
+# the time of writing (2026-08-31, ATO-1829). Neither is suppressed here: no skip-list, no
 # `continue-on-error`, no `|| true`. Each has its own job so the red is ATTRIBUTABLE to the ticket
 # that owns it rather than smeared across one opaque failure.
 #
@@ -25,11 +25,13 @@
 #   lint       22 ruff findings, 40 mypy findings -- ALL pre-existing on `dev` (53 and 75 there;
 #   types      the public subset is smaller only because internal files do not ship). Not caused
 #              by the projection, and not this ticket's to fix.
-#   lockfile   `uv sync --locked` fails: the projector rewrites `pyproject.toml` (it drops the
-#              `api` extra and the internal console script), which invalidates the `uv.lock` it
-#              ships alongside. ATO-1856's known gap. Until it lands, the other jobs resolve
-#              dependencies fresh rather than from the lock, and this job states the cost in CI
-#              instead of only in a document.
+#
+# The third, `lockfile`, is GONE -- not suppressed. `uv sync --locked` used to fail because the
+# projector rewrote `pyproject.toml` and copied `uv.lock` verbatim; ATO-1856 made the projection
+# prune the lock from the same table that rewrites the pyproject (`tools/lockfile.py`), so the two
+# agree by construction. The check did not need its own job once it stopped being a known gap: it
+# is `--locked` on every sync step below, which is stricter than one job was -- the lock now has to
+# hold on all three interpreters, not just on 3.12.
 #
 # BRANCH PROTECTION. Only the jobs that are actually green may be required status checks on day
 # one; requiring a known-red check blocks every merge including the ones that would fix it. The
@@ -51,10 +53,10 @@ concurrency:
   group: public-ci-${{ github.ref }}
   cancel-in-progress: true
 
-# NOTE ON `uv sync --extra dev`. It is deliberately NOT `--locked`: the projected tree ships a
-# `uv.lock` its rewritten `pyproject.toml` no longer matches (ATO-1856). Every job below resolves
-# fresh, and the `lockfile` job is what keeps that cost loud. When ATO-1856 lands, `--locked` goes
-# on each sync step and that job is deleted.
+# NOTE ON `uv sync --locked`. `--locked` rather than a plain sync, on every step: the projected
+# tree ships a `uv.lock` pruned to match its own `pyproject.toml`, and an install that resolved
+# fresh would pass whether or not that were still true. This is what makes the published tree
+# reproducible from its own lockfile rather than merely installable.
 
 jobs:
   # The boundary, checked by the published tree itself. `publish.toml` and `tools/manifest.py`
@@ -68,8 +70,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
-      - run: uv sync --extra dev
-      - run: uv run pytest -q tests/repo/test_public_boundary.py tests/repo/test_projection.py
+      - run: uv sync --locked --extra dev
+      - run: uv run pytest -q tests/repo/test_public_boundary.py tests/repo/test_projection.py tests/repo/test_projected_lockfile.py
 
   lint:
     name: lint
@@ -80,7 +82,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
-      - run: uv sync --extra dev
+      - run: uv sync --locked --extra dev
       - run: uv run ruff check .
 
   types:
@@ -92,7 +94,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
-      - run: uv sync --extra dev
+      - run: uv sync --locked --extra dev
       - run: uv run mypy memrank
 
   # The versions `pyproject.toml` actually claims: `requires-python = ">=3.10"`, and mypy's
@@ -114,20 +116,5 @@ jobs:
       # `--python` as well as the action's `python-version`, which only exports `UV_PYTHON`. The
       # projected tree ships `.python-version` pinning 3.12; the env var already outranks it, but
       # a matrix that silently ran one interpreter three times is the failure worth two words.
-      - run: uv sync --extra dev --python ${{ matrix.python }}
+      - run: uv sync --locked --extra dev --python ${{ matrix.python }}
       - run: uv run --python ${{ matrix.python }} pytest -q
-
-  # Reproducibility, stated as a check rather than as a paragraph. RED until ATO-1856 makes the
-  # projected lockfile agree with the projected `pyproject.toml`. It is a separate job so that gap
-  # is visible without holding the rest of CI hostage, and so it turns green on its own the day it
-  # is fixed.
-  lockfile:
-    name: lockfile (ATO-1856)
-    runs-on: ubuntu-latest
-    if: github.repository == 'atomicstrata/memrank'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: '3.12'
-      - run: uv sync --locked --extra dev
