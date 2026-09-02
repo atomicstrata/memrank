@@ -9,6 +9,7 @@ from memrank.adapters import get_adapter
 from memrank.runner import app
 from memrank.targets import resolve_target
 from memrank.targets.factory import build_adapter
+from tests import withheld
 
 runner = CliRunner()
 
@@ -78,6 +79,7 @@ def test_manifest_route_matches_the_legacy_env_route(monkeypatch):
     """The milestone gate: the manifest path must be faithful to the env path it replaces."""
     for key, value in LEGACY_ENV.items():
         monkeypatch.setenv(key, value)
+    withheld.require("mem0")
     legacy = get_adapter("mem0").effective_config()
     manifest = build_adapter(resolve_target("mem0", ["llm=anthropic/claude-sonnet-4-5-20250929",
                                                      "embedder=voyage/voyage-4-large",

@@ -46,9 +46,9 @@ full record -- state, where it ran, exit code, artifact location -- and `kill <i
 Finding your way around:
 
 ```bash
-memrank targets ls          # what can be evaluated (mem0, atomicmemory, word-overlap, ...)
-memrank evals ls            # what to evaluate against (locomo, beam, longmemeval, demo, ...)
-memrank targets show mem0   # the exact composition, and ✔/✘ per secret it needs
+memrank targets ls               # what can be evaluated (hindsight, atomicmemory, word-overlap, ...)
+memrank evals ls                 # what to evaluate against (locomo, beam, longmemeval, demo, ...)
+memrank targets show hindsight   # the exact composition, and ✔/✘ per secret it needs
 memrank submit --help       # every flag, grouped
 ```
 
@@ -68,9 +68,12 @@ the vendor's own configuration, and memrank's budget-matched comparison arm carr
 | `--on cloud` | submit to the hosted memrank platform (needs `memrank auth login`; membership is not self-served yet) |
 
 ```bash
-export MEM0_HTTP_URL=http://localhost:8888
-memrank submit mem0 locomo:smoke --on none
+export HINDSIGHT_API_URL=http://localhost:7000
+memrank submit hindsight locomo:smoke --on none
 ```
+
+Which engines you can actually obtain differs per target, and two of them you cannot pull at all.
+[Engine images](docs/engine-images.md) states it per target, with what to run instead.
 
 Judged runs send benchmark content to Anthropic and need `ANTHROPIC_API_KEY`. They are on by
 default for `locomo`, `longmemeval` and `beam`, whose only quality metric is the judge's;

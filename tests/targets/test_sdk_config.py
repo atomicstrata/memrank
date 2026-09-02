@@ -32,13 +32,25 @@ import pytest
 from memrank.targets import resolve_target
 from memrank.targets.factory import build_adapter
 from memrank.targets.manifest import ManifestError, from_dict, to_dict
+from tests import withheld
 
 CHROMA = {"vector_store": {"provider": "chroma", "config": {"collection_name": "t"}}}
 
 
+def _mem0():
+    """The shipped `mem0` manifest, which is the worked example throughout this file.
+
+    Every rule here is about `sdk_config` rather than about mem0, but mem0 is the engine whose SDK
+    and server genuinely diverge, so it is what the rules are stated against. A tree without the
+    manifest skips (`tests/withheld`) rather than asserting on a target it does not have.
+    """
+    withheld.require("mem0")
+    return resolve_target("mem0")
+
+
 def _sdk_target():
     """mem0 re-pointed at the SDK, with components dropped for sdk_config to replace."""
-    return replace(resolve_target("mem0"), transport="sdk", components={},
+    return replace(_mem0(), transport="sdk", components={},
                    sdk_config=CHROMA)
 
 
@@ -51,7 +63,7 @@ def test_an_sdk_config_reaches_the_adapter_verbatim():
 def test_sdk_config_is_refused_over_http():
     """Over HTTP the engine reads the environment, so a config object would be recorded in the
     receipt and obeyed by nothing."""
-    target = replace(resolve_target("mem0"), sdk_config=CHROMA)
+    target = replace(_mem0(), sdk_config=CHROMA)
     with pytest.raises(ManifestError) as excinfo:
         build_adapter(target, verify_engine=False)
     assert "transport" in str(excinfo.value)
@@ -59,7 +71,7 @@ def test_sdk_config_is_refused_over_http():
 
 def test_components_and_sdk_config_cannot_both_be_declared():
     """Two vocabularies for the same settings, of which only one reaches an in-process SDK."""
-    target = replace(resolve_target("mem0"), transport="sdk", sdk_config=CHROMA)
+    target = replace(_mem0(), transport="sdk", sdk_config=CHROMA)
     with pytest.raises(ManifestError) as excinfo:
         build_adapter(target, verify_engine=False)
     assert "components" in str(excinfo.value)
@@ -74,7 +86,7 @@ def test_a_non_mapping_sdk_config_is_rejected_at_parse_time():
 def test_an_absent_sdk_config_does_not_change_a_targets_serialisation():
     """Adding a field to the schema is not a change to targets that predate it -- the rule
     tests/targets/test_component_endpoint.py pins for `endpoint`."""
-    assert "sdk_config" not in to_dict(resolve_target("mem0"))
+    assert "sdk_config" not in to_dict(_mem0())
 
 
 def test_a_declared_sdk_config_is_recorded():
@@ -96,7 +108,7 @@ def _adapter_with(monkeypatch, resolved: dict[str, str]):
     """A configured sdk adapter whose credentials resolve ONLY through config.secret."""
     from memrank import config as memrank_config
     monkeypatch.setattr(memrank_config, "secret", lambda name: resolved.get(name))
-    target = replace(resolve_target("mem0"), transport="sdk", components={},
+    target = replace(_mem0(), transport="sdk", components={},
                      sdk_config=_WITH_PROVIDERS)
     return build_adapter(target, verify_engine=False)
 
@@ -192,7 +204,7 @@ def _sdk_adapter(monkeypatch, sdk_config):
     monkeypatch.setattr(memrank_config, "secret", lambda name: f"resolved-{name}")
     monkeypatch.setattr(mem0_mod, "_try_import_mem0", lambda: _FakeMemory)
     monkeypatch.setattr(mem0_mod, "_mem0_module", lambda: type("m", (), {"__version__": "0.1.114"}))
-    target = replace(resolve_target("mem0"), transport="sdk", components={},
+    target = replace(_mem0(), transport="sdk", components={},
                      sdk_config=sdk_config)
     return build_adapter(target, verify_engine=False)
 
@@ -231,7 +243,7 @@ def test_sdk_mode_declares_and_performs_destructive_cleanup(monkeypatch):
 
 def test_http_mode_leaves_cleanup_to_the_placement():
     """Over HTTP `compose down -v` destroys the store, so the adapter must not claim to."""
-    adapter = build_adapter(resolve_target("mem0"), verify_engine=False)
+    adapter = build_adapter(_mem0(), verify_engine=False)
     assert adapter.cleanup_is_destructive is False
 
 

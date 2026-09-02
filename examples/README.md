@@ -1,7 +1,7 @@
 # Memrank examples
 
-Runnable scripts that demonstrate the most common Memrank workflows. Run each from the repository
-root.
+Runnable material for the most common Memrank workflows -- scripts, and one container recipe. Run
+each from the repository root.
 
 | File | What it shows | Needs |
 | --- | --- | --- |
@@ -11,10 +11,12 @@ root.
 | [`custom-benchmark.py`](custom-benchmark.py) | Wire your own benchmark in -- three methods, no registration. | nothing |
 | [`custom-target/`](custom-target/README.md) | Register an engine memrank does not ship, so `memrank submit` drives it like any other target. | nothing |
 | [`3-line-example.py`](3-line-example.py) | The smallest real run: one adapter, one benchmark, smoke slice. | a live engine |
+| [`supermemory-image/`](supermemory-image/README.md) | Build the engine image the `supermemory` target names -- no registry serves it, so the recipe ships instead. | Docker |
 | [`native-adapter/`](native-adapter/README.md) | A translator: the adapter contract over HTTP, in any language, without touching memrank. | nothing |
 
-Everything except `3-line-example.py` uses `demo`, which ships with the repository, so they run
-offline and instantly.
+Every script except `3-line-example.py` uses `demo`, which ships with the repository, so they run
+offline and instantly. `supermemory-image/` is not a script: it is the Docker build for an engine
+image no registry serves, and its README says what that costs to reproduce.
 
 ## Prerequisites
 

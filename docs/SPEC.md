@@ -62,8 +62,10 @@ targets and two rows, told apart by `config_hash`. This is not bookkeeping -- a 
 result is dominated by the models it is wired to, so a row naming only the engine names two
 different systems at two different times.
 
-Targets ship for `atomicmemory`, `mem0`, `hindsight`, `supermemory`, plus the control arms
-`no-context`, `fixed-context`, `full-context` and `word-overlap`. Benchmarks ship for `locomo`,
+Targets are defined for `atomicmemory`, `mem0`, `hindsight` and `supermemory`, plus the control
+arms `no-context`, `fixed-context`, `full-context` and `word-overlap`. Not every engine image is
+obtainable, and the ones that are not are named as such: see
+[engine images](engine-images.md). Benchmarks ship for `locomo`,
 `beam`, `longmemeval`, `relation_graph` and the synthetic `demo`.
 
 ### 2.3 Control arms are part of the measurement

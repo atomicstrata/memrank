@@ -22,6 +22,7 @@ import pytest
 
 from memrank.placement.cloud import AwsContext, render_taskdef
 from memrank.targets import resolve_target
+from tests import withheld
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "retired_taskdefs"
 
@@ -89,6 +90,7 @@ def _rendered_env(ref: str) -> dict[str, set[str]]:
 @pytest.mark.parametrize("ref,engine", ENGINES.items())
 def test_no_environment_variable_was_dropped(ref, engine):
     """Per container, every name the template set must still be rendered."""
+    withheld.require(ref)
     template, rendered = _template_env(engine), _rendered_env(ref)
     missing: dict[str, set[str]] = {}
     for container, names in template.items():
@@ -105,6 +107,7 @@ def test_no_environment_variable_was_dropped(ref, engine):
 @pytest.mark.parametrize("ref,engine", ENGINES.items())
 def test_no_container_was_dropped(ref, engine):
     """A missing sidecar is the same class of loss, one level up."""
+    withheld.require(ref)
     expected = {_service_name(c, ref) for c in _template_env(engine)}
     assert expected - set(ALLOWED_MISSING_CONTAINERS) <= set(_rendered_env(ref))
 
@@ -116,7 +119,11 @@ def test_every_allowed_drop_has_a_reason():
 
 
 def test_the_allowlist_names_only_things_actually_dropped():
-    """A stale entry silently widens the gate for a name that has since come back."""
+    """A stale entry silently widens the gate for a name that has since come back.
+
+    All four engines or none. Narrowing the population to the refs a tree happens to carry would
+    make the gate quieter exactly where it is asked to be loud, so a tree missing one skips."""
+    withheld.require(*ENGINES)
     still_rendered = {name for ref in ENGINES for names in _rendered_env(ref).values()
                       for name in names}
     assert not (set(ALLOWED_DROPS) & still_rendered), (

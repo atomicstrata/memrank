@@ -27,10 +27,12 @@ import pytest
 from memrank.targets import resolve_target
 from memrank.targets.factory import build_adapter
 from memrank.targets.manifest import ManifestError, from_dict
+from tests import withheld
 
 
 def test_a_faithful_variant_declares_the_vendors_components():
     """mem0's own suite: gpt-4o-mini extraction, text-embedding-3-small at 1536d."""
+    withheld.require("mem0")
     t = resolve_target("mem0")
     assert t.components["llm"].model == "gpt-4o-mini"
     assert t.components["embedder"].model == "text-embedding-3-small"
@@ -39,8 +41,9 @@ def test_a_faithful_variant_declares_the_vendors_components():
 
 def test_faithful_variants_are_uncapped():
     """The point of the mode: reproduce the vendor's depth, not memrank's fairness cap."""
-    assert resolve_target("mem0").context_budget == "uncapped"
     assert resolve_target("hindsight").context_budget == "uncapped"
+    withheld.require("mem0")
+    assert resolve_target("mem0").context_budget == "uncapped"
 
 
 def test_a_matched_target_stays_matched():
@@ -51,6 +54,7 @@ def test_a_matched_target_stays_matched():
     memrank ships is uncapped, and that is the fact this asserts."""
     assert resolve_target("hindsight:matched").context_budget == "matched"
     assert resolve_target("hindsight").context_budget == "uncapped"
+    withheld.require("mem0")
     assert resolve_target("mem0").context_budget == "uncapped"
 
 

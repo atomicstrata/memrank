@@ -291,13 +291,29 @@ def test_a_graph_declaring_a_volume_is_refused_end_to_end(declare_target):
     assert "engine" in str(exc.value) and "volumes" in str(exc.value)
 
 
-def test_the_cli_prints_a_refusal_as_an_error_not_a_traceback(declare_target, capsys):
+#: The `.aws-context.json` shape `--aws` reads -- the raw terraform outputs, not `AwsContext`'s
+#: fields. Supplied explicitly so the render reaches the refusal under test: without it the
+#: command stops earlier, at `config.aws_context()`, refusing for want of a context file.
+AWS_CONTEXT_FILE = {
+    "region": "us-east-1", "cluster": "c", "subnet": "subnet-1", "security_group": "sg-1",
+    "log_group": "/ecs/x", "execution_role_arn": "arn:e", "task_role_arn": "arn:t",
+    "artifact_bucket": "b", "runner_repository": "r", "engines_repository": "e",
+    "secret_arns": {"ANTHROPIC_API_KEY": "arn:a", "OPENAI_API_KEY": "arn:o",
+                    "VOYAGE_API_KEY": "arn:v"}}
+
+
+def test_the_cli_prints_a_refusal_as_an_error_not_a_traceback(declare_target, tmp_path):
     """`targets render` catches CloudRenderError so an author sees the reason, not a stack."""
+    import json
+
     from typer.testing import CliRunner
 
     from memrank.runner import app
 
+    context = tmp_path / "aws-context.json"
+    context.write_text(json.dumps(AWS_CONTEXT_FILE), encoding="utf-8")
     declare_target("mounted-cli", {"engine": {"image": "e:1", "volumes": ["./d:/d"]}})
-    result = CliRunner().invoke(app, ["targets", "render", "--for", "cloud", "mounted-cli"])
+    result = CliRunner().invoke(app, ["targets", "render", "--for", "cloud",
+                                      "--aws", str(context), "mounted-cli"])
     assert result.exit_code == 1
     assert "volumes" in result.output and "Traceback" not in result.output

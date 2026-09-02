@@ -5,6 +5,7 @@ import pytest
 
 from memrank.targets import catalog as c
 from memrank.targets.manifest import ManifestError
+from tests import withheld
 
 
 def _write(tmp_path, monkeypatch, name, body):
@@ -15,8 +16,9 @@ def _write(tmp_path, monkeypatch, name, body):
 
 
 def test_builtin_targets_are_discovered():
-    assert "mem0" in c.list_targets()
     assert "word-overlap" in c.list_targets()
+    withheld.require("mem0")
+    assert "mem0" in c.list_targets()
 
 
 def test_user_dir_overrides_builtin(tmp_path, monkeypatch):
@@ -33,6 +35,7 @@ def test_resolve_applies_from_inheritance(tmp_path, monkeypatch):
     research lane on 2026-08-19, and a discovery test should not depend on an operator having that
     lane configured.
     """
+    withheld.require("mem0")
     _write(tmp_path, monkeypatch, "mem0-swapped",
            "from: mem0\nname: mem0:swapped\ncomponents:\n"
            "  embedder: {provider: voyage, model: voyage-4-large, dims: 1024}\n")
@@ -43,11 +46,13 @@ def test_resolve_applies_from_inheritance(tmp_path, monkeypatch):
 
 
 def test_resolve_applies_overrides():
+    withheld.require("mem0")
     got = c.resolve_target("mem0", ["embedder=voyage/voyage-4-large", "embedder.dims=1024"])
     assert got.components["embedder"].dims == 1024
 
 
 def test_override_without_dims_fails_loudly():
+    withheld.require("mem0")
     with pytest.raises(ManifestError, match=r"components\.embedder\.dims is required"):
         c.resolve_target("mem0", ["embedder=voyage/voyage-4-large"])
 
@@ -79,31 +84,43 @@ EXPECTED = {"word-overlap",
             "mem0", "hindsight:matched"}
 
 
-def test_every_seed_ships():
-    assert EXPECTED <= set(c.list_targets())
+# One case per seed rather than one loop over all of them. `mem0` and `supermemory` are not in
+# every tree (`tests/withheld`), and a loop makes the first missing one retire the check for the
+# seeds that ARE there. Parametrised, each seed answers for itself and the assertions are the same.
+seed = pytest.mark.parametrize("name", sorted(EXPECTED))
 
 
-def test_every_seed_resolves_and_validates():
-    for name in EXPECTED:
-        assert c.resolve_target(name).name == name
+@seed
+def test_every_seed_ships(name):
+    withheld.require(name)
+    assert name in c.list_targets()
 
 
-def test_every_seed_names_a_registered_adapter():
+@seed
+def test_every_seed_resolves_and_validates(name):
+    withheld.require(name)
+    assert c.resolve_target(name).name == name
+
+
+@seed
+def test_every_seed_names_a_registered_adapter(name):
     """A manifest pointing at a nonexistent adapter would only fail at run time."""
     from memrank.adapters import REGISTRY
 
-    for name in EXPECTED:
-        assert c.resolve_target(name).adapter in REGISTRY
+    withheld.require(name)
+    assert c.resolve_target(name).adapter in REGISTRY
 
 
-def test_every_seed_declares_a_transport():
+@seed
+def test_every_seed_declares_a_transport(name):
     """Declared, never inferred -- hindsight's adapter class sets none, so it read 'unknown'."""
-    for name in EXPECTED:
-        assert c.resolve_target(name).transport is not None
+    withheld.require(name)
+    assert c.resolve_target(name).transport is not None
 
 
 def test_mem0_pins_http_transport():
     """Methodology constraint: the public mem0ai SDK cannot replicate the running server."""
+    withheld.require("mem0")
     assert c.resolve_target("mem0").transport == "http"
 
 
@@ -119,6 +136,7 @@ def test_a_hosted_embedder_adds_its_own_key(tmp_path, monkeypatch):
     Synthetic since `mem0:voyage` moved to the research lane; what is under test is the derivation,
     not that one shipped manifest happens to name Voyage.
     """
+    withheld.require("mem0")
     _write(tmp_path, monkeypatch, "mem0-hosted",
            "from: mem0\nname: mem0:hosted\ncomponents:\n"
            "  llm: {provider: anthropic, model: claude-sonnet-4-5-20250929}\n"
@@ -130,6 +148,7 @@ def test_a_hosted_embedder_adds_its_own_key(tmp_path, monkeypatch):
 
 def test_a_self_hosted_embedder_needs_no_embedder_key(tmp_path, monkeypatch):
     """huggingface/TEI serves the model locally, so only extraction spends a credential."""
+    withheld.require("mem0")
     _write(tmp_path, monkeypatch, "mem0-selfhosted",
            "from: mem0\nname: mem0:selfhosted\ncomponents:\n"
            "  llm: {provider: anthropic, model: claude-sonnet-4-5-20250929}\n"
@@ -150,6 +169,7 @@ def test_supermemory_demands_no_credential():
     invalid key and watching ingest and retrieve return the right document
     (tests/live/conformance/test_supermemory_llm_unused.py).
     """
+    withheld.require("supermemory")
     assert c.required_secrets_for(c.resolve_target("supermemory")) == []
 
 
@@ -157,6 +177,7 @@ def test_secret_status_reports_resolvability(tmp_path, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     monkeypatch.delenv("VOYAGE_API_KEY", raising=False)
     monkeypatch.setenv("MEMRANK_CONFIG_DIR", str(tmp_path))   # empty wallet
+    withheld.require("mem0")
     _write(tmp_path, monkeypatch, "mem0-twokey",
            "from: mem0\nname: mem0:twokey\ncomponents:\n"
            "  llm: {provider: anthropic, model: claude-sonnet-4-5-20250929}\n"
@@ -198,6 +219,7 @@ def test_a_variant_inherits_the_graph_but_pins_its_own_configuration(tmp_path, m
     prove it -- `mem0:voyage` and `mem0:bge-tei` -- moved to the research lane on 2026-08-19. What
     the gate protects is unchanged and now matters MORE: those manifests live in another repo, so
     nothing in this one fails when the base changes underneath them."""
+    withheld.require("mem0")
     _write(tmp_path, monkeypatch, "mem0-matched",
            "from: mem0\nname: mem0:matched\ncontext_budget: matched\ncomponents:\n"
            "  llm: {provider: anthropic, model: claude-sonnet-4-5-20250929}\n"
