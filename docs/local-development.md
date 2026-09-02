@@ -14,6 +14,10 @@ cd memrank
 uv sync --extra dev
 ```
 
+`uv sync --locked --extra dev` installs the exact versions in `uv.lock` and fails rather than
+resolving anything fresh. Use it when you want this repository's resolution rather than today's:
+reproducing a published result, or bisecting a failure that may be a dependency's.
+
 `.python-version` pins the local interpreter to 3.12 and uv installs it if the machine has none.
 **Python 3.10 is the supported floor** -- `pyproject.toml` declares `requires-python = ">=3.10"`
 and mypy targets 3.10 -- so a change that needs a newer language feature is a change to that floor,

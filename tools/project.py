@@ -35,7 +35,8 @@ any machine in any state: an uncommitted edit cannot reach the output, an untrac
 a public path cannot reach it, and a stale file left over from a deleted branch cannot reach it.
 Copying from disk made all three possible, and none of them are visible in the result.
 
-The classification rule itself is not reimplemented here -- see `tools/manifest.py`.
+The classification rule itself is not reimplemented here -- see `tools/manifest.py`, and neither
+is the lockfile prune -- see `tools/lockfile.py`.
 """
 from __future__ import annotations
 
@@ -47,6 +48,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tools import lockfile
 from tools import manifest as mf
 
 #: A projection smaller than this is a bug, not a small repository. The exact number is asserted by
@@ -210,6 +212,12 @@ def project(root: Path, out: Path, rev: str = DEFAULT_REVISION, dry_run: bool = 
 
     Nothing is read from the working tree: `root` supplies the object database and the manifest,
     and every byte written comes from a committed blob.
+
+    Two of those blobs are then rewritten in place, both from `[projection]` in the manifest and
+    so from ONE statement of which extras do not ship: `pyproject.toml` loses those extras, and
+    `uv.lock` loses what they held (`tools/lockfile.py`). They are rewritten together because a
+    lock that disagrees with the `pyproject.toml` beside it makes `uv sync --locked` refuse the
+    whole tree -- which is what the public repository got until ATO-1856.
     """
     manifest = mf.load(root)
     entries = [e for e in committed_entries(root, rev)
@@ -234,9 +242,14 @@ def project(root: Path, out: Path, rev: str = DEFAULT_REVISION, dry_run: bool = 
         destination.write_bytes(blobs[entry.sha])
         destination.chmod(FILE_MODES[entry.mode])
 
+    extras = manifest.get("projection", {}).get("drop_optional_dependencies", [])
     pyproject = out / "pyproject.toml"
     pyproject.write_text(_public_pyproject(pyproject.read_text(encoding="utf-8"), manifest),
                          encoding="utf-8")
+    if "uv.lock" in paths:                             # classified like any other path, so ask
+        lock = out / "uv.lock"
+        lock.write_text(lockfile.public_lock(lock.read_text(encoding="utf-8"), extras),
+                        encoding="utf-8")
     return paths
 
 

@@ -116,10 +116,11 @@ def cell_headline(cell: Mapping[str, Any]) -> Headline:
         render the rest.
     """
     judged = cell.get("judged_metrics")
-    coverage = judged.get("judged_coverage") if isinstance(judged, Mapping) else None
-    if coverage:
-        return Headline(value=judged.get("answer_correctness"), kind=JUDGED,
-                        rankable=coverage >= MIN_RANKABLE_COVERAGE, coverage=coverage)
+    if isinstance(judged, Mapping):
+        coverage = judged.get("judged_coverage")
+        if coverage:
+            return Headline(value=judged.get("answer_correctness"), kind=JUDGED,
+                            rankable=coverage >= MIN_RANKABLE_COVERAGE, coverage=coverage)
     composite = cell.get("composite")
     if composite is not None and rankable_composite(cell):
         return Headline(value=composite, kind=cell.get("quality_metric") or DEFAULT_QUALITY_METRIC,

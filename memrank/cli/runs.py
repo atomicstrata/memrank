@@ -406,7 +406,10 @@ def _print_table(rows: list[RunRow]) -> None:
     it styles on the plain path, which is the alignment rule this listing used to enforce by
     hand at every cell.
     """
-    body = [
+    # Annotated rather than inferred: `Cell` is a NamedTuple, so a list literal mixing it with
+    # bare strings joins to `Sequence[str | Styler | None]` -- the two elements' common supertype,
+    # which is not what `emit` takes. `CellLike` is the type this row actually is.
+    body: list[list[table.CellLike]] = [
         [row.run_id,
          ",".join(row.targets) or "?",
          row.eval_name,
@@ -422,8 +425,8 @@ def _print_table(rows: list[RunRow]) -> None:
 
 
 def cli_runs_ls(
-    target: str = typer.Option(None, "--target", help="only runs of this target"),
-    eval_name: str = typer.Option(None, "--eval", help="only runs of this eval"),
+    target: str | None = typer.Option(None, "--target", help="only runs of this target"),
+    eval_name: str | None = typer.Option(None, "--eval", help="only runs of this eval"),
     live: bool = typer.Option(False, "--live", help="only runs that are still going"),
     org_wide: bool = typer.Option(False, "--org", help="every submitter's runs in your org, "
                                   "not just yours"),
@@ -474,7 +477,7 @@ def cli_runs_ls(
 
 def cli_ps(
     all_runs: bool = typer.Option(False, "--all", help="include finished/failed/stale runs"),
-    target: str = typer.Option(None, "--target", help="only runs of this target"),
+    target: str | None = typer.Option(None, "--target", help="only runs of this target"),
     limit: int = typer.Option(DEFAULT_LIMIT, "--limit", min=0,
                               help="show at most this many, newest first (0 = no cap)"),
     json_out: bool = typer.Option(False, "--json", help="machine-readable JSON output"),

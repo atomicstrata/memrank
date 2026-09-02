@@ -71,6 +71,24 @@ def interpolate(document: str, variables: dict[str, str]) -> str:
     return re.sub(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}", replace, document)
 
 
+def service_name(target: Manifest) -> str:
+    """The service the adapter drives, refused when the target names none.
+
+    ``Manifest.service`` is optional because an in-process target has no containers at all. Every
+    caller below is already past that branch, so a missing name there is an illegal state and not a
+    mode to fall back through -- and stating the refusal once keeps it identical everywhere it is
+    reached.
+
+    Raises:
+        ValueError: If the target declares no service.
+    """
+    if target.service is None:
+        raise ValueError(
+            f"{target.name!r} declares no compose service to drive; a target with containers "
+            f"must name the one its adapter talks to")
+    return target.service
+
+
 def load_graph(target: Manifest) -> dict[str, Any]:
     """Read, interpolate and parse ``target``'s Compose file.
 
@@ -87,19 +105,20 @@ def load_graph(target: Manifest) -> dict[str, Any]:
     path = graph_path(target)
     if not path.is_file():
         raise ValueError(f"{target.name!r} names a compose file that does not exist: {path}")
+    service = service_name(target)
     source = path.read_text(encoding="utf-8")
     document = yaml.safe_load(interpolate(source, graph_variables(target)))
     services = document.get("services") or {}
-    if target.service not in services:
+    if service not in services:
         raise ValueError(
-            f"{target.name!r} names service {target.service!r}, which {path.name} does not "
+            f"{target.name!r} names service {service!r}, which {path.name} does not "
             f"define (it has: {', '.join(sorted(services)) or 'nothing'})")
     return document
 
 
 def engine_image(target: Manifest) -> str:
     """The image reference of the container the adapter drives, as the graph declares it."""
-    return str(load_graph(target)["services"][target.service]["image"])
+    return str(load_graph(target)["services"][service_name(target)]["image"])
 
 
 def reference_parts(image: str) -> tuple[str, str]:

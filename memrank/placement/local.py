@@ -35,7 +35,7 @@ from types import TracebackType
 from typing import Any
 
 from memrank.placement.base import Endpoint, PlacementError, Requirement, require
-from memrank.placement.graph import load_graph, pin
+from memrank.placement.graph import load_graph, pin, service_name
 from memrank.targets.engine_env import (
     ENGINE_SETTINGS,
     component_env,
@@ -125,7 +125,7 @@ def render_compose(target: Manifest, *, project: str) -> dict[str, Any]:
     if target.kind == "in-process":
         raise ValueError(f"{target.name!r} is in-process and needs no compose project")
     document = load_graph(target)
-    engine = document["services"][target.service]
+    engine = document["services"][service_name(target)]
     # Merged rather than declared: these come from the manifest, which is the one place that says
     # what a target is made of. See graph_variables.
     engine["environment"] = {**(engine.get("environment") or {}), **_engine_environment(target)}
@@ -249,7 +249,8 @@ class LocalPlacement:
         document, resolutions = pin(document, default_platform=self.daemon_platform())
         # Merged HERE, not in render_compose: the rendered document is inert and safe to log or
         # diff, and credentials must never be part of a comparable artifact.
-        document["services"][target.service]["environment"] |= engine_secrets(target)
+        service = service_name(target)
+        document["services"][service]["environment"] |= engine_secrets(target)
         self._document = json.dumps(document)          # compose accepts JSON as YAML
         try:
             # `--pull always` is now belt AND braces: the references are already digests, so
@@ -261,7 +262,7 @@ class LocalPlacement:
             self.teardown()
             raise PlacementError(
                 f"could not start {self.project}: {exc.stderr or exc.stdout}") from exc
-        base_url = self._discover_url(target.service, target.engine.port)
+        base_url = self._discover_url(service, target.engine.port)
         # Per engine, not mem0's assumed for all -- see engine_env.READINESS.
         self._wait_ready(target, base_url)
         # The FULL harness env, the same function the cloud renderer uses. Returning only the base
@@ -272,7 +273,7 @@ class LocalPlacement:
         # pulled, and asking Docker afterwards was only ever an approximation of that. The tag
         # travels here too -- a pinned reference no longer contains it, and a receipt still wants
         # to say which pointer was followed.
-        engine = resolutions[target.service]
+        engine = resolutions[service]
         return Endpoint(base_url=base_url,
                         adapter_env=harness_env(target, url=base_url,
                                                 engines_repo=engine.repository,

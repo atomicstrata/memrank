@@ -267,10 +267,21 @@ class LongMemEvalBenchmark(Benchmark):
                 "re-download, or point LONGMEMEVAL_DATA_PATH at a deliberate local variant.")
 
     @staticmethod
+    def _question_type(item: dict[str, Any]) -> str:
+        """One item's question type, as a string, so it can key a count and a stratum.
+
+        A record missing the field keys under the empty string, which no declared type uses. It
+        is neither dropped nor folded into a real type: `_verify_fingerprint` reports it as the
+        mismatch it is, and `_strata` gives it a stratum of its own -- the same treatment an
+        unrecognised type already gets.
+        """
+        return str(item.get("question_type") or "")
+
+    @staticmethod
     def _verify_fingerprint(raw: list[dict[str, Any]]) -> None:
         counts: dict[str, int] = defaultdict(int)
         for item in raw:
-            counts[item.get("question_type")] += 1
+            counts[LongMemEvalBenchmark._question_type(item)] += 1
         if dict(counts) != _FINGERPRINT:
             raise RuntimeError(
                 f"LongMemEval dataset fingerprint mismatch: expected {_FINGERPRINT}, "
@@ -313,8 +324,8 @@ class LongMemEvalBenchmark(Benchmark):
         groups: dict[tuple[str, bool], list[dict[str, Any]]] = defaultdict(list)
         for item in raw:
             is_abs = str(item.get("question_id", "")).endswith(_ABSTENTION_SUFFIX)
-            groups[(item.get("question_type"), is_abs)].append(item)
-        declared = [t for t in _QUESTION_TYPES] + \
+            groups[(LongMemEvalBenchmark._question_type(item), is_abs)].append(item)
+        declared = list(_QUESTION_TYPES) + \
                    [t for t, _ in groups if t not in _QUESTION_TYPES]
         keys = [(t, False) for t in declared] + [(t, True) for t in declared]
         return [groups[k] for k in keys if groups.get(k)]
@@ -426,8 +437,12 @@ class LongMemEvalBenchmark(Benchmark):
 
     def _documents_for(
         self, item: dict[str, Any],
-    ) -> tuple[list[Document], list[str], dict[str, str]]:
-        """One Document per haystack session, the evidence handles, and the handle->id map.
+    ) -> tuple[list[Document], list[str], dict[str, str], dict[str, str]]:
+        """One Document per haystack session, the evidence handles, and the two id maps.
+
+        Four values: the documents, the `has_answer` gold handles, handle->session-id, and its
+        inverse session-id->handle. The inverse is what resolves `answer_session_ids` in `load()`,
+        and the signature said three for as long as it went unmentioned.
 
         Documents are keyed by OPAQUE POSITIONAL HANDLES, never by the dataset's own session
         ids. LongMemEval prefixes every evidence session id with `answer` and its official
@@ -591,11 +606,12 @@ class LongMemEvalBenchmark(Benchmark):
             # `recall_all@5` = 0.0, which reads as total retrieval failure for the two arms that
             # retrieved everything. The official harness excludes its long-context modes from
             # retrieval scoring by construction.
-            out: dict[str, Any] = {"n_retrieval_scoreable": 0, "retrieval_metrics_apply": False}
+            unscored: dict[str, Any] = {"n_retrieval_scoreable": 0,
+                                        "retrieval_metrics_apply": False}
             for k in DEFAULT_KS:
-                out[f"recall_all@{k}"] = None
-                out[f"ndcg_any@{k}"] = None
-            return out
+                unscored[f"recall_all@{k}"] = None
+                unscored[f"ndcg_any@{k}"] = None
+            return unscored
 
         cells = [u.get("retrieval") or {} for u in per_unit_scores]
         out: dict[str, Any] = {

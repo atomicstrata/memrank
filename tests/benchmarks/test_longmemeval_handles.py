@@ -32,7 +32,6 @@ between engines, not merely the level. These tests are the guard.
 import pytest
 
 from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
-
 from tests.benchmarks.test_longmemeval_methodology import _item, _one_per_type, _write_fixture
 
 

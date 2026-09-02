@@ -115,8 +115,12 @@ def unreconciled_run_dirs() -> list[tuple[Path, dict]]:
     found = []
     for run_dir in sorted(p for p in root.iterdir() if p.is_dir()):
         data = run_status.read(run_dir)
-        if data is not None:
-            data = {**data, "_has_cells": bool(registry.cell_files(run_dir))}
+        if data is None:
+            # A run directory with no status file is not a lagging cloud run; it is not a run
+            # this machine ever recorded. `is_unreconciled(None)` already said False -- said
+            # here instead so the record that reaches the caller is one, not one-or-nothing.
+            continue
+        data = {**data, "_has_cells": bool(registry.cell_files(run_dir))}
         if is_unreconciled(data):
             found.append((run_dir, data))
     return found

@@ -78,7 +78,7 @@ SERVICE_ONLY_DIRS = (artifacts.CORPUS_DIRNAME, artifacts.DETAIL_DIRNAME)
 _MIRROR_LOCK = threading.Lock()
 
 
-def fetch_artifacts(http: Any, org: str | None, run_dir: Path,
+def fetch_artifacts(http: Any, org: str, run_dir: Path,
                     report: Callable[[str], None] | None = None,
                     show_progress: bool = True, region: Any = None,
                     workers: int = ARTIFACT_WORKERS, everything: bool = False) -> list[Path]:
@@ -182,7 +182,7 @@ def _prepare_dirs(run_dir: Path, entries: list[dict[str, Any]]) -> None:
         parent.mkdir(parents=True, exist_ok=True)
 
 
-def _download_all(http: Any, org: str | None, run_dir: Path, entries: list[dict[str, Any]],
+def _download_all(http: Any, org: str, run_dir: Path, entries: list[dict[str, Any]],
                   meter: Any, workers: int) -> list[Path]:
     """Every artifact, ``workers`` at a time, in listing order whatever the width.
 
@@ -204,7 +204,7 @@ def _download_all(http: Any, org: str | None, run_dir: Path, entries: list[dict[
             lambda entry: _download_one(http, org, run_dir, entry, meter), entries))
 
 
-def _download_one(http: Any, org: str | None, run_dir: Path, entry: dict[str, Any],
+def _download_one(http: Any, org: str, run_dir: Path, entry: dict[str, Any],
                   meter: Any) -> Path:
     """One artifact to its place under ``run_dir``, or a refusal that names it.
 
@@ -241,7 +241,7 @@ _FORGOTTEN = "unknown"
 _PROGRESS_ARTIFACT = "progress.json"
 
 
-def _finished_by_artifact(http: Any, org: str | None, run_id: str, state: str) -> bool:
+def _finished_by_artifact(http: Any, org: str, run_id: str, state: str) -> bool:
     """Whether a run the platform lost track of nevertheless left results behind.
 
     The harness uploads its cells and summary as the last thing it does, so a result artifact is
@@ -263,7 +263,7 @@ def _finished_by_artifact(http: Any, org: str | None, run_id: str, state: str) -
     return any(e.get("name") != _PROGRESS_ARTIFACT for e in entries)
 
 
-def reconcile(http: Any, org: str | None, run_dir: Path, record: dict[str, Any],
+def reconcile(http: Any, org: str, run_dir: Path, record: dict[str, Any],
               report: Callable[[str], None] | None = None, region: Any = None,
               workers: int = ARTIFACT_WORKERS, show_progress: bool = True) -> str:
     """Make ``run_dir`` say what the org says, fetching results when there are results to fetch.

@@ -32,7 +32,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import typer
 
@@ -144,9 +144,9 @@ class ProgressDisplay:
         """Give the cursor back. Safe on every exit path, and safe to call twice."""
         self._region.close()
 
-    def show(self, root: Path, run_ids: list[str], *, http: Any, org: str | None) -> None:
+    def show(self, root: Path, run_ids: list[str], *, cloud: _Cloud | None) -> None:
         found = [(rid, record) for rid in run_ids
-                 if (record := _progress_of(root / rid, http=http, org=org))]
+                 if (record := _progress_of(root / rid, cloud=cloud))]
         if not found:
             return
         if self._region.live:
@@ -191,7 +191,20 @@ def _title(run_id: str, record: dict[str, Any]) -> str:
     return record.get("_title") or run_id
 
 
-def _progress_of(run_dir: Path, *, http: Any, org: str | None) -> dict[str, Any] | None:
+class _Cloud(NamedTuple):
+    """The API client and the org to poll under, as ONE value.
+
+    `_cloud_client` hands both back together or raises, so they were never independently
+    optional -- but threaded as two arguments each consumer could test one and use the other,
+    which is precisely what a `None` org reaching a `/orgs/{org}/...` URL would be. Bundling
+    them makes "are we watching a cloud run" a single question with a single answer.
+    """
+
+    http: Any
+    org: str
+
+
+def _progress_of(run_dir: Path, *, cloud: _Cloud | None) -> dict[str, Any] | None:
     """One run's progress record -- from its local heartbeat, or from S3 for a cloud run.
 
     A cloud run's heartbeat here says only what the submitter knew; the live record is what the
@@ -200,12 +213,12 @@ def _progress_of(run_dir: Path, *, http: Any, org: str | None) -> dict[str, Any]
     """
     data = run_status.read(run_dir) or {}
     record = data.get("progress") or None
-    if data.get("placement") == "cloud" and http is not None:
+    if data.get("placement") == "cloud" and cloud is not None:
         # The stream first, then the artifact. Both describe the same run, but the stream's copy
         # is at most one publish old while the artifact's is at most one poll old on top of that
         # -- and asking S3 for something already delivered is a request per run per tick that
         # tells the viewer nothing new.
-        record = _live_progress(run_dir.name) or _remote_progress(http, org, run_dir.name) or record
+        record = _live_progress(run_dir.name) or _remote_progress(cloud, run_dir.name) or record
     if record and data.get("target"):
         record = {**record, "_title": f"{data['target']} × {data.get('benchmark')}"}
     return record
@@ -263,7 +276,7 @@ def _live_progress(run_id: str) -> dict[str, Any] | None:
         return _LIVE.get(run_id)
 
 
-def _remote_progress(http: Any, org: str | None, run_id: str) -> dict[str, Any] | None:
+def _remote_progress(cloud: _Cloud, run_id: str) -> dict[str, Any] | None:
     """The progress a cloud task published, or None if it has not published any.
 
     Swallows its own failures deliberately: a watch that cannot read a progress file must keep
@@ -273,7 +286,7 @@ def _remote_progress(http: Any, org: str | None, run_id: str) -> dict[str, Any] 
     from memrank.runs.artifacts import PROGRESS_FILE
 
     try:
-        raw = run_api_client.fetch_artifact(http, org, run_id, PROGRESS_FILE)
+        raw = run_api_client.fetch_artifact(cloud.http, cloud.org, run_id, PROGRESS_FILE)
         return json.loads(raw)
     except Exception:  # noqa: BLE001 - see the docstring; absence of a bar is not an error
         return None
@@ -292,23 +305,25 @@ def _watch_all(root: Path, run_ids: list[str]) -> dict[str, int]:
     streams: list[_EventStream] = []
     with client as http, key_input.raw_mode() as listening:
         display.listening = listening
-        # Both come from `_cloud_client`, which returns them together or raises -- so this pair
-        # is one condition, written as two only because mypy cannot see that from here.
-        if http is not None and org is not None:
+        # Both come from `_cloud_client`, which returns them together or raises. Joined into one
+        # value here so everything below asks a single question instead of two that were never
+        # actually independent.
+        cloud = _Cloud(http, org) if http is not None and org is not None else None
+        if cloud is not None:
             # Started before the first draw so a run already in flight fills its bar from the
             # stream rather than waiting a poll for it. One per cloud run: a sweep is watched
             # together, and a shared stream would have to demultiplex what the server already
             # separates by route.
-            streams = [_EventStream(http, org, rid) for rid in cloud_ids]
+            streams = [_EventStream(cloud.http, cloud.org, rid) for rid in cloud_ids]
             for stream in streams:
                 stream.start()
         try:
             while True:
                 for rid, settled in outcomes.items():
                     if settled is None:
-                        outcomes[rid] = _poll_one(root / rid, http=http, org=org, display=display)
+                        outcomes[rid] = _poll_one(root / rid, cloud=cloud, display=display)
                 pending = [rid for rid, settled in outcomes.items() if settled is None]
-                display.show(root, pending, http=http, org=org)
+                display.show(root, pending, cloud=cloud)
                 if not pending:
                     break
                 if time.monotonic() >= deadline:
@@ -351,11 +366,21 @@ def _detach(pending: list[str], outcomes: dict[str, int | None], why: str,
         outcomes[rid] = 2
 
 
-def _poll_one(run_dir: Path, *, http: Any, org: str | None, display: Any = None) -> int | None:
+def _poll_one(run_dir: Path, *, cloud: _Cloud | None, display: Any = None) -> int | None:
     """One run's outcome -- 0/1 when it has ended, ``None`` while it is still worth waiting."""
-    data = run_status.read(run_dir)
+    # `or {}` as everywhere else in this module: a run directory with no status file has an
+    # empty record, not an absent one, and `classify` already reads that as `stale` -- which is
+    # the honest verdict on a heartbeat nobody ever wrote.
+    data = run_status.read(run_dir) or {}
     if data.get("placement") == "cloud":
-        return _poll_cloud(run_dir, data, http=http, org=org, display=display)
+        if cloud is None:
+            # The watch decided which runs were cloud runs before it signed in, from this same
+            # field; a run that became a cloud run since cannot be polled under no org. Said
+            # plainly rather than sent to `/orgs/None/runs`, which returns a 404 about a run.
+            raise RuntimeError(
+                f"{run_dir.name} became a cloud run after the watch started; re-run "
+                f"`memrank watch {run_dir.name}` so it signs in for it")
+        return _poll_cloud(run_dir, data, cloud=cloud, display=display)
     outcome = run_status.classify(data)
     if outcome == "done":
         _say(display, f"{run_dir.name}: {style.good('done')}")
@@ -370,7 +395,7 @@ def _poll_one(run_dir: Path, *, http: Any, org: str | None, display: Any = None)
     return None
 
 
-def _poll_cloud(run_dir: Path, data: dict[str, Any], *, http: Any, org: str | None,
+def _poll_cloud(run_dir: Path, data: dict[str, Any], *, cloud: _Cloud,
                 display: Any = None) -> int | None:
     """One cloud run's outcome via the platform API; artifacts come down on success.
 
@@ -379,9 +404,9 @@ def _poll_cloud(run_dir: Path, data: dict[str, Any], *, http: Any, org: str | No
     place that knows how -- which it was, and which is why a run nobody watched kept its numbers
     in the cloud forever.
     """
-    record = run_api_client.get_run(http, org, run_dir.name)
+    record = run_api_client.get_run(cloud.http, cloud.org, run_dir.name)
     state = reconcile.reconcile(
-        http, org, run_dir, record,
+        cloud.http, cloud.org, run_dir, record,
         report=lambda what: _say(display, f"{run_dir.name}: fetching {what}"),
         # So the byte meter becomes a footer UNDER the block instead of a second thing moving the
         # cursor on the same stream -- which is what it was, and what made a cloud run's block come

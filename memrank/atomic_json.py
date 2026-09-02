@@ -58,7 +58,7 @@ def staging_path(path: Path) -> Path:
     return path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
 
 
-def write_json(path: Path, data: Any, *, mode: int | None = None, indent: int = 2,
+def write_json(path: Path, data: Any, *, mode: int | None = None, indent: int | None = 2,
                sort_keys: bool = False, trailing_newline: bool = False) -> None:
     """Serialise ``data`` to ``path`` atomically, creating parent directories as needed.
 
@@ -68,7 +68,8 @@ def write_json(path: Path, data: Any, *, mode: int | None = None, indent: int = 
         mode: Permission bits applied to the staged file *before* the rename and to the
             destination after, so the content is never briefly world-readable. ``None`` leaves
             the umask default.
-        indent: ``json.dumps`` indent.
+        indent: ``json.dumps`` indent. ``None`` writes the compact form, for a file
+            no person reads -- see `runs.checkpoint.write`.
         sort_keys: Sort object keys -- for stores a human diffs (the wallet, settings).
         trailing_newline: Append a newline, for files meant to be ``cat``-ed.
     """

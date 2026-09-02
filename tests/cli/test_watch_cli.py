@@ -383,11 +383,11 @@ def test_the_quit_hint_appears_only_where_a_key_is_read(tmp_path, monkeypatch, c
 
     display = watch_cli.ProgressDisplay()
     display.listening = False
-    display.show(tmp_path, [run_id], http=None, org=None)
+    display.show(tmp_path, [run_id], cloud=None)
     silent = capsys.readouterr().err
 
     display.listening = True
-    display.show(tmp_path, [run_id], http=None, org=None)
+    display.show(tmp_path, [run_id], cloud=None)
 
     assert "press q" not in silent
     assert "press q" in capsys.readouterr().err

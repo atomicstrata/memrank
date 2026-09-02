@@ -29,6 +29,7 @@ manager, whether the flow succeeded or not.
 from __future__ import annotations
 
 import http.server
+import socketserver
 import threading
 import urllib.parse
 
@@ -64,8 +65,9 @@ class _QuietHTTPServer(http.server.HTTPServer):
 
     def server_bind(self) -> None:
         """Bind without the reverse-DNS round trip."""
-        # Deliberately skips HTTPServer.server_bind and calls its parent's.
-        http.server.socketserver.TCPServer.server_bind(self)
+        # Deliberately skips HTTPServer.server_bind and calls its parent's. Reached through
+        # `socketserver` itself: `http.server` imports the module but does not re-export it.
+        socketserver.TCPServer.server_bind(self)
         self.server_name = "127.0.0.1"
         self.server_port = self.server_address[1]
 

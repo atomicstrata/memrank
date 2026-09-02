@@ -29,7 +29,6 @@ discarding the time of day on EVERY record -- so all timestamps were midnight an
 import pytest
 
 from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
-
 from tests.benchmarks.test_longmemeval_methodology import _item, _one_per_type, _write_fixture
 
 

@@ -43,7 +43,7 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 #: The stages a cell spends its time in, in the order a run reaches them. Ingest and retrieve
 #: alternate per unit; judge follows the last of them, once.
@@ -317,7 +317,7 @@ class StageTimer:
         self._start = time.perf_counter()
         return self
 
-    def __exit__(self, *exc: Any) -> bool:
+    def __exit__(self, *exc: Any) -> Literal[False]:
         if self._progress is not None:
             self._progress.record(self._stage, seconds=time.perf_counter() - self._start)
         return False
