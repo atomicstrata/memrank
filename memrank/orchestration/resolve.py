@@ -147,22 +147,38 @@ def _validate_reader(reader: str | None, *, judged: bool) -> None:
             "(e.g. claude-haiku-4-5-20251001).")
 
 
-def _cli_experiments(factories, benchmark: str, overrides: list[str], params: dict[str, Any]):
-    """Resolve CLI-created cells through the same canonical identity operation as MCP."""
+def _cli_experiments(factories, eval_name: str, overrides: list[str], params: dict[str, Any]):
+    """Resolve CLI-created cells through the same canonical identity operation as MCP.
+
+    The overrides go INSIDE the settings rather than beside them, and ``eval_name`` is the eval's
+    bare registry name with tier and slice in the settings. Both are how a planned cell states the
+    same facts, and the identity is a hash over exactly those fields -- so stating them the other
+    way made ``submit hindsight beam:100k-smoke embedder=voyage/voyage-3`` a different experiment
+    id from the identical cell composed through :func:`plan_sweep`. One cell, one id, whichever
+    door composed it: that is what lets the CLI describe a cloud submission and have the server
+    resolve the SAME experiment from it.
+
+    Args:
+        factories: ``(ref, make_adapter)`` for every target in this sweep.
+        eval_name: The eval's registry name. NOT a ref carrying a preset -- ``beam``, never
+            ``beam:100k-smoke``; the variant travels as ``params["tier"]`` and ``params["slice_"]``.
+        overrides: Component overrides for the manifest, run-level ones already split out.
+        params: The CLI's parsed parameters.
+    """
     from memrank.application.planning import resolve_experiment
     from memrank.application.types import ExperimentSettings, JudgeSettings, ModelRef
 
     reader = params.get("reader")
     settings = ExperimentSettings(
         reader=ModelRef(provider="anthropic", model=reader) if reader else None,
+        overrides=list(overrides),
         pricing_model=params["model"], slice=params["slice_"], tier=params["tier"],
         k=params["k"], repeats=params["repeats"], token_budget=params["token_budget"],
         seed=params["seed"], workers=params["workers"], units=params["unit"],
         judge=JudgeSettings(enabled=params["judge"], samples=params["judge_samples"],
                             cache=not params["no_judge_cache"],
                             allow_empty_coverage=params["allow_empty_judge_coverage"]))
-    return {ref: resolve_experiment(ref, benchmark, settings, overrides)
-            for ref, _ in factories}
+    return {ref: resolve_experiment(ref, eval_name, settings) for ref, _ in factories}
 
 
 def _experiment_metadata(experiment, plan_hash: str | None) -> dict[str, Any]:

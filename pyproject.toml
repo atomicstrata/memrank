@@ -1,20 +1,20 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "memrank"
-version = "0.2.0"
+version = "0.3.1"
 description = "Open, vendor-neutral benchmark suite for AI memory engines."
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "AtomicStrata", email = "hello@atomicstrata.ai" }]
 keywords = ["memory", "benchmark", "ai", "agents", "llm", "evaluation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -104,7 +104,11 @@ memrank-mcp = "memrank.mcp_server:main"
 # outage is the worst time to remember where a script lives.
 
 [tool.setuptools.package-data]
-memrank = ["targets/builtin/*.yaml"]
+# The demo scenario ships inside the package because the demo is the benchmark a stranger runs
+# first: it needs no engine, no credential and no download, so it must not need a checkout
+# either. `tools/internal/distribution.py` records what discovery actually shipped, and its
+# wheel-only demo check fails the build if this line stops carrying the file. ATO-2059.
+memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json"]
 
 [tool.setuptools.packages.find]
 where = ["."]

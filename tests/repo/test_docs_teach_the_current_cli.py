@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: `.ipynb` is deliberately absent: the dataset notebooks load and inspect data and
 #: invoke no CLI command, so there is nothing here for them to get wrong. Their prose
 #: lives in notebooks/README.md, which IS scanned.
-LIVE_GLOBS = ("*.md", "docs/**/*.md", "localdocs/**/*.md", "deploy/**/*.md",
+LIVE_GLOBS = ("*.md", "docs/**/*.md", "docs-internal/**/*.md", "deploy/**/*.md",
               "examples/**/*.md", "notebooks/**/*.md", "scripts/**/*.sh")
 
 #: Excluded because they record what WAS typed, not what to type. Rewriting a command inside a
@@ -53,9 +53,9 @@ LIVE_GLOBS = ("*.md", "docs/**/*.md", "localdocs/**/*.md", "deploy/**/*.md",
 #: teach `memrank run --adapter X --benchmark Y` is a specification of a CLI that does not exist.
 HISTORICAL: tuple[str, ...] = (
     "tech-debt.md",               # narrates past runs; only its forward-looking lines are fixed
-    "localdocs/open-issues.md",   # ditto
-    "localdocs/superpowers/",     # evidence / plans / specs, each dated
-    "localdocs/experimental-prds/",
+    "docs-internal/open-issues.md",   # ditto
+    "docs-internal/superpowers/",     # evidence / plans / specs, each dated
+    "docs-internal/experimental-prds/",
 )
 
 #: A dated audit is a record of a moment, same as the above, but there are ten of them and more
@@ -65,7 +65,7 @@ DATED_AUDIT = re.compile(r"/\d{4}-\d{2}-\d{2}-")
 #: `docs/repro/` carries the same date prefix and is deliberately NOT exempt. A repro doc's whole
 #: claim is that typing this reproduces that number -- a command in one is a standing invitation,
 #: not a record, so it is the one dated corpus that has to keep working.
-DATED_BUT_STILL_EXECUTABLE = ("localdocs/repro/",)
+DATED_BUT_STILL_EXECUTABLE = ("docs-internal/repro/",)
 
 #: The commands whose flags these are. `memrank-ops.py compare` still declares `--slice`,
 #: `--tier` and `--ack-egress` (memrank/ops/analysis_cli.py) and is a DIFFERENT product -- the
@@ -164,7 +164,7 @@ def test_no_live_instruction_is_refused_by_the_cli(path: Path):
 PUBLIC_MUST_COVER = ("docs/adapter-contract.md", "docs/local-development.md", "docs/SPEC.md")
 INTERNAL_MUST_COVER = ("scripts/local-eval.sh", "scripts/internal/build-push.sh", "AGENTS.md",
                        "deploy/README.md",
-                       "localdocs/repro/2026-08-04-judged-matched-baseline.md")
+                       "docs-internal/repro/2026-08-04-judged-matched-baseline.md")
 
 
 def test_the_scan_reaches_the_files_that_actually_broke():

@@ -26,6 +26,7 @@ from pathlib import Path
 
 from memrank.core import Benchmark, MemoryAdapter
 from memrank.evaluation.cell import _close_adapter, run_cell
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.observer import NULL_OBSERVER, EvalObserver
 from memrank.evaluation.result import EvalResult
 from memrank.judging.judge import JudgeConfig
@@ -43,7 +44,8 @@ def run(
     judge: bool | JudgeConfig | None = None,
     units: list | None = None,
     workers: int = 1,
-    judge_workers: int = 1,
+    judge_workers: int = DEFAULT_JUDGE_WORKERS,
+    fail_fast: bool = False,
     observer: EvalObserver | None = None,
     checkpoint_path: Path | None = None,
 ) -> EvalResult:
@@ -62,6 +64,9 @@ def run(
             protocol IS the judge get one by default; ``True``/``False`` force it; a
             :class:`JudgeConfig` is used as given. Judging calls Anthropic and keeps a
             local verdict cache (``JudgeConfig(cache=False)`` opts out).
+        fail_fast: Stop at the first unit that raises. The default attempts every unit and
+            records what happened to each on ``result.unit_outcomes``, with the counts under
+            ``units_total``/``units_failed``.
         observer: Where progress narration goes. ``None`` is silent -- pass an
             :class:`EvalObserver` subclass to hear about units, items and warnings.
         checkpoint_path: ``None`` writes no checkpoint. Give a path to make a judged
@@ -114,7 +119,7 @@ def run(
             adapter, benchmark, k=k, repeats=repeats,
             run_id_prefix=f"{adapter.name}-{uuid.uuid4().hex[:8]}",
             model=model, token_budget=token_budget, seed=seed, judge=judge_cfg,
-            units=units, workers=workers, judge_workers=judge_workers,
+            units=units, workers=workers, judge_workers=judge_workers, fail_fast=fail_fast,
             checkpoint_path=checkpoint_path, make_adapter=make_adapter,
             observer=observer if observer is not None else NULL_OBSERVER,
             )

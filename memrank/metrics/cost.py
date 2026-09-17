@@ -48,10 +48,11 @@ def _encoding() -> tiktoken.Encoding:
     try:
         return tiktoken.get_encoding(ENCODING_NAME)
     except Exception as exc:  # pragma: no cover - environment failure
+        from memrank.provenance.install import dependency_instruction
+
         raise RuntimeError(
-            f"tiktoken encoding {ENCODING_NAME!r} unavailable. "
-            "Install/sync deps with: uv sync --extra dev (from a checkout), or reinstall the "
-            "tool with: uv tool install --force --refresh <the git URL you installed from>"
+            f"tiktoken encoding {ENCODING_NAME!r} unavailable. Repair this install with: "
+            f"{dependency_instruction('tiktoken')}"
         ) from exc
 
 

@@ -15,8 +15,8 @@
 
 A ``Completer`` is ``(model, system, user) -> text``; all functions take one so
 the judge is fully testable without the network. The Anthropic-backed completer
-(with caching + a hard call cap) lives in ``judge_client``. Verdicts are strict
-JSON; malformed output raises (no silent fallback).
+(with caching + a hard call cap) lives in ``judge_client``. Verdicts are strict JSON, bare or
+inside a single markdown code fence; anything else raises (no silent fallback).
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ Completer = Callable[[str, str, str], str]
 # object, and an unknown category raises instead of silently shrinking the denominator. The
 # allowlist was keyed on bare strings across three benchmarks' vocabularies at once, which is
 # how LoCoMo judged 39.2% of itself under mislabeled categories without any signal (audit F2,
-# localdocs/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md).
+# docs-internal/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md).
 
 
 def gold_answer(query: dict[str, Any]) -> str:
@@ -101,10 +101,42 @@ class JudgeConfig:
                 raise ValueError(f"JudgeConfig.{name} must be >= 1, got {getattr(self, name)}")
 
 
+#: The one delimiter a judge reply may carry around its JSON object. Whether a JSON answer comes
+#: back bare or inside a markdown fence is a habit of the model, not a property of the grading:
+#: `claude-opus-4-8`, `claude-sonnet-5` and `claude-fable-5` return it bare, `claude-haiku-4-5`
+#: fences every one, in both judge roles, deterministically (ATO-1885). Reading only the incumbents'
+#: habit made a whole judge unusable at three billed attempts per grading.
+_FENCE = "```"
+
+
+def _json_payload(text: str) -> str:
+    """The JSON text of a judge reply: the reply itself, or the whole content of one code fence.
+
+    Two accepted shapes, chosen by the reply's own delimiters and not by parsing -- so this is a
+    grammar rather than a fallback chain. Nothing is salvaged from a reply that is neither: a fence
+    left open, a fence tagged as something other than JSON, or an object with prose around it comes
+    back unchanged and fails at :func:`json.loads` as the malformed reply it is. A fence carries no
+    information of its own, so removing it cannot change what the judge said -- which is what
+    separates this from the degraded modes the repository forbids.
+    """
+    if not isinstance(text, str):
+        return text
+    body = text.strip()
+    if not body.startswith(_FENCE):
+        return text
+    tag, newline, rest = body[len(_FENCE):].partition("\n")
+    if not newline or tag.strip().lower() not in ("", "json"):
+        return text
+    rest = rest.rstrip()
+    if not rest.endswith(_FENCE):
+        return text
+    return rest[: -len(_FENCE)]
+
+
 def parse_verdict(text: str) -> JudgeVerdict:
     """Parse strict JSON ``{passed, rationale}``; raise ValueError on anything else."""
     try:
-        data = json.loads(text)
+        data = json.loads(_json_payload(text))
     except (ValueError, TypeError) as exc:
         raise ValueError(f"Judge did not return JSON: {text!r}") from exc
     if not isinstance(data, dict) or "passed" not in data or "rationale" not in data:
@@ -221,7 +253,7 @@ class NuggetScore:
 def parse_nugget_score(text: str) -> tuple[float, str]:
     """Parse strict JSON ``{score, rationale}`` on the {0, 0.5, 1} scale; raise otherwise."""
     try:
-        data = json.loads(text)
+        data = json.loads(_json_payload(text))
     except (ValueError, TypeError) as exc:
         raise ValueError(f"Nugget judge did not return JSON: {text!r}") from exc
     if not isinstance(data, dict) or "score" not in data or "rationale" not in data:
@@ -262,7 +294,7 @@ def parse_events(text: str) -> list[str]:
     zero, which is the correct outcome rather than an error.
     """
     try:
-        data = json.loads(text)
+        data = json.loads(_json_payload(text))
     except (ValueError, TypeError) as exc:
         raise ValueError(f"Event extractor did not return JSON: {text!r}") from exc
     if not isinstance(data, dict) or "events" not in data:

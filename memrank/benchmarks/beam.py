@@ -18,7 +18,7 @@ memory ability categories. Memrank v0.1 supports the 100K, 500K, and 1M
 tiers; 10M is reserved for v0.2 (memory + bandwidth requirements).
 
 BEAM scores against a ``rubric`` of atomic nuggets -- one judge call each, scored
-{0, 0.5, 1} and averaged within the question (localdocs/benchmarks/benchmark-beam.md section 3).
+{0, 0.5, 1} and averaged within the question (docs-internal/benchmarks/benchmark-beam.md section 3).
 ``judge_shape()`` returns that grader, so ``--judge`` measures BEAM the way BEAM
 specifies. All ten abilities are covered: nine by rubric averaging, and ``event_ordering``
 by rank correlation over its ordered rubric, because averaging that one would score a
@@ -36,7 +36,7 @@ no ``query_timestamp`` -- and the reader's context is uncapped (``context_policy
 what every published BEAM harness does, including BEAM's own baselines, and it is what makes
 a memrank BEAM number a BEAM number rather than a memrank variant of one
 (docs/research/2026-08-13-how-beam-is-actually-evaluated.md section 5,
-localdocs/decisions/decision-beam-runs-its-own-protocol.md). The dataset's ``time_anchor`` field
+docs-internal/decisions/decision-beam-runs-its-own-protocol.md). The dataset's ``time_anchor`` field
 exists and is deliberately not forwarded: only 16 of 90 sessions at 100k restate their date
 in-band, so forwarding it would hand our engines temporal information no other harness's
 systems had.
@@ -138,7 +138,7 @@ class BEAMBenchmark(Benchmark):
     context_policy = "uncapped"
     # 2026-08-13: loading stopped forwarding the dataset's time anchors (no rendered header, no
     # Document.timestamp, no query_timestamp) and the reader went uncapped -- scores across this
-    # boundary are not comparable (localdocs/decisions/decision-beam-runs-its-own-protocol.md).
+    # boundary are not comparable (docs-internal/decisions/decision-beam-runs-its-own-protocol.md).
     VERSION = 1
 
     def __init__(self, tier: str = "100k", slice: str | None = None, k: int = 10) -> None:
@@ -362,7 +362,7 @@ class BEAMBenchmark(Benchmark):
     def judge_shape(self) -> JudgeShape:
         """BEAM is scored per rubric nugget, not by one verdict against a reference answer.
 
-        This is the benchmark's own protocol (localdocs/benchmarks/benchmark-beam.md section 3) and the reason
+        This is the benchmark's own protocol (docs-internal/benchmarks/benchmark-beam.md section 3) and the reason
         the shape seam exists. It also decides judgeability: a BEAM question is gradeable when it
         has a rubric, which every one of them does -- where "has a gold answer" left
         `instruction_following` and `preference_following` graded against a behaviour description.
@@ -378,7 +378,7 @@ class BEAMBenchmark(Benchmark):
 
         BEAM's reference harness contradicts BEAM's paper in three places, so "a BEAM score" names
         two different metrics; `spec` is the documented one, per
-        localdocs/decisions/decision-beam-targets-the-spec-not-the-harness.md. In the HASHED config, not
+        docs-internal/decisions/decision-beam-targets-the-spec-not-the-harness.md. In the HASHED config, not
         `receipt.extra`: an artifact has to be classifiable years later by someone who did not run
         it, and two runs differing only in protocol must not collide on one config hash.
 

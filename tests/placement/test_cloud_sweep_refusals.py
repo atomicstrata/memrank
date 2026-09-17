@@ -48,7 +48,7 @@ def cloud(tmp_path, monkeypatch):
             return False
 
     def _submit(http, org, payload):
-        ref = payload["target_ref"]
+        ref = payload["config"]["target_ref"]
         state["attempted"].append(ref)
         problem = state["refuse"].get(ref)
         if problem is not None:
@@ -127,7 +127,7 @@ def test_no_switch_can_be_dropped_from_the_retry_line_unnoticed(cloud):
     # --verbose is Typer's own flag on this command and --allow-empty-judge-coverage needs a judge;
     # both are switches all the same, so the assertion is over the table, not a hand-picked subset.
     result = _sweep("--judge", "--verbose", "--no-judge-cache",
-                    "--allow-empty-judge-coverage")
+                    "--allow-empty-judge-coverage", "--fail-fast")
 
     retry = next(ln for ln in result.output.splitlines() if "resubmit those:" in ln)
     assert [flag for _, flag in REMOTE_SWITCHES if flag not in retry] == []

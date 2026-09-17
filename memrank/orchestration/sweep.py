@@ -48,6 +48,7 @@ from memrank.evaluation.cell import (
     cell_applicable,
     run_cell,
 )
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.judge_stage import (
     EmptyJudgeCoverage,
     assert_judge_coverage,
@@ -155,9 +156,14 @@ class _ExecOpts:
     verbose: bool
     judged: bool
     #: Concurrency for the judge stage. Defaulted rather than positional so every existing
-    #: construction of this bundle keeps working, and 1 rather than 4 so a caller that does not
-    #: know about it gets the old sequential behaviour instead of a surprise.
-    judge_workers: int = 1
+    #: construction of this bundle keeps working, and defaulted to ``DEFAULT_JUDGE_WORKERS`` so a
+    #: caller that does not set it gets the same judge concurrency as every other surface. The
+    #: value is a throughput knob only: metrics are identical at any worker count.
+    judge_workers: int = DEFAULT_JUDGE_WORKERS
+    #: Whether one unit's failure ends the cell. Defaulted to False for the same reason
+    #: ``run_cell`` defaults it there: a run that dies on unit 12 of 50 throws away the eleven
+    #: that worked, and how often a unit fails is itself something the artifact should record.
+    fail_fast: bool = False
     judge_cfg: Any = None
     judge_runtime: Any = None
     units: Any = None
@@ -379,7 +385,8 @@ def _execute_local_run(run: _LocalRun, opts: _ExecOpts) -> dict[str, Any]:
                     model=opts.model, token_budget=opts.token_budget, seed=opts.seed,
                     judge=opts.judge_cfg, judge_runtime=opts.judge_runtime,
                     out_path=out_path, units=opts.units, workers=opts.workers,
-                    judge_workers=opts.judge_workers, make_adapter=run.make_adapter,
+                    judge_workers=opts.judge_workers, fail_fast=opts.fail_fast,
+                    make_adapter=run.make_adapter,
                     observer=observer, gate=cell_gate, target=run.ref)
         _echo_cell_outcome(run.ref, aggregated, opts, out_path)
         _record_local_run(run, out_path, aggregated, opts)
@@ -569,7 +576,8 @@ def _discard_checkpoint(out_path: Path) -> None:
 
 def _run_and_persist(instance, bench, *, k, repeats, run_id_prefix, model,
                      token_budget, seed, judge, judge_runtime, out_path, units=None,
-                     workers=1, judge_workers=1, make_adapter=None, verbose=False,
+                     workers=1, judge_workers=DEFAULT_JUDGE_WORKERS, fail_fast=False,
+                     make_adapter=None, verbose=False,
                      observer=None, gate=None, target=None):
     """Run one cell, write its JSON, and always close the adapter afterward."""
     try:
@@ -580,7 +588,7 @@ def _run_and_persist(instance, bench, *, k, repeats, run_id_prefix, model,
                           run_id_prefix=run_id_prefix, model=model,
                           token_budget=token_budget, seed=seed, judge=judge,
                           judge_runtime=judge_runtime, units=units,
-                          workers=workers, judge_workers=judge_workers,
+                          workers=workers, judge_workers=judge_workers, fail_fast=fail_fast,
                           checkpoint_path=out_path.with_name(checkpoint.CHECKPOINT_FILE),
                           make_adapter=make_adapter,
                           observer=observer if observer is not None else NULL_OBSERVER,

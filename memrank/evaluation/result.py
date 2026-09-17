@@ -29,6 +29,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
+
 
 @dataclass(frozen=True)
 class EvalResult:
@@ -59,7 +61,7 @@ class EvalResult:
     corpus_tokens: int = 0
     workers: int = 1
     latency_contended: bool = False
-    judge_workers: int = 1
+    judge_workers: int = DEFAULT_JUDGE_WORKERS
     context_tokens_mean: float = 0.0
     est_dollars_per_query: float = 0.0
     est_dollars_per_cell: float = 0.0
@@ -73,6 +75,18 @@ class EvalResult:
     n_units: int = 0
     k: int = 0
     repeats: int = 0
+    #: One record per unit ATTEMPTED, in unit order: ``{"unit_id", "outcome"}`` for a unit that
+    #: ran, plus ``stage``/``error``/``message`` for one that did not. Empty for a cell built
+    #: without them (``_aggregate_cell``'s legacy callers), which is why the three counts below
+    #: are read from this list rather than from ``n_units``.
+    unit_outcomes: list[dict[str, Any]] = field(default_factory=list)
+    #: Units attempted, units lost, and the ratio -- beside the composite because the composite
+    #: is a mean over the units that RAN. 50 of 385 units scored is not a score over 385, and
+    #: without these nothing in the artifact says which it is. ``unit_failure_rate`` is None for
+    #: a cell with no units, on the same None-vs-0.0 rule the composite follows.
+    units_total: int = 0
+    units_failed: int = 0
+    unit_failure_rate: float | None = None
     #: ``benchmark.rollup(...)`` -- run-level metrics the benchmark reduces itself.
     #: Open keys: the benchmark names them, the schema does not.
     rollup: dict[str, Any] = field(default_factory=dict)
@@ -142,6 +156,10 @@ class EvalResult:
             "n_units": self.n_units,
             "k": self.k,
             "repeats": self.repeats,
+            "unit_outcomes": self.unit_outcomes,
+            "units_total": self.units_total,
+            "units_failed": self.units_failed,
+            "unit_failure_rate": self.unit_failure_rate,
             **self.rollup,
             **self.benchmark_config,
         }

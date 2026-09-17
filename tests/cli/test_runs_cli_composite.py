@@ -20,7 +20,7 @@ The other two paths are the hosted API's -- it projects a score from the synced 
 this machine holds no artifact the listing shows the number the API sent.
 `tests/internal/test_runs_cli_composite_api.py` drives the SAME table of cells through those,
 importing the helpers below so the two halves cannot drift onto different fixtures. See
-localdocs/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 3.
+docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 3.
 """
 from __future__ import annotations
 

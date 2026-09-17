@@ -34,7 +34,7 @@ the decision one step earlier, while the material is still undecided.
 
 The manifest is deliberately a PREFIX list with an exceptions table, and the exceptions table is
 deliberately written out in full. See `publish.toml` and
-`localdocs/plans/2026-08-25-repo-boundary-execution-plan.md`.
+`docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md`.
 """
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ def test_no_exception_names_a_path_that_is_gone(manifest, tracked):
 def test_no_untracked_path_would_be_published(manifest, undecided):
     """Undecided material under a public prefix, caught before the commit that publishes it.
 
-    This is the finding of `localdocs/2026-08-25-audit-pre-release-readiness.md` section 6: `docs/pitch/`
+    This is the finding of `docs-internal/2026-08-25-audit-pre-release-readiness.md` section 6: `docs/pitch/`
     and `docs/research/` sat untracked under a now-public prefix, and would have classified PUBLIC
     the instant anyone staged them. Nothing would have objected -- a prefix rule matches a whole
     directory, so internal material lands inside a public tree by inheriting a classification that
@@ -141,7 +141,7 @@ def test_no_untracked_path_would_be_published(manifest, undecided):
 
     * it ships -- stage it, and the change is then visible in a diff someone reviews;
     * it never ships -- add it to `[exceptions] internal` in `publish.toml`, or move it under an
-      internal prefix (`localdocs/`, `tests/internal/`, `scripts/internal/`);
+      internal prefix (`docs-internal/`, `tests/internal/`, `scripts/internal/`);
     * it is not repository material at all -- add it to `.gitignore`.
 
     A path the manifest cannot classify is left to

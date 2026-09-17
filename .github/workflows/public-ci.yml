@@ -1,7 +1,7 @@
 # The PUBLIC repository's own CI. This file SHIPS.
 #
 # WHY IT IS HERE AND NOT ONLY THERE. `atomicstrata/memrank` is a projection of a commit in this
-# repository (`tools/project.py`, `localdocs/runbooks/public-projection.md`). Anything the public
+# repository (`tools/project.py`, `docs-internal/runbooks/public-projection.md`). Anything the public
 # repo needs that is not in the projection has to be re-applied by hand after every export, and a
 # post-export step nobody is present for is a step that stops happening. So the public workflow is
 # a tracked file here, classified public by an EXACT-PATH rule in `publish.toml`, and it arrives
@@ -37,7 +37,7 @@
 # BRANCH PROTECTION. Only the jobs that are actually green may be required status checks on day
 # one; requiring a known-red check blocks every merge including the ones that would fix it. The
 # staged list, and the `gh api` calls that apply it, are in
-# `localdocs/runbooks/public-ci-and-branch-protection.md`.
+# `docs-internal/runbooks/public-ci-and-branch-protection.md`.
 
 name: public-ci
 

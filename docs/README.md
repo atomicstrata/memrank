@@ -23,6 +23,6 @@ Everything memrank documents about itself, in reading order. The repository-root
 |---|---|
 | [Local development](local-development.md) | environment, the test suite, the checks a change has to pass |
 | [Adapter contract](adapter-contract.md) | what an engine must implement to be measurable, in full |
-| [Adding an adapter](adding-adapters.md) | in-tree adapters, and when to write an out-of-tree translator instead |
-| [Adding a benchmark](adding-benchmarks.md) | loaders, scorers, registration |
+| [Adding an adapter](adding-adapters.md) | run your own engine by passing the instance; registration when it needs a name |
+| [Adding a benchmark](adding-benchmarks.md) | run your own eval by passing the instance; loaders, scorers, registration |
 | [Runnable examples](../examples/README.md) | the library API, a custom engine, a custom benchmark, and wiring in a target memrank does not ship |

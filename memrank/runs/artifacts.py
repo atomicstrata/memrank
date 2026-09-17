@@ -53,7 +53,7 @@ CORPUS_DIRNAME = "corpus"
 # opposite sides of the public boundary: `runs/reconcile.py` skips these directories on sync (the
 # CLI never wants them), and `api/results_repository.py` serves out of them. Keeping them in
 # `analysis/` made a published module import an unpublished package for two strings -- see
-# localdocs/plans/2026-08-25-repo-boundary-execution-plan.md.
+# docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md.
 
 
 class ArtifactFetchError(MemrankError):

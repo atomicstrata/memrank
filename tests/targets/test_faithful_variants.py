@@ -3,7 +3,7 @@
 Matched mode holds every target to one budget; a faithful variant exists to answer a different
 question -- "can we land near what the vendor published" -- and so must be able to state the
 vendor's retrieval settings and run uncapped
-(localdocs/decisions/decision-matched-and-faithful-run-modes.md).
+(docs-internal/decisions/decision-matched-and-faithful-run-modes.md).
 
 Two things were silently broken before these existed: a manifest could declare
 ``context_budget: uncapped`` and be capped anyway (the runner reads the attribute off the ADAPTER,
