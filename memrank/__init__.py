@@ -11,7 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Memrank -- open, vendor-neutral benchmark suite for AI memory engines."""
+"""Memrank -- an open, vendor-neutral instrument for measuring AI memory engines.
+
+    memrank.run("word-overlap", "demo")   # a shipped engine on a shipped evaluation
+    memrank.run(MyEngine(), MyEval())     # your own, passed as instances -- nothing registered
+
+``run(engine, evaluation)`` is the entry point. Either argument takes a catalog name or an object
+you built: an engine is any ``MemoryAdapter`` (six methods), an evaluation any ``Benchmark``
+(three), and the two forms are interchangeable. Registration is what makes a piece shareable by
+name -- from the ``memrank`` command line and from other people's runs -- never a precondition for
+measuring it. The call returns an ``EvalResult`` and writes nothing.
+"""
 
 from memrank.core import (
     AdapterResponse,

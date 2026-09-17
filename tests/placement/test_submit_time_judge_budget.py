@@ -87,12 +87,18 @@ def test_the_estimate_names_the_arithmetic_not_just_the_number(cloud):
 
 
 def test_no_cap_reaches_the_task(cloud):
-    """The flag is retired, so the rendered command must not carry it -- an image that no longer
-    parses it would die on its own command, which is what the contract bump to 4 refuses."""
+    """The flag is retired, so the command the server renders must not carry it -- an image that
+    no longer parses it would die on its own command.
+
+    A described submission cannot state one at all: there is no such field, so what used to be a
+    property of the renderer's diligence is now a property of the model. That the command the
+    server renders IS the one this CLI would have rendered is the separate guarantee in
+    `tests/internal/accounts/test_cli_config_equivalence.py`."""
     result = _submit()
 
     assert result.exit_code == 0, result.output
-    assert "--max-judge-calls" not in cloud["submits"][0]["argv"]
+    config = cloud["submits"][0]["config"]
+    assert not [key for key in config if "judge_calls" in key]
 
 
 def test_nothing_is_refused_for_being_expensive(cloud):

@@ -20,7 +20,7 @@ MLflow run per result cell, idempotently, so re-running it converges rather than
 The command that first pulls cloud runs down from object storage and then hands them to `export`
 is :mod:`memrank.ops.mlflow_sync`, on the operator side. It used to live here as `sync`, which put
 an internal-only module inside a package the CLI publishes; it moved with Phase 2 of
-`localdocs/plans/2026-08-25-repo-boundary-execution-plan.md`. The direction of the dependency is
+`docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md`. The direction of the dependency is
 unchanged -- `ops` knows about `tracking`, never the reverse.
 
 MLflow is an optional dependency, imported lazily. Nothing else in memrank may depend on this

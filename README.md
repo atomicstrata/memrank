@@ -3,32 +3,138 @@
 > An instrument for measuring AI memory engines -- on your own machine, on your own data,
 > under a configuration you can read and a result you can re-run.
 
-**Status:** v0.2, in active development. Interfaces still move between releases.
+**Status:** v0.3, in active development. Interfaces still move between releases.
 
 Memrank runs a memory engine against a task set and emits a number with everything needed to
 re-run it attached: the configuration, the dataset version, the model, the seed, and the
 version of the instrument itself. It measures **quality, latency, cost, and token
 efficiency** in one pass.
 
+## What you bring, and what memrank takes care of
+
+You bring the memory engine you want measured -- the one you are building, or one you already run.
+You bring the questions you want it measured on, if you have data of your own; if you do not,
+memrank ships its own. If you want a written answer judged rather than just the recalled text
+scored, you also bring the model that answers from what the engine recalled and the rule that
+decides whether that answer is right -- memrank has a default for both. Everything between those
+pieces is memrank's: it feeds each case in and asks the questions back, runs the same measurement
+against built-in comparison engines so your number has something to sit beside, scores the result
+with labels that say what was actually measured and what was not, times every write and every
+recall, adds up what the run cost in tokens and money, and writes down the versions, settings and
+seed that produced the number so the same run can be done again.
+
 ## Install
 
-Memrank is not on PyPI yet. Install the CLI from the repository:
-
 ```bash
-uv tool install --force --refresh git+https://github.com/atomicstrata/memrank
+uv tool install memrank
 memrank --version
 ```
 
-`--force --refresh` is also the upgrade command, which is why there is only one to remember.
 If you do not have [uv](https://docs.astral.sh/uv/): `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
+**The first functional release has not been uploaded yet** -- the `memrank` name is held on PyPI,
+but the only version on the index is a yanked placeholder, so the command above does not resolve
+today. Until it does, install from the repository, which is public and needs no credential:
+
+```bash
+uv tool install --force --refresh git+https://github.com/atomicstrata/memrank
+```
+
 Working on memrank itself? Clone it and see [Local development](docs/local-development.md).
-Full install detail, including PATH and MCP setup: **[Installing memrank](docs/install.md)**.
+Full install detail, upgrading, PATH and MCP setup: **[Installing memrank](docs/install.md)**.
 
 ## Run something in one minute
 
-`demo` is a small synthetic benchmark that ships with the repository, and `word-overlap` is a
-trivial in-process retriever. Together they need no engine, no network, and no API key:
+Memrank is a Python package, and `memrank.run(engine, evaluation)` is its entry point. Each of the
+two arguments takes either a name from the catalog or an object you built yourself; the two forms
+are interchangeable, and neither is the privileged one.
+
+`word-overlap` is a trivial in-process retriever that ships with the package, and `demo` is a small
+synthetic evaluation that ships with it too. Together they need no engine, no network, and no API
+key:
+
+```python
+import memrank
+
+result = memrank.run("word-overlap", "demo", repeats=1)
+print(f"{result.composite:.3f}  {result.adapter} x {result.benchmark}")
+```
+
+```console
+0.800  word-overlap x demo
+```
+
+### The same call, with your own engine and your own evaluation
+
+An engine is any `MemoryAdapter` -- six methods -- and an evaluation is any `Benchmark` -- three.
+Pass the instances where the names went. Nothing is registered, nothing is named, and no file is
+written inside memrank:
+
+```python
+import memrank
+from memrank import Benchmark, BenchmarkUnit, Document, MemoryAdapter
+from memrank.instrumentation import LatencyCollector, TokenCollector
+
+
+class MyEngine(MemoryAdapter):                      # your engine, six methods
+    name, version, engine_version = "my-engine", "0.1", "0.1"
+
+    def __init__(self):
+        self.docs, self.lat, self.tok = [], LatencyCollector(), TokenCollector()
+
+    def prepare(self, isolation_unit): self.docs = []
+    def ingest(self, documents): self.docs.extend(documents)
+
+    def retrieve(self, query, k, user_id, query_timestamp=None):
+        words = set(query.lower().split())
+        ranked = sorted(self.docs, key=lambda d: len(words & set(d.content.lower().split())),
+                        reverse=True)
+        return ranked[:k], {"engine": self.name}
+
+    def cleanup(self): self.docs = []
+    def latency_metrics(self): return self.lat.as_metrics()
+    def token_metrics(self): return self.tok.as_metrics()
+
+
+class MyEval(Benchmark):                            # your data, three methods
+    name, dataset_version = "my-eval", "internal@1"
+
+    def load(self):
+        return [BenchmarkUnit(
+            unit_id="u1", isolation_id="u1",
+            documents=[Document(id="d1", user_id="u1",
+                                content="Acme moved to the enterprise plan in March.")],
+            queries=[{"id": "q1", "text": "What plan is Acme on?",
+                      "required_spans": ["enterprise"]}])]
+
+    def score(self, unit, responses):
+        from memrank.metrics.scoring import score_query, spec_from_query
+        by_id = {r.query_id: r for r in responses}
+        hits = [score_query(spec_from_query(q), by_id[q["id"]].documents).hit for q in unit.queries]
+        return {"composite": sum(hits) / len(hits), "per_category": {}, "n_queries": len(hits)}
+
+    def report_template(self): return "composite: {composite}"
+
+
+result = memrank.run(MyEngine(), MyEval(), repeats=1)
+print(f"{result.composite:.3f}  {result.adapter} x {result.benchmark}")
+```
+
+```console
+1.000  my-engine x my-eval
+```
+
+Registering an engine or an evaluation is how it becomes **shareable** -- reachable by name from the
+command line, from a comparison, and from someone else's run -- never a precondition for measuring
+it. [`examples/custom-engine.py`](examples/custom-engine.py) and
+[`examples/custom-benchmark.py`](examples/custom-benchmark.py) are the two halves above as
+commented, runnable scripts.
+
+## The same run from the command line
+
+The command line drives the same evaluation for the cases a script does not cover: a run you want
+tracked, compared, or placed somewhere other than this process. The two shipped pieces above, by
+name:
 
 ```console
 $ memrank submit word-overlap demo

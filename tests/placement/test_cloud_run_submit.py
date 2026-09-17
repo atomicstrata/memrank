@@ -40,7 +40,7 @@ def api(tmp_path, monkeypatch):
     def _submit(http, org, payload):
         captured["submits"].append((org, payload))
         n = len(captured["submits"])
-        rid = f"20260801-12000{n}__{payload['benchmark']}__r{n}"
+        rid = f"20260801-12000{n}__{payload['config']['eval_ref']}__r{n}"
         return {"id": rid, "state": "submitted", "taskdef_arn": "arn:td",
                 "task_arn": f"arn:aws:ecs:us-east-1:1:task/bench/{n}deadbeef",
                 "cluster": "bench", "region": "us-east-1", "log_group": "/ecs/bench",
@@ -97,20 +97,28 @@ def test_the_local_record_carries_the_servers_run_id(api):
     assert [d.name for d in api["runs_root"].iterdir()] == ["20260801-120001__demo__r1"]
 
 
-def test_the_payload_argv_is_the_remote_rebuild_not_this_processes(api):
+def test_the_payload_describes_the_measurement_rather_than_a_command(api):
+    """No argv at all: what crosses is WHAT to measure, and the server renders the command.
+
+    The CLI's flag vocabulary stops being a wire format here -- which is what lets a published
+    CLI and the platform ship on their own schedules. `tests/placement/
+    test_cloud_config_equivalence.py` is the guard that the two renderings still agree.
+    """
     _run("word-overlap", "demo", "--on", "cloud", "--org", "acme")
     org, payload = api["submits"][0]
     assert org == "acme"
-    assert payload["argv"][:3] == ["submit", "word-overlap", "demo"]
-    assert "--on" not in payload["argv"] and "--org" not in payload["argv"]
-    assert payload["experiment_id"]
-    assert payload["experiment_spec"]["eval_ref"] == "demo"
+    assert list(payload) == ["config"], "a submission carries the config and nothing beside it"
+    config = payload["config"]
+    assert config["target_ref"] == "word-overlap" and config["eval_ref"] == "demo"
+    # Routing is the submitter's, and there is no field here that could carry it.
+    assert "on" not in config and "org" not in config
 
 
 def test_a_sweep_posts_one_run_per_target_each_with_its_own_record(api):
     result = _run("no-context,fixed-context,full-context", "demo", "--on", "cloud", "--org", "acme")
     assert result.exit_code == 0, result.output
-    assert [p["target_ref"] for _, p in api["submits"]] == ["no-context", "fixed-context", "full-context"]
+    assert [p["config"]["target_ref"] for _, p in api["submits"]] == [
+        "no-context", "fixed-context", "full-context"]
     assert len(list(api["runs_root"].iterdir())) == 3
     arns = {r["task_arn"] for r in run_status.active_runs(api["runs_root"])}
     assert len(arns) == 3
@@ -172,47 +180,45 @@ def test_watch_giving_up_is_not_the_same_as_failing(api, monkeypatch):
     assert "still running" in result.output
 
 
-def test_a_bare_submission_names_no_image_and_carries_its_contract(api, monkeypatch):
-    """EVERY submission runs the platform's pinned harness: the payload names no image, and
-    compatibility rides on the contract number the server checks against its own lineage.
+def test_a_submission_names_no_image_and_negotiates_no_contract(api):
+    """EVERY submission runs the platform's pinned harness, and now speaks no argv to it.
 
-    This used to be the default among three modes. It is now the only one -- naming a build
-    assumed a checkout, a Docker daemon and ECR rights, and swapped only the image while the API
-    went on rendering the task command from its own."""
-    from memrank.placement.cloud_submit import REMOTE_CLI_CONTRACT
-
+    Naming a build assumed a checkout, a Docker daemon and ECR rights, and swapped only the image
+    while the API went on rendering the task command from its own. `cli_contract` was the other
+    half of that coupling: it existed to negotiate the skew between an installed CLI's flag
+    vocabulary and the platform's. A described run has no such skew to negotiate -- the renderer
+    and the platform image are one build -- so the number is not sent and not needed."""
     result = _run("word-overlap", "demo", "--on", "cloud", "--org", "acme")
 
     assert result.exit_code == 0, result.output
     _, payload = api["submits"][0]
     assert "image_tag" not in payload
-    assert payload["cli_contract"] == REMOTE_CLI_CONTRACT
+    assert "cli_contract" not in payload
 
 
-def test_the_payload_carries_parsed_facts_not_the_raw_ref(api):
-    """The server mints run ids and rows from the positional facts, and a raw ref there put a
+def test_the_config_carries_the_variant_parsed_rather_than_in_the_ref(api):
+    """The server mints run ids and rows from the eval it resolves, and a raw ref there put a
     `:` into a string that becomes a shell token and an S3 key -- refused as an unsafe run id on
     2026-08-13, after the eval-refs migration started sending `beam:100k-smoke` as `benchmark`.
-    The argv keeps the canonical ref; the facts travel parsed beside it."""
+    The variant travels as `tier`/`slice`, which is also how a browser states it, and the ref the
+    task is told to run is composed back on the server."""
     result = _run("word-overlap", "beam:100k-smoke", "--on", "cloud", "--org", "acme")
 
     assert result.exit_code == 0, result.output
-    _, payload = api["submits"][0]
-    assert payload["benchmark"] == "beam"
-    assert payload["tier"] == "100k" and payload["slice"] == "smoke"
-    assert payload["argv"][:3] == ["submit", "word-overlap", "beam:100k-smoke"]
-    assert ":" not in payload["benchmark"]
+    config = api["submits"][0][1]["config"]
+    assert config["eval_ref"] == "beam"
+    assert config["tier"] == "100k" and config["slice"] == "smoke"
+    assert ":" not in config["eval_ref"]
 
 
-def test_a_bare_ref_submits_its_canonical_spelling(api):
-    """`beam` runs, but what it RAN is `beam:100k` -- the argv must say so, and the facts must
-    carry the default tier the bare form resolves to."""
+def test_a_bare_ref_submits_the_variant_it_resolved_to(api):
+    """`beam` runs, but what it RAN is `beam:100k` -- the config must state that tier rather than
+    leave the server's own catalog to pick a default a second time."""
     result = _run("word-overlap", "beam", "--on", "cloud", "--org", "acme")
 
     assert result.exit_code == 0, result.output
-    _, payload = api["submits"][0]
-    assert payload["benchmark"] == "beam" and payload["tier"] == "100k"
-    assert payload["argv"][2] == "beam:100k"
+    config = api["submits"][0][1]["config"]
+    assert config["eval_ref"] == "beam" and config["tier"] == "100k"
 
 
 @pytest.mark.parametrize("flag", ["--image-tag", "--no-auto-push", "--allow-unverified-image"])
@@ -284,7 +290,7 @@ def test_a_configured_machine_submits_with_no_routing_flags(configured):
     assert result.exit_code == 0, result.output
     org, payload = configured["submits"][0]
     assert org == "acme"
-    assert payload["target_ref"] == "word-overlap"
+    assert payload["config"]["target_ref"] == "word-overlap"
 
 
 def test_an_explicit_flag_still_beats_the_configured_default(configured):

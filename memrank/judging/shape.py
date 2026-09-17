@@ -19,7 +19,7 @@ questions each have a single gold answer.
 
 It is not what BEAM specifies. BEAM scores against a `rubric` of atomic nuggets -- one judge call
 PER NUGGET, each scored {0, 0.5, 1}, averaged within the question
-(localdocs/benchmarks/benchmark-beam.md section 3). That is a different shape, not a different prompt: N calls
+(docs-internal/benchmarks/benchmark-beam.md section 3). That is a different shape, not a different prompt: N calls
 where there was one, and a mean where there was a boolean. There was nowhere to say it. The runner's
 judge path is benchmark-agnostic by construction, so the only way to express it was to branch on
 benchmark name inside the runner -- which is the thing this seam exists to prevent.

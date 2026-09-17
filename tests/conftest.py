@@ -23,7 +23,7 @@ import pytest
 # arena suites only, and they live under the `tests/internal/` prefix that `publish.toml` drops
 # wholesale. Naming the module unconditionally makes its absence break collection of the ENTIRE
 # suite -- every public test included -- rather than the handful that need a database. See
-# localdocs/plans/2026-08-25-repo-boundary-execution-plan.md, Phases 1 and 3.
+# docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phases 1 and 3.
 pytest_plugins = [
     f"tests.internal.{_name}"
     for _name in ("conftest_pg",)

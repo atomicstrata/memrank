@@ -21,16 +21,18 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from memrank import rate_limit
 from memrank.core import AdapterResponse, Benchmark, Document, MemoryAdapter
 from memrank.errors import MemrankError
 from memrank.evaluation.aggregate import _drill_unit, build_result
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.judge_stage import _apply_judge, assert_judge_coverage
 from memrank.evaluation.observer import NULL_OBSERVER, EvalObserver, _eval_plan
 from memrank.evaluation.receipt import _build_receipt
 from memrank.evaluation.result import EvalResult
+from memrank.evaluation.unit_outcome import UnitOutcome, UnitStageError, stage_guard
 from memrank.instrumentation import LatencyCollector, TokenCollector
 from memrank.judging.client import build_completer
 from memrank.judging.judge import JudgeConfig
@@ -77,7 +79,12 @@ def run_cell(
     judge_runtime: tuple[Any, Any] | None = None,
     units: list[Any] | None = None,
     workers: int = 1,
-    judge_workers: int = 1,
+    judge_workers: int = DEFAULT_JUDGE_WORKERS,
+    #: Stop at the first unit that raises, as every run did before per-unit outcomes existed.
+    #: The default attempts every unit and records what happened to each: a run that dies on
+    #: unit 12 of 50 discards the eleven that worked, and the failure RATE is itself a
+    #: measurement of the engine. See `memrank.evaluation.unit_outcome`.
+    fail_fast: bool = False,
     #: Where to write the pre-judgment checkpoint. ``None`` writes none: ``run_cell`` is a library
     #: primitive that tests drive without a run directory, and a checkpoint nothing can resume from
     #: is just a file.
@@ -107,6 +114,11 @@ def run_cell(
     is required when workers>1) to avoid shared mutable adapter state. Docs WITHIN a
     unit stay sequential (mem0's per-user reconcile is order-dependent), and judging
     stays sequential after. Recall is unaffected; latency becomes contended (flagged).
+
+    A unit that raises is RECORDED and the run continues (``fail_fast=False``). Its scores and
+    drill rows are absent rather than zero, so it leaves the composite's denominator and the
+    judge's work along with them; ``units_total``/``units_failed``/``unit_failure_rate`` on the
+    result are what say how many units the number was computed over.
     """
     if not cell_applicable(adapter, benchmark):
         return _not_applicable_result(adapter, benchmark)
@@ -136,27 +148,26 @@ def run_cell(
         gate = RateLimitGate()
     if workers > 1:
         assert make_adapter is not None  # guarded above; narrows for type-checkers
-        (per_unit_scores, per_query, latency_metrics, token_metrics, retrieve_summary,
-         ingest_summary) = \
-            _run_units_concurrent(make_adapter, benchmark, units, k=k, repeats=repeats,
-                                  run_id_prefix=run_id_prefix, token_budget=token_budget,
-                                  workers=workers, label=label, gate=gate,
-                                  observer=observer)
+        measured = _run_units_concurrent(make_adapter, benchmark, units, k=k, repeats=repeats,
+                                         run_id_prefix=run_id_prefix, token_budget=token_budget,
+                                         workers=workers, label=label, gate=gate,
+                                         observer=observer, fail_fast=fail_fast)
     else:
-        (per_unit_scores, per_query, latency_metrics, token_metrics, retrieve_summary,
-         ingest_summary) = \
-            _run_units_sequential(adapter, benchmark, units, k=k, repeats=repeats,
-                                  run_id_prefix=run_id_prefix, token_budget=token_budget,
-                                  gate=gate, observer=observer)
+        measured = _run_units_sequential(adapter, benchmark, units, k=k, repeats=repeats,
+                                         run_id_prefix=run_id_prefix, token_budget=token_budget,
+                                         gate=gate, observer=observer, fail_fast=fail_fast)
     budget_mode = _effective_budget_mode(adapter, benchmark)
+    per_query = measured.per_query
 
     def aggregate(judged):
-        return build_result(adapter, benchmark, units, per_unit_scores, per_query,
+        return build_result(adapter, benchmark, units, measured.per_unit_scores, per_query,
                             model=model, token_budget=token_budget, receipt=receipt,
                             k=k, repeats=repeats, judged_metrics=judged,
-                            retrieve_summary=retrieve_summary, latency_metrics=latency_metrics,
-                            token_metrics=token_metrics, workers=workers,
-                            judge_workers=judge_workers, ingest_summary=ingest_summary)
+                            retrieve_summary=measured.retrieve_summary,
+                            latency_metrics=measured.latency_metrics,
+                            token_metrics=measured.token_metrics, workers=workers,
+                            judge_workers=judge_workers, ingest_summary=measured.ingest_summary,
+                            unit_outcomes=measured.outcomes)
 
     # Everything expensive is now done and nothing is on disk. Judging is the last stage, the one
     # with the least test exposure, and the one a 4h50m run died in on 2026-08-12 having completed
@@ -201,85 +212,191 @@ def _effective_budget_mode(adapter, benchmark) -> str:
     return arm
 
 
+class _Measured(NamedTuple):
+    """What the unit loop produced, whichever path ran it.
+
+    A named tuple rather than a longer positional one: the two paths return the same six
+    measurements plus one outcome record per unit, and a seventh anonymous slot is exactly the
+    kind of thing a caller reads in the wrong order once.
+    """
+
+    per_unit_scores: list[dict[str, Any]]
+    per_query: list[dict[str, Any]]
+    latency_metrics: dict[str, Any]
+    token_metrics: dict[str, Any]
+    retrieve_summary: dict[str, Any] | None
+    ingest_summary: dict[str, Any] | None
+    #: One per unit ATTEMPTED, in unit order -- the ok ones included. See `unit_outcome`.
+    outcomes: list[UnitOutcome]
+
+
+def _fatal_unit_failure(exc: UnitStageError, *, fail_fast: bool) -> bool:
+    """Whether this unit's failure ends the run instead of being recorded and stepped over.
+
+    ``RateLimitExhausted`` whatever the flag says: the provider stayed over quota for the whole
+    retry deadline, which is a condition of the ACCOUNT rather than of the unit. Continuing would
+    spend that deadline again on every remaining unit and arrive at the same nothing, ten minutes
+    at a time. ``KeyboardInterrupt`` never reaches here at all -- `stage_guard` tags only
+    ``Exception``, so an interrupt is never a unit failure to begin with.
+    """
+    return fail_fast or isinstance(exc.cause, RateLimitExhausted)
+
+
+def _warn_unit_failed(observer: EvalObserver, label: str, outcome: UnitOutcome, *,
+                      failed: int, total: int) -> None:
+    """Say that a unit was lost, and how many have been.
+
+    Through ``observer.warning`` rather than a hook of its own: that is what already reaches the
+    terminal (``ConsoleObserver``) and the run's log, and the durable count belongs in the
+    artifact -- ``units_failed`` -- rather than in a progress record that is overwritten.
+    """
+    observer.warning(
+        f"{label} unit {outcome.unit_id!r} failed in {outcome.stage}: {outcome.error}: "
+        f"{outcome.message} -- continuing without it ({failed}/{total} units failed so far; "
+        f"--fail-fast stops at the first instead)")
+
+
+def _record_unit_failure(unit, exc: UnitStageError, *, fail_fast: bool, observer: EvalObserver,
+                         label: str, failed: int, total: int) -> UnitOutcome:
+    """Turn one unit's tagged failure into its outcome record -- or re-raise, when it is fatal.
+
+    Re-raises the CAUSE rather than the tag, so a caller that has always caught (say)
+    ``RuntimeError`` from ``run_cell`` still catches the same exception it always did.
+    """
+    if _fatal_unit_failure(exc, fail_fast=fail_fast):
+        raise exc.cause
+    outcome = UnitOutcome.failed(unit.unit_id, stage=exc.stage, cause=exc.cause)
+    _warn_unit_failed(observer, label, outcome, failed=failed, total=total)
+    return outcome
+
+
+def _measure_unit(adapter, benchmark, unit, *, k, repeats, run_id_prefix, token_budget,
+                  measured, label, gate, observer):
+    """Ingest, retrieve and score ONE unit; return its scored dict and drill rows.
+
+    Every exception this raises is a :class:`UnitStageError` naming the stage it came from --
+    ``prepare`` and ``cleanup`` excepted, which are the adapter's own lifecycle around the unit
+    rather than work done inside it, and stay fatal as they always were.
+    """
+    responses = _run_unit_repeats(adapter, unit, k=k, repeats=repeats,
+                                  run_id_prefix=run_id_prefix, measured=measured,
+                                  label=label, gate=gate, observer=observer)
+    with stage_guard("score"):
+        scored = benchmark.score(unit, responses)
+        scored["unit_id"] = unit.unit_id
+        drill = _drill_unit(unit, responses, token_budget,
+                            _effective_budget_mode(adapter, benchmark))
+    return scored, drill
+
+
 def _run_units_sequential(adapter, benchmark, units, *, k, repeats, run_id_prefix,
-                          token_budget, gate, observer):
+                          token_budget, gate, observer, fail_fast=False):
     """Original sequential path: one shared adapter over every unit, in order.
 
-    Returns ``(per_unit_scores, per_query, latency_metrics, token_metrics, retrieve_summary)``.
-    Latency/token metrics come straight from the single reused adapter (unchanged behavior)."""
+    Latency/token metrics come straight from the single reused adapter (unchanged behavior).
+    A failed unit still advances the query counter, so the progress bar keeps meaning "how far
+    through the benchmark", not "how far through the part that worked"."""
     measured = LatencyCollector()
     per_unit_scores: list[dict[str, Any]] = []
     per_query: list[dict[str, Any]] = []
+    outcomes: list[UnitOutcome] = []
     label = f"[{adapter.name} × {benchmark.name}]"
     total_queries = sum(len(u.queries) for u in units)
     done_queries = 0
     for unit_idx, unit in enumerate(units, start=1):
         observer.unit_started(index=unit_idx, total=len(units),
                               documents=len(unit.documents))
-        responses = _run_unit_repeats(adapter, unit, k=k, repeats=repeats,
-                                      run_id_prefix=run_id_prefix, measured=measured,
-                                      label=label, gate=gate, observer=observer)
-        scored = benchmark.score(unit, responses)
-        scored["unit_id"] = unit.unit_id
-        per_unit_scores.append(scored)
-        per_query.extend(_drill_unit(unit, responses, token_budget,
-                                     _effective_budget_mode(adapter, benchmark)))
+        try:
+            scored, drill = _measure_unit(adapter, benchmark, unit, k=k, repeats=repeats,
+                                          run_id_prefix=run_id_prefix, token_budget=token_budget,
+                                          measured=measured, label=label, gate=gate,
+                                          observer=observer)
+        except UnitStageError as exc:
+            outcomes.append(_record_unit_failure(
+                unit, exc, fail_fast=fail_fast, observer=observer, label=label,
+                failed=sum(1 for o in outcomes if not o.is_ok) + 1, total=len(units)))
+        else:
+            per_unit_scores.append(scored)
+            per_query.extend(drill)
+            outcomes.append(UnitOutcome.ok(unit.unit_id))
         done_queries += len(unit.queries)
         observer.unit_finished(label=label, index=unit_idx, total=len(units),
                                queries_done=done_queries, queries_total=total_queries)
-    return (per_unit_scores, per_query, adapter.latency_metrics(),
-            adapter.token_metrics(), measured.summary("retrieve"),
-            measured.summary("ingest"))
+    return _Measured(per_unit_scores, per_query, adapter.latency_metrics(),
+                     adapter.token_metrics(), measured.summary("retrieve"),
+                     measured.summary("ingest"), outcomes)
 
 
 def _run_one_unit(make_adapter, benchmark, unit, *, k, repeats, run_id_prefix,
-                  token_budget, label, gate, observer):
-    """Run ONE unit on its own fresh adapter (concurrent path). Returns the unit's
-    scored dict, drill rows, and its adapter's latency/token/retrieve collectors."""
+                  token_budget, label, gate, observer, fail_fast=False):
+    """Run ONE unit on its own fresh adapter (concurrent path). Returns the unit's outcome,
+    scored dict (``None`` when it failed), drill rows, and its adapter's collectors.
+
+    The failure is turned into an outcome HERE so a fatal one is raised out of the worker (and
+    out of ``ex.map``) exactly as before; the warning is left to the merge, which is single
+    threaded and ordered and so can count what has failed without racing.
+
+    The adapter is closed either way -- the ``finally`` predates this and covers the failure
+    path for the same reason it covered the success one."""
     adapter = make_adapter()
     measured = LatencyCollector()
+    scored: dict[str, Any] | None = None
+    drill: list[dict[str, Any]] = []
     try:
-        responses = _run_unit_repeats(adapter, unit, k=k, repeats=repeats,
-                                      run_id_prefix=run_id_prefix, measured=measured,
-                                      label=f"{label} u={unit.unit_id}", gate=gate,
-                                      observer=observer)
-        scored = benchmark.score(unit, responses)
-        scored["unit_id"] = unit.unit_id
-        drill = _drill_unit(unit, responses, token_budget,
-                            _effective_budget_mode(adapter, benchmark))
-        return scored, drill, adapter.latency, adapter.tokens, measured
+        try:
+            scored, drill = _measure_unit(adapter, benchmark, unit, k=k, repeats=repeats,
+                                          run_id_prefix=run_id_prefix, token_budget=token_budget,
+                                          measured=measured, label=f"{label} u={unit.unit_id}",
+                                          gate=gate, observer=observer)
+        except UnitStageError as exc:
+            if _fatal_unit_failure(exc, fail_fast=fail_fast):
+                # Bare, not `from exc`: the tag is a wrapper this loop made, and re-raising the
+                # cause on its own is what keeps the caller seeing the exception it always saw.
+                raise exc.cause  # noqa: B904 - see above
+            outcome = UnitOutcome.failed(unit.unit_id, stage=exc.stage, cause=exc.cause)
+        else:
+            outcome = UnitOutcome.ok(unit.unit_id)
+        return outcome, scored, drill, adapter.latency, adapter.tokens, measured
     finally:
         _close_adapter(adapter)
 
 
 def _run_units_concurrent(make_adapter, benchmark, units, *, k, repeats, run_id_prefix,
-                          token_budget, workers, label, gate, observer):
+                          token_budget, workers, label, gate, observer, fail_fast=False):
     """Ingest+retrieve units concurrently (one adapter each), then merge in unit order.
 
-    ``ThreadPoolExecutor.map`` preserves input order, so per_unit_scores/per_query and the
-    composite stay deterministic regardless of which unit finishes first."""
+    ``ThreadPoolExecutor.map`` preserves input order, so per_unit_scores/per_query, the outcome
+    list and the composite stay deterministic regardless of which unit finishes first."""
     def work(unit):
         return _run_one_unit(make_adapter, benchmark, unit, k=k, repeats=repeats,
                              run_id_prefix=run_id_prefix, token_budget=token_budget,
-                             label=label, gate=gate, observer=observer)
+                             label=label, gate=gate, observer=observer, fail_fast=fail_fast)
 
     with ThreadPoolExecutor(max_workers=min(workers, len(units))) as ex:
         results = list(ex.map(work, units))
 
     per_unit_scores: list[dict[str, Any]] = []
     per_query: list[dict[str, Any]] = []
+    outcomes: list[UnitOutcome] = []
     # ``lat``/``tok`` merge the ADAPTERS' collectors (the published metrics shape); ``runner_lat``
     # merges what the runner timed at its own call boundary, which is where both summaries come
     # from -- see _ingest_with_progress on why the adapter's internals are not that boundary.
     lat, tok, runner_lat = LatencyCollector(), TokenCollector(), LatencyCollector()
-    for scored, drill, adapter_lat, adapter_tok, measured in results:
-        per_unit_scores.append(scored)
-        per_query.extend(drill)
+    for outcome, scored, drill, adapter_lat, adapter_tok, measured in results:
+        outcomes.append(outcome)
+        if outcome.is_ok:
+            per_unit_scores.append(scored)
+            per_query.extend(drill)
+        else:
+            _warn_unit_failed(observer, label, outcome,
+                              failed=sum(1 for o in outcomes if not o.is_ok), total=len(units))
+        # Merged for a failed unit too: whatever it managed before it raised is a real
+        # measurement of this engine, and dropping it would flatter the percentiles.
         lat.merge(adapter_lat)
         tok.merge(adapter_tok)
         runner_lat.merge(measured)
-    return (per_unit_scores, per_query, lat.as_metrics(), tok.as_metrics(),
-            runner_lat.summary("retrieve"), runner_lat.summary("ingest"))
+    return _Measured(per_unit_scores, per_query, lat.as_metrics(), tok.as_metrics(),
+                     runner_lat.summary("retrieve"), runner_lat.summary("ingest"), outcomes)
 
 def _ingest_with_progress(adapter: MemoryAdapter, documents: list[Document], *,
                           measured: LatencyCollector, label: str, gate: RateLimitGate,
@@ -492,19 +609,26 @@ def _run_unit_repeats(adapter, unit, *, k, repeats, run_id_prefix, measured, lab
     Documents are re-scoped to ``run_id`` before ingest so engines that key on
     ``doc.user_id`` (AM, Mem0) ingest under the same id retrieval queries with.
     Only measured retrieves are recorded into ``measured`` -- the warm-up is not.
+
+    The two guards tag whatever raises with the stage it raised in, which is what lets the loop
+    record a per-unit outcome instead of dying. ``prepare`` and ``cleanup`` are deliberately
+    OUTSIDE them: they are the adapter's lifecycle around the unit rather than the measurement
+    inside it, and an engine that cannot open or close a namespace is not one unit's problem.
     """
     run_id = f"{run_id_prefix}-{unit.isolation_id}"
     adapter.prepare(run_id)
     try:
-        _ingest_with_progress(
-            adapter, [replace(doc, user_id=run_id) for doc in unit.documents], label=label,
-            measured=measured, gate=gate, observer=observer)
-        if unit.queries:  # warm-up -- intentionally NOT recorded in `measured`
-            _retrieve_one(adapter, unit.queries[0], k=k, run_id=run_id, label=label,
-                          gate=gate, observer=observer)
-        return _retrieve_with_progress(adapter, unit, k=k, repeats=repeats,
-                                       run_id=run_id, measured=measured, label=label,
-                                       gate=gate, observer=observer)
+        with stage_guard("ingest"):
+            _ingest_with_progress(
+                adapter, [replace(doc, user_id=run_id) for doc in unit.documents], label=label,
+                measured=measured, gate=gate, observer=observer)
+        with stage_guard("retrieve"):
+            if unit.queries:  # warm-up -- intentionally NOT recorded in `measured`
+                _retrieve_one(adapter, unit.queries[0], k=k, run_id=run_id, label=label,
+                              gate=gate, observer=observer)
+            return _retrieve_with_progress(adapter, unit, k=k, repeats=repeats,
+                                           run_id=run_id, measured=measured, label=label,
+                                           gate=gate, observer=observer)
     finally:
         adapter.cleanup()
 

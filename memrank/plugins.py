@@ -33,7 +33,7 @@ origin, so registering through it earns no reproducibility claim of its own: the
 class still derives from how its *artifact* was bound, which for a source-bound target is
 ``development_observation``. Provenance here is asserted by the registering module, and memrank
 cannot verify it -- see the direction brief on addressability
-(``localdocs/directions/2026-08-28-customizability-and-reproducibility.md``).
+(``docs-internal/directions/2026-08-28-customizability-and-reproducibility.md``).
 """
 
 from __future__ import annotations

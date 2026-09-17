@@ -25,14 +25,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import subprocess
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from memrank import __version__ as memrank_version
-from memrank.provenance import environment
+from memrank.provenance import environment, install
 from memrank.secrets.names import is_secret_key
 
 #: The receipt layout THIS memrank writes. Version 3 adds a centrally-derived evidence class so a
@@ -123,21 +121,14 @@ class Receipt:
 
 
 def _git_sha() -> str | None:
-    """Return the current repo's HEAD SHA, or ``None`` when unavailable."""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=2,
-        )
-    except (FileNotFoundError, subprocess.SubprocessError):
-        return None
-    if result.returncode != 0:
-        return None
-    sha = result.stdout.strip()
-    return sha or None
+    """HEAD of the WORKING DIRECTORY's repository, or ``None`` when there is none.
+
+    Not the memrank build's commit, which is what :func:`install.build_identity` answers and
+    what receipts record. This asks about wherever the process is standing, so it is only
+    correct for a caller that knows it runs inside this repository -- ``memrank/arena/build.py``,
+    which builds Arena artifacts from a source checkout and legitimately wants that checkout.
+    """
+    return install.head_commit()
 
 
 # Revision of the config-hashing scheme. BUMP THIS whenever what feeds ``config_hash`` changes --
@@ -247,10 +238,9 @@ def build_receipt(
     started = datetime.now(timezone.utc).isoformat()
     config = _redact_secrets(config) if config else config
     cfg_hash = _hash_config(config) if config else None
-    git = _git_sha()
     return Receipt(
         schema_version=SCHEMA_VERSION,
-        memrank_version=f"{memrank_version}{('+' + git[:8]) if git else ''}",
+        memrank_version=install.build_identity(),
         adapter_name=adapter_name,
         adapter_version=adapter_version,
         engine_version=engine_version,

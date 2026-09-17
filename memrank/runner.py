@@ -27,7 +27,7 @@ captures latency/token metrics, and writes a reproducibility receipt.
 Operator and cross-record-analysis commands (``leaderboard*``, ``arena*``, ``compare``,
 ``report``, ``compare-versions``, ``mlflow-sync``) used to live here. They now live in
 :mod:`memrank.ops`, reached through ``scripts/internal/memrank-ops.py`` -- ``memrank`` shows exactly
-one product. See localdocs/interface-model.md section 7.
+one product. See docs-internal/interface-model.md section 7.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ from memrank.cli.evals import evals_app
 from memrank.cli.monitor import logs as _logs_cmd
 from memrank.cli.retired import refuse_retired_flags, register_retired
 
-# Flat aliases for the hot path, per localdocs/interface-model.md -- exactly `ps`, `watch`, `logs`,
+# Flat aliases for the hot path, per docs-internal/interface-model.md -- exactly `ps`, `watch`, `logs`,
 # `kill`, and the SAME functions their `runs` forms are, not reimplementations. `ps` used to read
 # local status.json files only, so it and `runs ls` disagreed about what was running: a cloud
 # sweep submitted from another directory was invisible to one and 89% complete according to the
@@ -101,6 +101,7 @@ from memrank.evaluation.cell import (  # noqa: F401
     cell_applicable,
     run_cell,
 )
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.judge_stage import (  # noqa: F401
     EmptyJudgeCoverage,
     _apply_judge,
@@ -336,6 +337,10 @@ def submit(
     workers: int = typer.Option(1, help="Ingest+retrieve this many UNITS concurrently "
                                         "(each on its own adapter instance; recall is unaffected, "
                                         "latency becomes contended). 1 = sequential."),
+    fail_fast: bool = typer.Option(
+        False, "--fail-fast", help="Stop the cell at the first unit that fails. The default "
+               "attempts every unit, records what happened to each in the artifact "
+               "(unit_outcomes, units_failed) and scores the composite over the units that ran."),
     unit: list[str] = typer.Option([], "--unit", help="Run only unit(s) matching this "
                                    "unit_id / substring, or a 0-based index (repeatable). "
                                    "Applied after the eval ref's slice."),
@@ -354,7 +359,7 @@ def submit(
              "and cost without paying for quality; `--judge` adds it where it is optional."),
     judge_samples: int = typer.Option(1, help="Majority-vote samples per judge grade"),
     judge_workers: int = typer.Option(
-        4, help="Grade this many queries concurrently. Separate from --workers because they bound "
+        DEFAULT_JUDGE_WORKERS, help="Grade this many queries concurrently. Separate from --workers because they bound "
                 "different resources: --workers is engine containers, this is ONE provider "
                 "account. Quality is unaffected -- the calls are independent and the reduce is "
                 "ordered, so metrics are identical at any value."),
@@ -444,8 +449,10 @@ def submit(
     gated_units, judge_cfg = question_gates(
         benchmark=eval_name, bench_kwargs=bench_kwargs, slice_=slice, judge_cfg=judge_cfg,
         unit=unit, targets=1 if submitting else len(factories))
+    # `eval_name`, not the ref as it was typed: the variant is already in `tier`/`slice` below, and
+    # a cell's identity must not depend on which of `beam` and `beam:100k` the caller wrote.
     experiments_by_ref = _cli_experiments(
-        factories, benchmark, component_overrides,
+        factories, eval_name, component_overrides,
         {**locals(), "reader": run_overrides.get("reader"), "slice_": slice})
     plan_hash = None
     if submitting:
@@ -459,7 +466,7 @@ def submit(
     # the placement AFTER minting, so a missing Docker became a run record marked failed with
     # `internal error: FileNotFoundError: 'docker'` -- memrank blaming itself for the machine. The
     # rows come from the placement that needs them, so this cannot drift from what actually stops
-    # the run (localdocs/decisions/decision-placement-owns-its-requirements.md).
+    # the run (docs-internal/decisions/decision-placement-owns-its-requirements.md).
     # Every source target in the sweep, not just the first: each launches its own directory, so
     # each has its own markers and launcher to be missing. Naming them one run at a time would be
     # the round-trip a single honest refusal removes.
@@ -477,7 +484,8 @@ def submit(
                      bench_kwargs=bench_kwargs, tier=tier, slice_=slice,
                      on=on, output_dir=output_dir, k=k, repeats=repeats, model=model,
                      token_budget=token_budget, seed=seed, workers=workers, verbose=verbose,
-                     judged=judge, judge_workers=judge_workers, judge_cfg=judge_cfg,
+                     judged=judge, judge_workers=judge_workers, fail_fast=fail_fast,
+                     judge_cfg=judge_cfg,
                      units=gated_units, experiments=experiments_by_ref)
     if run_id:  # execute mode: the spawned child, or the cloud container -- the blocking path
         _run_local_sweep(factories, opts, run_ids=list(run_id))

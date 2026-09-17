@@ -104,7 +104,7 @@ def test_the_cli_does_not_import_an_internal_package():
     `publish.toml` says these packages never ship. The CLI reaching one is not a packaging
     inconvenience like the check above -- it is a public tree that cannot import its own entry
     point, and it would be found by the first outsider to `pip install memrank` rather than
-    here. Documented in localdocs/plans/2026-08-25-repo-boundary-execution-plan.md; enforced here.
+    here. Documented in docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md; enforced here.
     """
     loaded = _imported_by(CLI_MODULES)
     published = _published_anyway()

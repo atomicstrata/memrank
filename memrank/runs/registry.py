@@ -372,6 +372,11 @@ def metrics_from(raw: dict[str, Any]) -> dict[str, Any]:
             **_judged_quality(raw.get("judged_metrics") or {}),
             "k": (raw.get("k"), "count"), "repeats": (raw.get("repeats"), "count"),
             "units": (raw.get("n_units"), "count"),
+            # Beside the unit count, because the composite above is a mean over the units that
+            # RAN: a cell that lost twelve of fifty is not a score over fifty. Omitted for the
+            # runs that predate per-unit outcomes -- `present` drops None, and 0 there would
+            # claim an all-units-attempted run the artifact never recorded.
+            "units failed": (raw.get("units_failed"), "count"),
         }),
         "latency": present({
             # HOW LONG THE RUN TOOK -- the first thing anyone asks, and until now the one thing this

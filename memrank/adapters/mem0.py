@@ -195,9 +195,11 @@ class Mem0Adapter(MemoryAdapter):
     def _build_sdk_memory(self) -> Any:
         Memory = _try_import_mem0()
         if Memory is None:
+            from memrank.provenance.install import dependency_instruction
+
             raise RuntimeError(
                 "Mem0 SDK requested but 'mem0ai' is not installed. "
-                "Install with: pip install memrank[mem0]"
+                f"Install with: {dependency_instruction('mem0ai', 'mem0')}"
             )
         if self.config:
             return Memory.from_config(self._with_credentials(self._resolved_config()))

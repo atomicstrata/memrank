@@ -78,16 +78,17 @@ def optional_import(module: str, extra: str | None) -> Any:
     try:
         return import_module(module)
     except ImportError as exc:
-        # BOTH install shapes, because this function cannot tell which one the reader used, and
-        # naming only the contributor's sent an outside user to `uv sync` from a directory with no
-        # pyproject.toml -- a second dead end on top of the missing package.
-        fix = (f"which is part of the {extra!r} extra. From a checkout: uv sync --extra {extra}. "
-               f"From a tool install: uv tool install --force --with {module} <the git URL you "
-               f"installed from>"
+        # The install's OWN shape, read from its PEP 610 metadata, because an instruction that
+        # does not fit the reader's install is a second dead end on top of the missing package.
+        # Naming only the contributor's sent an outside user to `uv sync` from a directory with
+        # no pyproject.toml; naming a git URL sends a released install to a branch checkout.
+        from memrank.provenance.install import dependency_instruction
+
+        fix = (f"which is part of the {extra!r} extra. Install it with: "
+               f"{dependency_instruction(module, extra)}"
                if extra else
-               "which is a base dependency, so this install is incomplete rather than missing an "
-               "extra. From a checkout: uv sync. From a tool install, reinstall it: "
-               "uv tool install --force --refresh <the git URL you installed from>")
+               f"which is a base dependency, so this install is incomplete rather than missing "
+               f"an extra. Repair it with: {dependency_instruction(module)}")
         raise MissingOptionalDependency(
             f"this command needs the {module!r} package, {fix}") from exc
 

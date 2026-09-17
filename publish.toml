@@ -3,7 +3,7 @@
 # WHAT THIS IS. `atomicstrata/memrank` is produced from this repository by dropping every path
 # this file classifies `internal`. That projection is meant to be a mechanical prefix operation,
 # not a judgement call repeated by whoever runs it -- which is the entire objective of
-# `localdocs/plans/2026-08-25-repo-boundary-execution-plan.md`.
+# `docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md`.
 #
 # HOW IT IS READ. A path is classified by its LONGEST matching prefix; `[exceptions]` overrides
 # any prefix. A prefix ending in `/` matches a directory; one that does not is an exact path.
@@ -63,7 +63,7 @@ public = [
 # The platform: the hosted API, the arena, the leaderboard, the operator tooling, and everything
 # that deploys them. Nothing in the public closure imports any of it.
 #
-# `localdocs/` and `tests/internal/` are the destinations Phases 3 and 4 move into. Declaring them
+# `docs-internal/` and `tests/internal/` are the destinations Phases 3 and 4 move into. Declaring them
 # before they are full is deliberate: the prefix is the contract, and a file that lands there is
 # classified from the moment it lands. `scripts/` is now internal WHOLE, so `scripts/internal/`
 # is no longer a rule -- the prefix above it says the same thing about more files.
@@ -75,7 +75,7 @@ internal = [
   "memrank/leaderboard/",
   "memrank/analysis/",
   "memrank/ops/",
-  "localdocs/",
+  "docs-internal/",
   "tests/internal/",
   # `scripts/` in full, and the notebooks. Neither is what an outsider needs to install,
   # run, interpret or extend memrank: `examples/` is the demonstration surface that ships,

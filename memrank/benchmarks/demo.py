@@ -29,9 +29,20 @@ from typing import Any
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
 from memrank.metrics.scoring import score_query, spec_from_query
 
-_DEFAULT_DATA = (
-    Path(__file__).resolve().parents[2] / "examples" / "data" / "demo_scenario.json"
-)
+#: The bundled scenario, resolved beside this module inside the package.
+#:
+#: It used to be found by walking two directories up to `examples/data/`, a path that exists
+#: only in a checkout: from a `pip install memrank` the demo failed on a missing file, and the
+#: demo is the one benchmark that needs no engine, no credential and no download. The file now
+#: ships as package data (`[tool.setuptools.package-data]`), so the package carries its own
+#: scenario wherever it is installed.
+#:
+#: `Path(__file__).parent` rather than `importlib.resources.files()` for the same reason
+#: `memrank/targets/catalog.py` resolves `builtin/` this way: `files()` returns a `Traversable`,
+#: whose only importable name across our 3.10 floor and 3.12 is `importlib.abc.Traversable`,
+#: which 3.12 deprecates and 3.14 removes. Both forms ask the package where it is; this one
+#: stays a `Path`, which is also what a `DEMO_DATA_PATH` override is. ATO-2059.
+_BUNDLED_SCENARIO = Path(__file__).resolve().parent / "data" / "demo_scenario.json"
 
 
 class DemoBenchmark(Benchmark):
@@ -47,7 +58,7 @@ class DemoBenchmark(Benchmark):
                  data_path: str | None = None) -> None:
         self.k = k
         env = os.environ.get("DEMO_DATA_PATH") or data_path
-        self._path = Path(env) if env else _DEFAULT_DATA
+        self._path = Path(env) if env else _BUNDLED_SCENARIO
         # Only the bundled scenario is synthetic; a DEMO_DATA_PATH/data_path
         # override may point at real data, so it is NOT egress-safe by default.
         self.is_synthetic = env is None

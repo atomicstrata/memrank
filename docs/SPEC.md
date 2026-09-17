@@ -278,7 +278,9 @@ independent stewardship after that if adoption justifies it. Neither is claimed 
 
 - **Repository:** https://github.com/atomicstrata/memrank
 - **License:** Apache 2.0 -- chosen for the patent grant and enterprise compatibility.
-- **Install:** `uv tool install git+https://github.com/atomicstrata/memrank`. Not yet on PyPI.
+- **Install:** `uv tool install memrank`. The name is held on PyPI and the first functional
+  release is not uploaded yet; until it is, `uv tool install git+https://github.com/atomicstrata/memrank`
+  installs the same tool from the public repository.
 - **Results:** run output is written under `results/` on the machine that ran it. There is no
   standing public leaderboard, and this specification does not authorise one; publication is
   selective and evidence-led.

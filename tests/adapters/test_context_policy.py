@@ -16,7 +16,7 @@
 The 5000-token cap is memrank's leaderboard fairness control, but BEAM's protocol -- like every
 published BEAM harness, including BEAM's own baselines -- hands the reader everything retrieval
 returned. A capped run of it is not that benchmark
-(localdocs/decisions/decision-beam-runs-its-own-protocol.md), so `Benchmark.context_policy` exists
+(docs-internal/decisions/decision-beam-runs-its-own-protocol.md), so `Benchmark.context_policy` exists
 and `runner._effective_budget_mode` promotes matched arms accordingly. What must never happen:
 the no-memory arm getting promoted (retrieving nothing is its point), or the promotion leaking
 into benchmarks that did not ask for it.

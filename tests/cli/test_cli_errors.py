@@ -189,26 +189,48 @@ def test_a_missing_optional_package_is_never_reported_as_a_bug():
     assert _import_guards_raising_builtins() == []
 
 
-def test_the_helper_names_the_extra_that_fixes_it():
-    """Both install shapes, because the helper cannot tell which one the reader used.
+def test_the_helper_names_an_install_command_that_fits_the_reader(monkeypatch):
+    """One shape, the reader's own, read from PEP 610 metadata.
 
-    Naming only `uv sync` sent an outside user to a command that needs a pyproject.toml he did not
-    have -- a second dead end stacked on the missing package.
+    It used to name both -- `uv sync` for a checkout and a `uv tool install ... <the git URL
+    you installed from>` for everyone else -- because the helper could not tell them apart. It
+    can: a released install has no git URL to substitute, and telling it to fetch one replaces
+    the release with a branch checkout.
     """
     from memrank.errors import MemrankError, optional_import
 
+    monkeypatch.setattr("memrank.provenance.install._direct_url", lambda distribution: None)
+    monkeypatch.setattr("memrank.provenance.install._installed_as_uv_tool",
+                        lambda distribution: False)
     with pytest.raises(MemrankError) as excinfo:
         optional_import("a_package_that_does_not_exist", "judge")
     message = str(excinfo.value)
-    assert "uv sync --extra judge" in message
-    assert "uv tool install --force --with a_package_that_does_not_exist" in message
+    assert "'judge'" in message
+    assert "pip install --upgrade 'memrank[judge]'" in message
+    assert "git" not in message
 
 
-def test_a_base_dependency_is_not_reported_as_a_missing_extra():
+def test_a_checkout_is_told_to_sync_rather_than_to_install(monkeypatch):
+    """The contributor's shape is still served -- it is just no longer served to everyone."""
+    from memrank.errors import MemrankError, optional_import
+
+    monkeypatch.setattr("memrank.provenance.install._direct_url",
+                        lambda distribution: {"url": "file:///home/dev/memrank",
+                                              "dir_info": {"editable": True}})
+    with pytest.raises(MemrankError) as excinfo:
+        optional_import("a_package_that_does_not_exist", "judge")
+
+    assert "uv sync --extra judge" in str(excinfo.value)
+
+
+def test_a_base_dependency_is_not_reported_as_a_missing_extra(monkeypatch):
     """`datasets` is a base dependency; advising `--extra datasets` would send someone the wrong
     way. A failed import there means the install is broken, not incomplete."""
     from memrank.errors import MemrankError, optional_import
 
+    monkeypatch.setattr("memrank.provenance.install._direct_url",
+                        lambda distribution: {"url": "file:///home/dev/memrank",
+                                              "dir_info": {"editable": True}})
     with pytest.raises(MemrankError) as excinfo:
         optional_import("another_package_that_does_not_exist", None)
     message = str(excinfo.value)

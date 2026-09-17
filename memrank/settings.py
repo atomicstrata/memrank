@@ -76,12 +76,16 @@ SETTINGS: tuple[Setting, ...] = (
     # `default` alongside its source, so nothing is hidden and both overrides still win.
     #
     # PRODUCTION since 2026-08-25, when api.memrank.ai went live. It was api-staging until
-    # then because there was no other option. Two consequences worth knowing rather than
+    # then because there was no other option. The consequence worth knowing rather than
     # discovering: an already-installed CLI keeps talking to staging until it is upgraded
-    # (the API's cli_contract check bounds what that can break, but does not redirect it),
-    # and `submit --on cloud` against prod does not work yet -- the shared provider keys at
-    # /memrank/prod/{anthropic,openai,voyage}_api_key are still placeholders, so a cloud run
-    # fails at task start. Sign-in, config and local runs are unaffected.
+    # (the API's cli_contract check bounds what that can break, but does not redirect it).
+    #
+    # `submit --on cloud` against prod works, and is BYOK: a submitted run spends the
+    # credential of the ORG it is recorded against, resolved from accounts.org_secrets and
+    # injected by ARN (memrank/api/runs.py, `"credentials": "org"`), so an org with no
+    # provider key stored cannot launch one. The shared /memrank/prod/* provider keys are
+    # placeholders and nothing on the submission path reads them; do not read them as the
+    # thing a cloud run spends (tech-debt.md).
     Setting("api.url", "MEMRANK_API_URL", "https://api.memrank.ai",
             "base URL of the memrank API this CLI talks to"),
     # Off by default: the OS keychain is better at rest, but memrank runs as a Python entry

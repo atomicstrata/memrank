@@ -42,7 +42,7 @@ def _mem0():
 
     Every rule here is about `sdk_config` rather than about mem0, but mem0 is the engine whose SDK
     and server genuinely diverge, so it is what the rules are stated against. A tree without the
-    manifest skips (`tests/withheld`) rather than asserting on a target it does not have.
+    manifest skips (`tests/withheld.py`) rather than asserting on a target it does not have.
     """
     withheld.require("mem0")
     return resolve_target("mem0")

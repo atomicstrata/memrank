@@ -71,7 +71,7 @@ def test_inheritance_cycle_is_detected(tmp_path, monkeypatch):
 EXPECTED = {"word-overlap",
             "atomicmemory", "hindsight", "supermemory",
             # Vendor-configuration targets -- vendor depth, never on the leaderboard
-            # (localdocs/decisions/decision-matched-and-faithful-run-modes.md). Since 2026-08-19 this is
+            # (docs-internal/decisions/decision-matched-and-faithful-run-modes.md). Since 2026-08-19 this is
             # what a BARE vendor ref means, for every vendor engine: `mem0` is mem0 as mem0 ships
             # it, `hindsight` is hindsight at the depth its own AMB harness publishes. memrank's
             # comparison arm carries the suffix -- `hindsight:matched` below.
@@ -85,7 +85,7 @@ EXPECTED = {"word-overlap",
 
 
 # One case per seed rather than one loop over all of them. `mem0` and `supermemory` are not in
-# every tree (`tests/withheld`), and a loop makes the first missing one retire the check for the
+# every tree (`tests/withheld.py`), and a loop makes the first missing one retire the check for the
 # seeds that ARE there. Parametrised, each seed answers for itself and the assertions are the same.
 seed = pytest.mark.parametrize("name", sorted(EXPECTED))
 

@@ -67,7 +67,14 @@ def _component_override(role: str, model: ModelRef | None) -> list[str]:
 
 
 def _overrides(settings: ExperimentSettings) -> list[str]:
-    values = _component_override("llm", settings.engine_llm)
+    """The manifest override tokens this cell resolves against, free-form ones first.
+
+    Order is what decides a collision: ``parse_overrides`` keeps the last token for a key, so a
+    role spelled both as ``settings.overrides`` and as a typed component field resolves to the
+    typed one.
+    """
+    values = list(settings.overrides)
+    values.extend(_component_override("llm", settings.engine_llm))
     values.extend(_component_override("embedder", settings.embedder))
     return values
 
