@@ -116,7 +116,7 @@ def test_the_message_agrees_with_itself_about_number():
 def _submission_modules() -> list[Path]:
     root = Path(__file__).resolve().parents[2] / "memrank"
     found = [path for path in root.rglob("*.py")
-             if '"cli_contract": REMOTE_CLI_CONTRACT' in path.read_text(encoding="utf-8")]
+             if '"config": remote_config(' in path.read_text(encoding="utf-8")]
     assert found, "no cloud submission site found -- has the payload key been renamed?"
     return found
 

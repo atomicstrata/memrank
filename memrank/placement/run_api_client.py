@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from memrank.errors import MemrankError
+from memrank.provenance.install import with_upgrade_instruction
 
 
 class RunApiError(MemrankError):
@@ -37,7 +38,13 @@ class RunApiError(MemrankError):
 
 
 def _refusal(response) -> RunApiError:
-    """Map one non-2xx response to a typed error, keeping the server's code."""
+    """Map one non-2xx response to a typed error, keeping the server's code.
+
+    A refusal that asks for an upgrade is completed here rather than on the platform: the
+    platform can see that this CLI is stale and cannot see how it was installed, and the two
+    installs take opposite upgrades. Handing a released install a git command is the failure
+    this seam exists to prevent.
+    """
     if response.status_code == 401:
         return RunApiError("not signed in -- run `memrank auth login`")
     if response.status_code == 403:
@@ -45,7 +52,8 @@ def _refusal(response) -> RunApiError:
     detail = response.json().get("detail", {}) if _is_json(response) else {}
     code = detail.get("code", "") if isinstance(detail, dict) else ""
     message = detail.get("message", response.text) if isinstance(detail, dict) else response.text
-    return RunApiError(f"{message} ({response.status_code})", code=code)
+    return RunApiError(f"{with_upgrade_instruction(str(message))} ({response.status_code})",
+                       code=code)
 
 
 def _is_json(response) -> bool:

@@ -149,11 +149,12 @@ than asking you to trust that someone did.
 
 ## Adding something
 
-- **An engine, without touching memrank at all** -- write a translator that speaks the
+- **An engine of your own** -- [adding an adapter](adding-adapters.md): pass the instance to
+  `memrank.run`, and register it only when it needs a name.
+- **A benchmark of your own** -- [adding a benchmark](adding-benchmarks.md), the same way.
+- **An engine, without writing Python at all** -- write a translator that speaks the
   [adapter contract](adapter-contract.md) over HTTP, in any language.
   [`examples/native-adapter/`](../examples/native-adapter/README.md) is a working one.
-- **An in-tree adapter** -- [adding an adapter](adding-adapters.md).
-- **A benchmark** -- [adding a benchmark](adding-benchmarks.md).
 
 A change that affects how anything is scored needs a matching change to
 [methodology.md](methodology.md). That is not a review preference: a

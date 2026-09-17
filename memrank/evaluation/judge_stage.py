@@ -22,8 +22,14 @@ from dataclasses import asdict
 from typing import Any
 
 from memrank.errors import MemrankError
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.observer import NULL_OBSERVER, EvalObserver
-from memrank.judging.judge import JudgeConfig, JudgedQuery, UnparseableVerdict
+from memrank.judging.judge import (
+    MAX_VERDICT_ATTEMPTS,
+    JudgeConfig,
+    JudgedQuery,
+    UnparseableVerdict,
+)
 from memrank.judging.prompts import JUDGE_PROMPT_VERSION
 from memrank.judging.shape import GENERIC_BINARY_CATEGORIES, BinaryJudgeShape, JudgeShape
 from memrank.metrics import cost
@@ -32,6 +38,20 @@ from memrank.metrics import cost
 class EmptyJudgeCoverage(MemrankError, ValueError):
     """A judged run has no judgeable queries. Subclasses ValueError so library
     callers can catch either; the CLI translates it to a clean Typer error."""
+
+
+class AllVerdictsUnparseable(MemrankError):
+    """Every gradeable query in a cell failed to produce a parseable verdict.
+
+    Raised rather than reported, because the alternative is the state ATO-1885 found: a run that
+    COMPLETES with a normal-looking receipt at `judged_coverage` 0.0, having billed every attempt
+    of every grading. Losing one query to a malformed reply is survivable and stays survivable
+    (`_judge_one_query`); losing all of them is a broken judge, not a thin result.
+
+    Structural rather than a warning on purpose. The only signal on this path was
+    ``observer.warning``, and the library default `memrank.run()` wires `NULL_OBSERVER`, whose
+    `warning` does nothing -- so a run with nobody listening said nothing at all.
+    """
 
 
 def assert_judge_coverage(units, judge: JudgeConfig | None, benchmark_name: str,
@@ -135,8 +155,10 @@ def _judge_one_query(q, row, cfg: JudgeConfig, complete,
         # One query the judge could not be made to grade. Recorded and skipped rather than
         # propagated: a supermemory cell finished all 385 queries, judged nearly all of
         # them, then died on a single reply that quoted the candidate with unescaped
-        # quotes -- discarding every result and all the spend behind it. Coverage falls and
-        # the count is in the receipt, so this is visible, not a silent degradation.
+        # quotes -- discarding every result and all the spend behind it. What makes ONE such
+        # query survivable rather than silent is `n_unjudged_unparseable_verdict` in the receipt;
+        # this warning reaches nobody on the default library path, where `NULL_OBSERVER` swallows
+        # it. When NOTHING grades, `_apply_judge` raises rather than leaning on either (ATO-1885).
         observer.warning(f"query {q['id']!r} left unjudged: {exc}")
         return None
     finally:
@@ -157,7 +179,7 @@ def _judge_one_query(q, row, cfg: JudgeConfig, complete,
 def _apply_judge(units, per_query, cfg: JudgeConfig, complete,
                  budget_mode: str = "matched",
                  shape: JudgeShape | None = None,
-                 judge_workers: int = 1,
+                 judge_workers: int = DEFAULT_JUDGE_WORKERS,
                  observer: EvalObserver = NULL_OBSERVER) -> dict[str, Any]:
     """Grade every judgeable query and reduce the verdicts into metrics.
 
@@ -183,6 +205,13 @@ def _apply_judge(units, per_query, cfg: JudgeConfig, complete,
     unsupported: set[str] = set()
     judgeable: list[tuple[dict[str, Any], dict[str, Any]]] = []
     for unit in units:
+        # A unit that FAILED during ingest or retrieval has no drill rows at all, so there is
+        # nothing to grade and nothing it can be graded against -- it leaves the judged
+        # denominator exactly as it leaves the composite's, rather than counting as N queries
+        # the judge declined. Whole-unit, because a MISSING row for a unit that did run is the
+        # loader defect the assertion below still catches.
+        if unit.queries and not any(q["id"] in rows for q in unit.queries):
+            continue
         for q in unit.queries:
             total += 1
             reason = shape.unjudged_reason(q)
@@ -233,6 +262,13 @@ def _apply_judge(units, per_query, cfg: JudgeConfig, complete,
             corr_ctx.append(jq.score)
         if jq.sufficiency is not None:
             suff.append(jq.sufficiency.passed)
+    if n_unparseable and not n_judged:
+        raise AllVerdictsUnparseable(
+            f"the judge ({cfg.judge_model}) returned no parseable verdict for any of the "
+            f"{n_unparseable} gradeable queries, after {MAX_VERDICT_ATTEMPTS} attempts each -- "
+            "every one of them billed. A judged run with nothing judged is not a result. Check "
+            "that this model returns the verdict JSON this build parses (bare, or inside a "
+            "single markdown code fence); the incumbent judges do.")
     return _judge_metrics(cfg, suff, corr, corr_ctx, n_judged, skipped,
                           sorted(unsupported), total, n_unparseable,
                           per_category=per_category, n_scoreable=len(judgeable),
@@ -327,7 +363,7 @@ def _judge_metrics(cfg, suff, corr, corr_ctx, n_judged, skipped: dict[str, int],
         # The explicit denominator: how many queries the shape could grade. A subset run can
         # never masquerade as a full one when the artifact says what "all of them" meant --
         # the numerator/denominator mix-up is the failure behind the field's one retracted
-        # LoCoMo number (localdocs/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md T3).
+        # LoCoMo number (docs-internal/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md T3).
         "n_scoreable": n_scoreable if n_scoreable is not None else n_judged + n_unparseable,
         # Cells carry their n so a reader can detect mislabeled or refiltered comparisons --
         # LoCoMo's per-category counts {282, 321, 96, 841} are a fingerprint.

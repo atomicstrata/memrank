@@ -64,6 +64,7 @@ CELL_KEYS = (
     "context_tokens_mean", "est_dollars_per_query", "est_dollars_per_cell", "cost_basis",
     "cleanup_is_destructive", "substring_recall_supported", "composite_rankable",
     "quality_metric", "question_text_public", "receipt", "n_units", "k", "repeats",
+    "unit_outcomes", "units_total", "units_failed", "unit_failure_rate",
     # FakeBenchmark's config_for_receipt() -- the open tail, pinned so a reordering of the
     # spreads (they must come LAST, later keys shadowing earlier ones) cannot pass unseen.
     "tier", "slice", "task_version",

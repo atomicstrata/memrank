@@ -45,6 +45,25 @@ defining -- requiring one silently dropped every judged run of them between
 2026-08-13 and 2026-08-25. A run with no quality number still publishes its latency,
 cost and token measurements, which are real measurements regardless.
 
+**A failed unit leaves the denominator, and says so.** A cell attempts every unit and
+records what happened to each. A unit whose ingest, retrieval or scoring raises is recorded as
+failed and the run continues; it contributes no per-unit score and no per-query rows, so it is
+excluded from the composite's mean and from judging rather than counted as a zero. **A composite
+is therefore a mean over the units that RAN, not over the units the benchmark defines.** What
+says which is in the same artifact, beside the composite:
+
+- `unit_outcomes` -- one record per unit attempted: `unit_id` and `outcome` (`ok` or `failed`),
+  plus the `stage` (`ingest` / `retrieve` / `score`), exception class and message for a failure.
+- `units_total`, `units_failed`, `unit_failure_rate` -- the counts, also shown as `units failed`
+  by `memrank runs show`, and narrated during the run as a warning per lost unit.
+
+A cell in which every unit failed reports `composite: null` rather than `0.0`, on the same rule
+as everywhere else: a score an engine did not earn is not zero. `memrank submit --fail-fast`
+restores the older behaviour of ending the cell at the first unit that raises. Two conditions end
+a run whatever that flag says: an exhausted provider rate limit (an account-wide condition, so
+every remaining unit would spend the same deadline for the same nothing) and an operator
+interrupt.
+
 **One engine under two configurations is two rows on one board.** Row identity is the
 adapter, the transport, *and* the engine's configuration -- the extractor LLM, embedder,
 context budget and retrieval settings it ran with. So two arms of one engine that differ only
@@ -198,9 +217,9 @@ family rather than the instance, and this repo already uses "lexical" for its or
 real engines describe their own retrieval as "lexical and graph" walks. One word cannot be both an arm
 name and a property several engines have.
 
-### Two arms we do not have, and why
+### One arm we do not have, and one we measure but do not ship
 
-Recorded so their absence reads as a decision rather than an oversight.
+Recorded so the status of each reads as a decision rather than an oversight.
 
 **Oracle / gold-evidence retrieval** -- the ceiling that separates "retrieval is hard" from "reading
 is hard". [LongMemEval](https://arxiv.org/abs/2410.10813) ships it as a dataset variant and builds
@@ -209,8 +228,20 @@ not have it because it needs per-benchmark gold-evidence labels, which not every
 carries.
 
 **Random retrieval** -- [MemDelta](https://arxiv.org/html/2606.29914)'s control, "random chunks...
-controls for 'having text' vs. 'relevant text'". Nothing we ship separates a memory system's
-ranking from the mere presence of context. Cheap to add; not yet added.
+controls for 'having text' vs. 'relevant text'". **Measured since 2026-09-10**, as a seeded
+arm over one retrieval grid on `locomo`: k documents drawn uniformly at random per query from
+the same unit's corpus, ignoring the query, scored by the same evidence-recall diagnostic as
+the engines beside it. The control is MemDelta's; ours is a reproduction of it.
+
+What it found there is worth stating because it is the reason the control exists: at that
+grid's shipped settings a majority of a retrieval score was reachable by drawing at random,
+and a retriever that ignores the query did not clear the floor at any setting. A level quoted
+without its random floor overstates what retrieval contributed.
+
+It is **not a shipped arm**: `memrank list-adapters` does not offer it, no benchmark run adds
+it, and it is not a registered adapter. It is a measurement arm, and what remains undone is
+promoting it to one -- which needs a decision about how a floor is reported beside a published
+score, not just an adapter.
 
 ## Cost
 

@@ -39,7 +39,8 @@ REMOTE_VALUE_FLAGS: tuple[tuple[str, str], ...] = (
     ("judge_samples", "--judge-samples"))
 REMOTE_SWITCHES: tuple[tuple[str, str], ...] = (
     ("verbose", "--verbose"), ("no_judge_cache", "--no-judge-cache"),
-    ("allow_empty_judge_coverage", "--allow-empty-judge-coverage"))
+    ("allow_empty_judge_coverage", "--allow-empty-judge-coverage"),
+    ("fail_fast", "--fail-fast"))
 #: Parameters whose value must be STATED rather than implied by a flag's absence, as
 #: ``(name, when_true, when_false)``. A switch says nothing when it is off, which is the right
 #: shape for a knob whose default is fixed -- and the wrong one for judging, whose default is

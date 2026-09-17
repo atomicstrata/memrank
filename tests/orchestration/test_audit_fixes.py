@@ -156,10 +156,12 @@ def test_run_and_persist_closes_adapter_on_failure(tmp_path):
         def ingest(self, documents):
             raise RuntimeError("boom")
 
+    # `fail_fast` because a unit's failure is otherwise RECORDED and stepped over (see
+    # tests/orchestration/test_unit_outcomes.py); this pins what happens when a cell does die.
     with pytest.raises(RuntimeError):
         _run_and_persist(Boom(), FakeBenchmark(), k=10, repeats=1, run_id_prefix="r",
                          model="gpt-4o-mini", token_budget=5000, seed=42, judge=None,
-                         judge_runtime=None, out_path=tmp_path / "o.json")
+                         judge_runtime=None, out_path=tmp_path / "o.json", fail_fast=True)
     assert closed == ["boom"]
 
 

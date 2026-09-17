@@ -14,17 +14,15 @@ memrank needs Python 3.10 or newer; uv installs one for you if the machine has n
 
 ## 2. Install memrank
 
-memrank is not published to PyPI yet, so the install is from git:
-
 ```bash
-uv tool install --force --refresh git+https://github.com/atomicstrata/memrank
+uv tool install memrank
 ```
 
 Check it landed:
 
 ```bash
 memrank --help
-memrank --version      # 0.2.0 or newer, and the commit it was built from
+memrank --version      # the version, and where this install came from
 ```
 
 <details>
@@ -40,24 +38,36 @@ uv tool update-shell    # then restart your shell
 <details>
 <summary>Upgrading later</summary>
 
-The same command. It is the install command precisely so there is only one to remember:
+For a published install, the upgrade is the ordinary one:
+
+```bash
+uv tool upgrade memrank     # or: pip install --upgrade memrank
+```
+
+For a source install it is the install command again, `--force --refresh` included -- see
+below for why. Which one applies to *your* install is not something you have to remember:
+every memrank message that asks you to upgrade reads your own install metadata and names the
+path that fits it -- including an editable install, where the answer is to update the tree it
+tracks rather than to reinstall anything.
+</details>
+
+<details>
+<summary>Installing from source (contributors)</summary>
+
+The repository is public, so this needs no GitHub credential:
 
 ```bash
 uv tool install --force --refresh git+https://github.com/atomicstrata/memrank
 ```
 
-`--force` reinstalls over what is already there; `--refresh` is what makes it actually pick up a
-moved branch. Not `uv tool upgrade memrank` -- uv resolves a git *branch* against its cache and
-will tell you there is nothing to upgrade while the branch has moved
+`--force` reinstalls over what is already there; `--refresh` is what makes it actually pick up
+a moved branch. Not `uv tool upgrade memrank` -- for a *git* install uv resolves the branch
+against its cache and will tell you there is nothing to upgrade while the branch has moved
 ([astral-sh/uv#4317](https://github.com/astral-sh/uv/issues/4317),
-[#9146](https://github.com/astral-sh/uv/issues/9146)).
+[#9146](https://github.com/astral-sh/uv/issues/9146)). That caveat is about git installs only;
+a published install upgrades normally.
 
-`memrank --version` prints the commit you are on, which is the thing to quote when something
-looks wrong.
-</details>
-
-<details>
-<summary>Working on memrank itself</summary>
+To work on memrank itself, take a checkout instead:
 
 ```bash
 git clone https://github.com/atomicstrata/memrank
@@ -65,8 +75,11 @@ cd memrank
 uv tool install --editable .     # `memrank` tracks your working tree
 ```
 
-Code edits apply immediately; changing *dependencies* needs a re-install. For the test suite and
-the rest of the development loop, see [local development](local-development.md).
+Code edits apply immediately; changing *dependencies* needs a re-install. For the test suite
+and the rest of the development loop, see [local development](local-development.md).
+
+`memrank --version` prints where the install came from -- for a git install, the commit -- which
+is the thing to quote when something looks wrong.
 </details>
 
 ## 3. Run an evaluation
@@ -152,6 +165,10 @@ chose since (change it with `memrank config set defaults.org <slug>`).
 > **"no default org"?** Membership is not self-served yet. Hosted runs are, for now, limited to
 > accounts AtomicStrata has provisioned; local placements are not.
 
+Hosted runs are held to your org's limits -- a quota on how many you may have started and still
+running, and, for a run composed in the browser rather than submitted from the CLI, that org's
+run-shape ceilings; a submission over either is refused naming the limit it crossed.
+
 <details>
 <summary>Signing in over SSH, or anywhere with no browser</summary>
 
@@ -195,6 +212,12 @@ again. `MEMRANK_TOKEN` overrides both, and is what CI should use.
 Install the optional MCP server with `uv tool install 'memrank[mcp]'`, then configure the agent to
 launch `memrank-mcp`. Run `memrank-mcp --help` for the tool workflow and configuration.
 
+From the source install, the same extra is named against the URL:
+
+```bash
+uv tool install --force --refresh 'memrank[mcp] @ git+https://github.com/atomicstrata/memrank'
+```
+
 ## Known limitations
 
 - **A finished cloud run shows no SCORE** -- `runs ls` prints `—` and `runs show` says
@@ -209,7 +232,7 @@ Local placements -- the ones this page leads with -- are not affected by any of 
 
 ## Telling us something broke
 
-`memrank --version` and the run id from `runs ls` make a report actionable -- the version line
-carries the commit, so "0.2.0" from two people is two different builds and we can tell which.
-Paste the whole error text: messages are written to name the fix, and one that doesn't is itself
-worth reporting.
+`memrank --version` and the run id from `runs ls` make a report actionable. The version line says
+where the install came from as well as what it is -- a released version identifies itself, and a
+git install adds the commit, so two people reporting "0.2.0" are distinguishable. Paste the whole
+error text: messages are written to name the fix, and one that doesn't is itself worth reporting.

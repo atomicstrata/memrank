@@ -18,7 +18,7 @@ API. What a given target *requires* is answered by `targets show <ref>`, which p
 required secret: the target owns that fact, so the catalog is where it is read. The
 `memrank preflight` command that used to answer it here is retired -- a run refuses loudly with
 the same information at the moment it matters, which cannot go stale between the check and the
-run (localdocs/interface-model.md section 6).
+run (docs-internal/interface-model.md section 6).
 """
 
 from __future__ import annotations

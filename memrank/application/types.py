@@ -45,6 +45,15 @@ class ExperimentSettings(ContractModel):
     engine_llm: ModelRef | None = None
     embedder: ModelRef | None = None
     reader: ModelRef | None = None
+    #: Manifest overrides the typed component fields above cannot spell -- ``embedder.endpoint=``
+    #: and its siblings -- as the same ``key=value`` tokens the CLI takes positionally. Part of the
+    #: settings rather than beside them because they change which components run, and therefore
+    #: what the cell IS: two runs differing only here are different experiments.
+    #:
+    #: Rendered BEFORE the typed fields, so a role spelled both ways resolves to the typed one --
+    #: ``parse_overrides`` is last-wins, and the field that has a name in the model is the one a
+    #: caller expects to win.
+    overrides: list[str] = Field(default_factory=list)
     pricing_model: str = "gpt-4o-mini"
     slice: str | None = None
     tier: str | None = None

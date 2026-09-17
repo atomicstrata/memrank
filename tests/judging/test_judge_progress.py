@@ -28,6 +28,7 @@ import json
 import pytest
 
 from memrank import runner
+from memrank.evaluation.judge_stage import AllVerdictsUnparseable
 from memrank.judging.judge import JudgeConfig
 from memrank.orchestration.observers import RunStatusObserver
 from memrank.runs import status as run_status
@@ -114,18 +115,22 @@ def test_the_heartbeat_on_disk_says_judging(judging, tmp_path, units):
 def test_an_unjudgeable_verdict_still_costs_the_run_its_time(judging, units, monkeypatch):
     """A query whose verdict will not parse burned five calls before saying so. Counting it out
     of `done` would leave the bar short of a total it could then never reach -- a stuck bar, on a
-    run that is fine. Coverage falls; progress does not lie about it."""
+    run that is fine. Progress does not lie about it.
+
+    Every query fails here, which is now the loud case: `_apply_judge` raises rather than handing
+    back a receipt at `judged_coverage` 0.0 (ATO-1885). The progress property under test is
+    unchanged and is asserted where it now lands -- on the observer, after the raise, because the
+    items were attempted and timed before the stage refused its own result."""
     _status, cfg, observer = judging
     # Patched on the SHAPE, which is where grading now happens; this used to reach for
     # `runner.judge_query`. Only the injection point moved -- every assertion below is unchanged.
     monkeypatch.setattr(runner.BinaryJudgeShape, "grade",
                         lambda *a, **k: (_ for _ in ()).throw(runner.UnparseableVerdict("nope")))
 
-    metrics = _judge(units, cfg, observer)
+    with pytest.raises(AllVerdictsUnparseable):
+        _judge(units, cfg, observer)
     judge = observer._progress.as_dict()["judge"]
 
-    assert metrics["n_judged"] == 0
-    assert metrics["n_unjudged_unparseable_verdict"] == JUDGEABLE
     assert judge["done"] == JUDGEABLE, "attempted, timed, and counted"
 
 

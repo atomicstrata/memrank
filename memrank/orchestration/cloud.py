@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Cloud submission: render the sweep for the platform and record what it answered.
+"""Cloud submission: describe the sweep for the platform and record what it answered.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ import typer
 
 from memrank.benchmarks.refs import canonical_ref
 from memrank.orchestration.resolve import _experiment_metadata
-from memrank.placement.remote_argv import remote_argv, submit_command
+from memrank.placement.remote_argv import submit_command
 from memrank.runs import registry
 from memrank.runs import status as run_status
 from memrank.term import style
@@ -52,8 +52,12 @@ def _submit_sweep(refs: list[str], params: dict[str, Any], *, org: str | None,
     """Submit one run per target THROUGH THE API -- the laptop holds no AWS identity.
 
     A sweep fans out (one task cannot serve mixed shapes); the server launches each and records it
-    against the org. NO image is ever named: the server runs its pinned platform harness, and
-    compatibility rides on ``cli_contract``, checked server-side against that image's lineage.
+    against the org. What crosses the wire is the MEASUREMENT -- the resolved cell as a structured
+    config -- and the server renders the command from it with the renderer its own platform image
+    was built beside. So there is no contract to negotiate: this CLI's flag vocabulary is its own
+    business, and a flag renamed on the platform moves the server's renderer alone.
+
+    NO image is ever named either: the server runs its pinned platform harness.
 
     Naming a harness build used to be possible here (``--image-tag``), and it is not any more. It
     assumed a memrank checkout, a Docker daemon and ECR push rights -- none of which a user of the
@@ -68,8 +72,8 @@ def _submit_sweep(refs: list[str], params: dict[str, Any], *, org: str | None,
             submission. Independent runs are submitted independently, and the refusals are
             named together at the end.
     """
+    from memrank.application.submission import remote_config
     from memrank.placement import run_api_client
-    from memrank.placement.cloud_submit import REMOTE_CLI_CONTRACT
     from memrank.targets.portability import local_only, unportable_message
 
     if org is None:
@@ -88,12 +92,10 @@ def _submit_sweep(refs: list[str], params: dict[str, Any], *, org: str | None,
     launched: list[str] = []
     with _api_client() as http:
         for ref in refs:
-            experiment = (params.get("experiments_by_ref") or {}).get(ref)
-            metadata = _experiment_metadata(experiment, params.get("plan_hash"))
-            payload = {"target_ref": ref, "benchmark": benchmark, "slice": slice_,
-                       "tier": tier, "argv": remote_argv(params, ref=ref),
-                       "cli_contract": REMOTE_CLI_CONTRACT,
-                       **metadata}
+            experiment = (params.get("experiments_by_ref") or {})[ref]
+            payload = {"config": remote_config(experiment, verbose=params["verbose"],
+                                               judge_workers=params["judge_workers"],
+                                               fail_fast=params["fail_fast"])}
             try:
                 record = run_api_client.submit_run(http, org, payload)
             except run_api_client.RunApiError as exc:

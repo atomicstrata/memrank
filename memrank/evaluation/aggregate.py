@@ -22,7 +22,9 @@ from __future__ import annotations
 from typing import Any
 
 from memrank.core import Benchmark
+from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.result import EvalResult
+from memrank.evaluation.unit_outcome import UnitOutcome, failure_summary
 from memrank.metrics import cost
 from memrank.metrics.scoring import score_query, spec_from_query
 
@@ -99,10 +101,18 @@ def _mean_composite(per_unit_scores) -> float | None:
 
 def build_result(adapter, benchmark, units, per_unit_scores, per_query, *,
                  model, token_budget, receipt, k, repeats, retrieve_summary,
-                 latency_metrics, token_metrics, workers=1, judge_workers=1,
-                 judged_metrics=None, ingest_summary=None) -> EvalResult:
-    """Build the final :class:`EvalResult` for one (adapter, benchmark) cell."""
+                 latency_metrics, token_metrics, workers=1, judge_workers=DEFAULT_JUDGE_WORKERS,
+                 judged_metrics=None, ingest_summary=None,
+                 unit_outcomes: list[UnitOutcome] | None = None) -> EvalResult:
+    """Build the final :class:`EvalResult` for one (adapter, benchmark) cell.
+
+    ``unit_outcomes`` is one record per unit ATTEMPTED. A failed unit is absent from
+    ``per_unit_scores``, so the composite below is a mean over the units that ran and the counts
+    beside it are what say how many that was.
+    """
     composite = _mean_composite(per_unit_scores)
+    outcomes = list(unit_outcomes or [])
+    counts = failure_summary(outcomes)
     # Run-level metrics the benchmark reduces from its own per-unit scores. Empty for a benchmark
     # that declares none, so BEAM's artifact is unchanged. Without this, LongMemEval's
     # recall_all@k and LoCoMo's evidence_recall existed only as N per-unit values under
@@ -161,6 +171,10 @@ def build_result(adapter, benchmark, units, per_unit_scores, per_query, *,
         n_units=len(units),
         k=k,
         repeats=repeats,
+        unit_outcomes=[o.to_dict() for o in outcomes],
+        units_total=counts["units_total"],
+        units_failed=counts["units_failed"],
+        unit_failure_rate=counts["unit_failure_rate"],
         rollup=rolled,
         benchmark_config=_benchmark_params(benchmark),
         judged_metrics=judged_metrics,
@@ -169,8 +183,9 @@ def build_result(adapter, benchmark, units, per_unit_scores, per_query, *,
 
 def _aggregate_cell(adapter, benchmark, units, per_unit_scores, per_query, *,
                     model, token_budget, receipt, k, repeats, retrieve_summary,
-                    latency_metrics, token_metrics, workers=1, judge_workers=1,
-                    judged_metrics=None, ingest_summary=None) -> dict[str, Any]:
+                    latency_metrics, token_metrics, workers=1, judge_workers=DEFAULT_JUDGE_WORKERS,
+                    judged_metrics=None, ingest_summary=None,
+                    unit_outcomes=None) -> dict[str, Any]:
     """The artifact dict for one cell -- exactly ``build_result(...).to_dict()``, kept as
     a function so the dict form and the typed form can never drift apart."""
     return build_result(
@@ -178,7 +193,8 @@ def _aggregate_cell(adapter, benchmark, units, per_unit_scores, per_query, *,
         model=model, token_budget=token_budget, receipt=receipt, k=k, repeats=repeats,
         retrieve_summary=retrieve_summary, latency_metrics=latency_metrics,
         token_metrics=token_metrics, workers=workers, judge_workers=judge_workers,
-        judged_metrics=judged_metrics, ingest_summary=ingest_summary).to_dict()
+        judged_metrics=judged_metrics, ingest_summary=ingest_summary,
+        unit_outcomes=unit_outcomes).to_dict()
 
 
 def _drill_unit(unit, responses, token_budget, budget_mode: str = "matched") -> list[dict[str, Any]]:

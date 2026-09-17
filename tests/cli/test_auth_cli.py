@@ -15,7 +15,7 @@
 
 The credential store is stubbed rather than mocked away: these tests exercise the real
 command, and never touch the developer's OS keyring (the FakeKeyring reasoning in
-tests/accounts/test_credentials.py).
+tests/internal/accounts/test_credentials.py).
 """
 from __future__ import annotations
 

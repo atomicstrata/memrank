@@ -15,7 +15,7 @@
 
 Three shapes used to coexist -- a bare array without ``sort_keys``, bare objects with it, and no
 ``--json`` at all on ``runs show``, the record view a script or an agent wants first. What is
-pinned here is the convention documented in localdocs/interface-model.md: detail views emit an object,
+pinned here is the convention documented in docs-internal/interface-model.md: detail views emit an object,
 listings emit an array of objects, keys are sorted, stdout carries the document alone, and any
 object may gain keys additively (a consumer must ignore what it does not know, which is what
 makes a later ``schema_version`` possible without an envelope now).

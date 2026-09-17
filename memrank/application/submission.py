@@ -6,7 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from memrank.application.planning import plan_sweep
-from memrank.application.types import Experiment, Notice, SweepPlan, ToolEnvelope
+from memrank.application.types import (
+    Experiment,
+    ModelRef,
+    Notice,
+    SweepPlan,
+    ToolEnvelope,
+)
 
 
 def _refused(code: str, message: str) -> ToolEnvelope:
@@ -36,13 +42,29 @@ def _verify(plan: SweepPlan, experiment_id: str, acknowledgements: list[str]) ->
 
 
 def remote_params(experiment: Experiment, plan: SweepPlan,
-                  acknowledgements: list[str]) -> dict[str, Any]:
+                  acknowledgements: list[str], *, verbose: bool = False,
+                  judge_workers: int | None = None,
+                  fail_fast: bool = False) -> dict[str, Any]:
     """One planned experiment as the flat parameters every submission path renders from.
 
     Public because it is the first half of the config-to-container translation, and the half a
     browser needs: the API plans a structured config, calls this, and hands the result to
     :func:`memrank.placement.remote_argv.remote_argv`. The CLI reaches the same dict from Typer's
     parsed flags instead. Two doors, one room -- and the API tests assert both render identical argv.
+
+    Args:
+        experiment: The resolved cell.
+        plan: The plan it belongs to, for routing.
+        acknowledgements: Warning codes the caller accepted.
+        verbose: How loudly the run narrates itself. Keyword rather than a settings field
+            because it changes what is PRINTED and nothing that is measured -- putting it in
+            ``ExperimentSettings`` would make two identical measurements two experiments.
+        judge_workers: Judge concurrency, or ``None`` to leave it unstated and let the task keep
+            its own default. Same reasoning as ``verbose``: independent calls with an ordered
+            reduce, so metrics are identical at any value.
+        fail_fast: Whether the task stops at the first unit that fails. Keyword for the same
+            reason as ``verbose``: it changes how much of the evaluation survives a failure,
+            never what any surviving unit measures.
     """
     from memrank.benchmarks.refs import compose_ref
 
@@ -61,7 +83,8 @@ def remote_params(experiment: Experiment, plan: SweepPlan,
         "overrides": overrides, "tier": settings.tier, "slice": settings.slice,
         "k": settings.k, "repeats": settings.repeats, "model": settings.pricing_model,
         "token_budget": settings.token_budget, "seed": settings.seed,
-        "workers": settings.workers, "unit": settings.units, "verbose": False,
+        "workers": settings.workers, "unit": settings.units, "verbose": verbose,
+        "judge_workers": judge_workers, "fail_fast": fail_fast,
         # Already resolved by the door that took the request -- never None here. `remote_argv`
         # renders it as `--judge` or `--no-judge`, so the task is told the decision rather than
         # re-deriving it from its own build of the benchmark.
@@ -71,6 +94,64 @@ def remote_params(experiment: Experiment, plan: SweepPlan,
         "on": plan.request.routing.placement, "output_dir": Path("results"),
         "org": plan.request.routing.org,
     }
+
+
+def _stated(role: str, ref: ModelRef | None, tokens: list[str]) -> dict[str, Any] | None:
+    """``ref`` when the CALLER named this component, ``None`` when the manifest supplied it.
+
+    ``resolve_experiment`` fills ``engine_llm`` and ``embedder`` in from the resolved manifest, so
+    the value alone cannot say which of the two happened -- and the difference is the whole of the
+    equivalence: a component restated here renders an override token the CLI never rendered, and
+    the two commands stop being the same bytes. What does say is the override list, whose typed
+    tail is exactly what the caller named.
+    """
+    if ref is None or not any(token.startswith(f"{role}=") for token in tokens):
+        return None
+    return ref.model_dump(mode="json")
+
+
+def remote_config(experiment: Experiment, *, verbose: bool,
+                  judge_workers: int | None = None,
+                  fail_fast: bool = False,
+                  acknowledged: list[str] | None = None) -> dict[str, Any]:
+    """One planned experiment as the ``config`` a cloud submission carries.
+
+    The structural twin of :func:`remote_params`: the same cell, DESCRIBED rather than rendered.
+    The server re-plans it and renders the command with the same renderer, which is what lets the
+    platform's flag vocabulary change without waiting for every installed CLI to catch up.
+
+    Every field is the one the caller stated, never the one resolution supplied -- see
+    :func:`_stated` -- so ``plan_sweep`` on the other side of the wire resolves the same
+    experiment id and ``remote_argv`` renders byte-identical argv.
+
+    Args:
+        experiment: The resolved cell.
+        verbose: How loudly the run narrates itself.
+        judge_workers: Judge concurrency, or ``None`` to leave the field out and take the API
+            model's own default. Unlike argv, an unstated field here is answered by the server
+            that renders the command rather than by whatever the task image defaults to.
+        acknowledged: Warning codes the caller accepted.
+    """
+    settings = experiment.settings
+    named = experiment.overrides[len(settings.overrides):]
+    config = {
+        "target_ref": experiment.target_ref, "eval_ref": experiment.eval_ref,
+        "engine_llm": _stated("llm", settings.engine_llm, named),
+        "embedder": _stated("embedder", settings.embedder, named),
+        "reader": settings.reader.model_dump(mode="json") if settings.reader else None,
+        "overrides": list(settings.overrides),
+        "pricing_model": settings.pricing_model,
+        "slice": settings.slice, "tier": settings.tier,
+        "k": settings.k, "repeats": settings.repeats,
+        "token_budget": settings.token_budget, "seed": settings.seed,
+        "workers": settings.workers, "units": list(settings.units),
+        "judge": settings.judge.model_dump(mode="json"),
+        "verbose": verbose, "fail_fast": fail_fast,
+        "acknowledged": list(acknowledged or []),
+    }
+    if judge_workers is not None:
+        config["judge_workers"] = judge_workers
+    return config
 
 
 def _metadata(plan: SweepPlan, experiment: Experiment) -> dict[str, Any]:
@@ -175,8 +256,6 @@ def _submit_cloud(plan: SweepPlan, experiment: Experiment,
                   acknowledgements: list[str]) -> dict[str, Any] | ToolEnvelope:
     from memrank.orchestration import cloud
     from memrank.placement import run_api_client
-    from memrank.placement.cloud_submit import REMOTE_CLI_CONTRACT
-    from memrank.placement.remote_argv import remote_argv
     from memrank.targets.portability import local_only, unportable_message
 
     # The same guard the CLI applies, at the other cloud door. A target defined only on the
@@ -193,14 +272,16 @@ def _submit_cloud(plan: SweepPlan, experiment: Experiment,
     refusal = _judge_gate_refusal(experiment, params)
     if refusal is not None:
         return refusal
-    # No image is named: the server launches its own pinned platform harness. Naming one was the
-    # harness-developer door and is gone -- it assumed a checkout, a Docker daemon and ECR rights,
-    # and it swapped only the image while the API still rendered the task command.
-    payload = {"target_ref": experiment.target_ref, "benchmark": experiment.eval_ref,
-               "slice": experiment.settings.slice, "tier": experiment.settings.tier,
-               "argv": remote_argv(params, ref=experiment.target_ref),
-               "cli_contract": REMOTE_CLI_CONTRACT,
-               **_metadata(plan, experiment)}
+    # WHAT to measure, not the command that measures it: the server plans this config and renders
+    # the argv with the same renderer, so this door speaks no flag vocabulary at all. The
+    # positional facts and the experiment identity come off the server's own resolution -- there is
+    # nothing for a submitter's copy of them to disagree with.
+    #
+    # No image is named either: the server launches its own pinned platform harness. Naming one was
+    # the harness-developer door and is gone -- it assumed a checkout, a Docker daemon and ECR
+    # rights, and it swapped only the image while the API still rendered the task command.
+    payload = {"config": remote_config(experiment, verbose=False,
+                                       acknowledged=acknowledgements)}
     with cloud._api_client() as http:
         record = run_api_client.submit_run(http, params["org"], payload)
         cloud._record_submission(http, params["org"], experiment.target_ref, record,

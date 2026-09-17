@@ -139,15 +139,23 @@ def test_one_ungradeable_query_costs_coverage_not_the_run():
 
 def test_the_unparseable_count_has_its_own_reason():
     """A benchmark gap and a judge malfunction are different problems; only one is worth
-    re-running to fix, so they must not share a counter."""
+    re-running to fix, so they must not share a counter.
+
+    Two queries with one survivor, where this once used a single query that failed. A cell where
+    NOTHING grades now raises instead of returning these metrics (ATO-1885,
+    `test_judge_fenced_verdict.py`), so the counter has to be read off a cell that lived.
+    """
     from memrank.runner import _apply_judge
 
-    rows = [{"query_id": "q0", "retrieved": [{"content": "c"}]}]
-    metrics = _apply_judge([_unit(["q"])], rows, JudgeConfig(no_context_control=False),
-                           lambda m, s, u: MALFORMED)
+    def complete(model: str, system: str, user: str) -> str:
+        return MALFORMED if "POISON" in user else VALID
+
+    rows = [{"query_id": f"q{i}", "retrieved": [{"content": "c"}]} for i in range(2)]
+    metrics = _apply_judge([_unit(["POISON", "fine"])], rows,
+                           JudgeConfig(no_context_control=False), complete)
 
     assert metrics["n_unjudged_unparseable_verdict"] == 1
     assert metrics["n_unjudged"] == 1
     assert metrics["n_unjudged_no_gold"] == 0
-    assert metrics["judged_coverage"] == 0.0
-    assert metrics["n_judged"] == 0
+    assert metrics["judged_coverage"] == pytest.approx(1 / 2)
+    assert metrics["n_judged"] == 1
