@@ -34,7 +34,7 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:6767"
@@ -53,6 +53,7 @@ class SupermemoryAdapter(MemoryAdapter):
     """HTTP adapter for local self-hosted Supermemory."""
 
     name = "supermemory"
+    base_url_env = "SUPERMEMORY_BASE_URL"
     version = "0.1.0"
     engine_version = os.environ.get("SUPERMEMORY_ENGINE_VERSION", "0.0.3-local")
     transport = "http"
@@ -105,7 +106,7 @@ class SupermemoryAdapter(MemoryAdapter):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         namespace = user_id or self._isolation
         if namespace is None:
             raise RuntimeError("retrieve called before prepare")
@@ -144,7 +145,7 @@ class SupermemoryAdapter(MemoryAdapter):
             "search": body,
             "graph_snapshot": self._graph_snapshot(namespace),
         }
-        return docs, raw
+        return Recall(documents=docs, declared=raw)
 
     def cleanup(self) -> None:
         if self._isolation is not None:

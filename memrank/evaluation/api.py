@@ -13,16 +13,23 @@
 # permissions and limitations under the License.
 """``memrank.run`` -- evaluate a memory engine from a Python script, and nothing else.
 
-The supported library entry point: resolve the target and eval the way the CLI does,
-run the cell, return a typed :class:`EvalResult`. No run directory, no ``status.json``,
-no sync, no cloud -- the only disk touched is the dataset/tokenizer/judge caches, and
-the only network egress is the engine under test (plus Anthropic when judged).
+The supported library entry point: resolve the engine and the evaluation the way the CLI
+does, run the cell, return a typed :class:`EvalResult`. No run directory, no
+``status.json``, no sync, no cloud -- the only disk touched is the dataset/tokenizer/judge
+caches, and the only network egress is the engine under test (plus Anthropic when judged).
+
+The two parameters were once ``target`` and ``eval`` -- the command line's own nouns, on a
+Python function. Both are still accepted as keywords and warn; see
+:data:`DEPRECATED_PARAMETERS`, which is what ``tests/repo/test_python_vocabulary.py``
+enumerates so a third spelling cannot appear without a deliberate edit.
 """
 from __future__ import annotations
 
 import uuid
+import warnings
 from dataclasses import replace
 from pathlib import Path
+from typing import cast
 
 from memrank.core import Benchmark, MemoryAdapter
 from memrank.evaluation.cell import _close_adapter, run_cell
@@ -31,10 +38,43 @@ from memrank.evaluation.observer import NULL_OBSERVER, EvalObserver
 from memrank.evaluation.result import EvalResult
 from memrank.judging.judge import JudgeConfig
 
+#: ``{deprecated spelling: the name it was replaced by}``. Both were the command line's
+#: nouns: ``target`` means the expected answer in machine learning and a deployment
+#: destination in operations, and ``eval`` shadows a builtin. Removed at plan step 22.
+DEPRECATED_PARAMETERS = {"target": "engine", "eval": "evaluation"}
+
+
+def _settled(supplied: object | None, deprecated: object | None, old_name: str) -> object:
+    """The value of a parameter that has two spellings, one of them deprecated.
+
+    Giving both raises rather than choosing: a caller who passes ``engine=`` and ``target=``
+    has two intentions and a silent winner would measure whichever one this function picked.
+
+    Returns ``object`` because mypy cannot carry a type variable through two optional unions
+    -- ``pick(x: T | None, y: T | None) -> T`` called with ``str | Adapter | None`` infers
+    ``object``, verified against the pinned mypy. The two call sites cast, which is where the
+    real type is known and readable.
+    """
+    current = DEPRECATED_PARAMETERS[old_name]
+    if deprecated is None:
+        if supplied is None:
+            raise TypeError(
+                f"run() needs {current}: the {current} to measure, as a catalog name or an "
+                f"object you built")
+        return supplied
+    if supplied is not None:
+        raise TypeError(
+            f"run() got both {current}= and {old_name}=; {old_name} is the deprecated spelling "
+            f"of {current}, so pass one of them")
+    warnings.warn(
+        f"run({old_name}=...) is deprecated; pass {current}= instead",
+        DeprecationWarning, stacklevel=3)
+    return deprecated
+
 
 def run(
-    target: str | MemoryAdapter,
-    eval: str | Benchmark,  # noqa: A002 - the CLI's own noun (`memrank submit TARGET EVAL`)
+    engine: str | MemoryAdapter | None = None,
+    evaluation: str | Benchmark | None = None,
     *,
     k: int = 10,
     repeats: int = 3,
@@ -48,17 +88,18 @@ def run(
     fail_fast: bool = False,
     observer: EvalObserver | None = None,
     checkpoint_path: Path | None = None,
+    target: str | MemoryAdapter | None = None,
+    eval: str | Benchmark | None = None,  # noqa: A002 - the deprecated spelling of `evaluation`
 ) -> EvalResult:
     """Run one evaluation cell and return its result. Writes nothing, prints nothing.
 
     Args:
-        target: A target ref from the catalog (``"mem0"``, ``"hindsight:matched"``,
-            ``"word-overlap"``) or a ready :class:`MemoryAdapter` instance. A ref is
-            resolved exactly as ``memrank submit`` resolves it; a container-backed
-            target's engine must already be reachable -- this function provisions
-            nothing.
-        eval: An eval ref (``"demo"``, ``"locomo:smoke"``, ``"beam:100k-smoke"``) or a
-            :class:`Benchmark` instance. ``load()`` may download the dataset into the
+        engine: A catalog name (``"mem0"``, ``"hindsight:matched"``, ``"word-overlap"``)
+            or a ready :class:`MemoryAdapter` instance. A name is resolved exactly as
+            ``memrank submit`` resolves it; a container-backed engine must already be
+            reachable -- this function provisions nothing.
+        evaluation: A catalog name (``"demo"``, ``"locomo:smoke"``, ``"beam:100k-smoke"``)
+            or a :class:`Benchmark` instance. ``load()`` may download the dataset into the
             cache on first use.
         judge: ``None`` asks the benchmark (`judge_required`) -- the evals whose
             protocol IS the judge get one by default; ``True``/``False`` force it; a
@@ -71,6 +112,8 @@ def run(
             :class:`EvalObserver` subclass to hear about units, items and warnings.
         checkpoint_path: ``None`` writes no checkpoint. Give a path to make a judged
             run resumable (``memrank ops rejudge``) at the cost of one file.
+        target: Deprecated spelling of ``engine``. Accepted, warns, removed at step 22.
+        eval: Deprecated spelling of ``evaluation``. Accepted, warns, removed at step 22.
 
     Defaults mirror ``memrank submit``'s (k=10, repeats=3, seed=42, token_budget=5000,
     priced at gpt-4o-mini), so a script and a sweep of the same cell agree.
@@ -79,12 +122,15 @@ def run(
     downloads (~4 MB, cached) on first cost accounting -- both inherited from the
     measurement loop and documented rather than hidden.
     """
-    if isinstance(eval, Benchmark):
-        benchmark = eval
+    chosen_engine = cast("str | MemoryAdapter", _settled(engine, target, "target"))
+    chosen_evaluation = cast("str | Benchmark", _settled(evaluation, eval, "eval"))
+
+    if isinstance(chosen_evaluation, Benchmark):
+        benchmark = chosen_evaluation
     else:
         from memrank.benchmarks import from_ref
 
-        benchmark = from_ref(eval)
+        benchmark = from_ref(chosen_evaluation)
 
     if judge is None:
         # The single definition of "does this eval need judging" -- an unjudged run of a
@@ -100,13 +146,13 @@ def run(
     ref: str | None = None
     make_adapter = None
     owns_adapter = False
-    if isinstance(target, MemoryAdapter):
-        adapter = target
+    if isinstance(chosen_engine, MemoryAdapter):
+        adapter = chosen_engine
     else:
         from memrank.targets import resolve_target
         from memrank.targets.factory import build_adapter
 
-        ref = target
+        ref = chosen_engine
 
         def make_adapter() -> MemoryAdapter:
             return build_adapter(resolve_target(ref))

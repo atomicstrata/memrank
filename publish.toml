@@ -82,6 +82,11 @@ internal = [
   # and the scripts are our own operating conveniences. ATO-1886.
   "scripts/",
   "notebooks/",
+  # Prototypes. `spikes/` holds working code written to be READ and reacted to -- a shape proposed
+  # for a future interface, running so it can be argued with, importing nothing from `memrank/` and
+  # imported by nothing in it. None of it ships: publishing a proposal beside the thing it proposes
+  # to replace is how an outsider ends up building against an interface nobody promised.
+  "spikes/",
   "infra/",
   "web-gui/",
   "supabase/",
@@ -94,6 +99,7 @@ internal = [
   "export-policy.toml",
   "tools/internal/",
   "tech-debt.md",
+  "working-state.md",
   "AGENTS.md",
   "CLAUDE.md",
   ".dockerignore",
@@ -144,7 +150,7 @@ internal = [
   #
   # The example is also broken independently: it imports a module that has since been renamed.
   # See tech-debt.md.
-  "examples/compare-am-mem0.py",
+  "examples/more/compare-am-mem0.py",
 
   # The `mem0` and `supermemory` targets, withheld pending ATO-1831 (2026-08-31, ATO-1824).
   #

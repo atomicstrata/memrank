@@ -34,6 +34,9 @@ class Unreachable:
 
     name = "unreachable"
     base_url = "http://localhost:9"
+    # The variable that moves the address, which the failure quotes. Declared here because a real
+    # adapter declares it: preflight reads it off the adapter rather than holding a table.
+    base_url_env = "UNREACHABLE_API_URL"
     graph_capable = False
 
     def __init__(self) -> None:
@@ -67,11 +70,19 @@ def test_a_failing_cleanup_does_not_replace_the_diagnosis():
 
 
 def test_the_message_names_both_ways_out():
+    """Point memrank at the engine that is running, or have memrank start one.
+
+    Both remedies are things the reader can do with what they installed. The message this
+    replaced named a shell script in the maintainers' own checkout, which the person who most
+    needs it does not have (ATO-2125); `tests/repo/test_user_facing_paths.py` is what keeps a
+    sibling message from doing it again.
+    """
     with pytest.raises(PreflightError) as caught:
         preflight(Unreachable())
 
     message = str(caught.value)
-    assert "backends.sh up" in message
+    assert "UNREACHABLE_API_URL" in message, "name the variable, do not describe it"
+    assert "base_url" in message
     assert "--on local" in message
 
 

@@ -21,26 +21,28 @@ This is the same engine `memrank submit recency demo` drives, reached the other 
 instance handed straight to `memrank.run`, which needs no `adapters.plugins`, no
 `targets.path` and no descriptor. It writes nothing and prints nothing but what is below.
 
-WHAT IT DOES NOT PRODUCE, and why that is correct: `result.target` is None. No ref was
+WHAT IT DOES NOT PRODUCE, and why that is correct: `result.engine_ref` is None. No ref was
 given, so memrank declines to invent one -- and without an address there is no variant
 digest and no provenance for the build. A number from here is a sanity check, not evidence.
 Registering the same engine (see README.md) is what earns the ref, and the receipt with it.
 """
 
-import memrank
+# The cell run, imported from its own module: `memrank.run` is now the typed run over
+# the seven, and this script is about the artifact the cell run returns.
+from memrank.evaluation.api import run as run_cell
 
 from recency_plugin import RecencyAdapter  # isort: skip  -- same directory; see README.md
 
 
 def main() -> None:
-    result = memrank.run(RecencyAdapter(), "demo", repeats=1)
+    result = run_cell(RecencyAdapter(), "demo", repeats=1)
 
-    print(f"composite: {result.composite:.3f}  ({result.adapter} × {result.benchmark})")
+    print(f"composite: {result.composite:.3f}  ({result.engine} × {result.evaluation})")
     for row in result.per_query:
         print(f"  {row['query_id']}: {'HIT ' if row['hit'] else 'MISS'} "
               f"matched={row['matched_doc_id'] or '-'}")
     print("retrieve p50:", result.latency_metrics["retrieve_p50_ms"], "ms")
-    print("target ref:  ", repr(result.target),
+    print("engine ref: ", repr(result.engine_ref),
           "<- None by design: no ref was given, so none is invented")
     print()
     print("The same engine through the CLI, which does have a ref -- see README.md:")

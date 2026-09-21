@@ -38,8 +38,10 @@ def main() -> None:
         adapter.ingest(unit.documents)
         responses: list[AdapterResponse] = []
         for query in unit.queries:
-            docs, raw = adapter.retrieve(query["text"], 10, query["user_id"])
-            responses.append(AdapterResponse(query_id=query["id"], documents=docs, raw=raw))
+            recall = adapter.retrieve(query["text"], 10, query["user_id"])
+            responses.append(AdapterResponse(query_id=query["id"],
+                                             documents=recall.documents,
+                                             raw=recall.declared))
         adapter.cleanup()
         composites.append(benchmark.score(unit, responses)["composite"])
     print(f"composite={sum(composites) / len(composites):.3f}")

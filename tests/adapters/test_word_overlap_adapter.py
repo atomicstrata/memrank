@@ -9,7 +9,7 @@ def test_word_overlap_retrieves_a_word_sharing_doc():
         Document(id="d1", content="favorite animal is the blue whale", metadata={"doc_id": "d1"}),
         Document(id="d2", content="the weather was rainy all week", metadata={"doc_id": "d2"}),
     ])
-    docs, _ = a.retrieve("what animal does she like", 1, "u1")
+    docs = a.retrieve("what animal does she like", 1, "u1").documents
     a.cleanup()
     assert docs[0].content == "favorite animal is the blue whale"
     assert docs[0].metadata["doc_id"] == "d1"
@@ -21,7 +21,7 @@ def test_baseline_isolates_runs():
     a.ingest([Document(id="d1", content="alpha token", metadata={"doc_id": "d1"})])
     a.cleanup()
     a.prepare("u2")
-    docs, _ = a.retrieve("alpha", 5, "u2")
+    docs = a.retrieve("alpha", 5, "u2").documents
     a.cleanup()
     assert docs == []  # u1 content not visible under u2
 

@@ -21,24 +21,24 @@ def _prepared(name):
 
 def test_none_retrieves_nothing():
     """The closed-book floor: the reader gets an empty context and answers from parametrics."""
-    docs, _ = _prepared("no-context").retrieve("what is fact number 3?", k=10, user_id="unit-1")
+    docs = _prepared("no-context").retrieve("what is fact number 3?", k=10, user_id="unit-1").documents
     assert docs == []
 
 
 def test_icl_returns_every_document_in_ingest_order():
     """Unranked: it reads what it can from the start, which is the whole point of the baseline."""
-    docs, _ = _prepared("fixed-context").retrieve("what is fact number 3?", k=10, user_id="unit-1")
+    docs = _prepared("fixed-context").retrieve("what is fact number 3?", k=10, user_id="unit-1").documents
     assert [d.id for d in docs] == ["d0", "d1", "d2", "d3", "d4"]
 
 
 def test_icl_ignores_k_because_the_token_budget_is_the_limit():
     """k caps ranked retrieval; ICL is capped by the shared token budget instead."""
-    docs, _ = _prepared("fixed-context").retrieve("q", k=2, user_id="unit-1")
+    docs = _prepared("fixed-context").retrieve("q", k=2, user_id="unit-1").documents
     assert len(docs) == 5
 
 
 def test_full_context_returns_everything_too():
-    docs, _ = _prepared("full-context").retrieve("q", k=1, user_id="unit-1")
+    docs = _prepared("full-context").retrieve("q", k=1, user_id="unit-1").documents
     assert len(docs) == 5
 
 
@@ -47,7 +47,7 @@ def test_isolation_holds_between_units():
     adapter = _prepared("fixed-context")
     adapter.cleanup()
     adapter.prepare("unit-2")
-    docs, _ = adapter.retrieve("q", k=10, user_id="unit-2")
+    docs = adapter.retrieve("q", k=10, user_id="unit-2").documents
     assert docs == []
 
 

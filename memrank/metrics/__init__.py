@@ -23,3 +23,26 @@ aligned sequence against a reference. `cost` prices a query's context in tokens.
 Everything here is pure and deterministic. Judgement -- anything that needs a model's opinion --
 lives in :mod:`memrank.judging` instead.
 """
+
+from memrank.metrics.scoring import (
+    EvidenceSpec,
+    MatchResult,
+    SpanRecall,
+    normalize,
+    score_query,
+    spec_from_query,
+)
+
+#: Re-exported here because this is where a person looks for them. They were reachable only as
+#: `memrank.metrics.scoring.score_query` and were not in any `__all__`, so the deterministic
+#: scorer memrank ships had no public name and "my questions, memrank's scorer" could not be
+#: written at all (ATO-2135). `SpanRecall` is that scorer as one object; the four names below
+#: it are the pieces, for a scorer that needs the per-query verdict rather than the unit mean.
+__all__ = [
+    "EvidenceSpec",
+    "MatchResult",
+    "SpanRecall",
+    "normalize",
+    "score_query",
+    "spec_from_query",
+]

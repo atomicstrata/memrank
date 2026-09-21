@@ -21,6 +21,7 @@ from pathlib import Path
 
 import typer
 
+from memrank.docs import doc_url
 from memrank.targets import Manifest, ManifestError, list_targets, resolve_target
 from memrank.targets.catalog import checkout_status, secret_status
 from memrank.targets.manifest import to_dict
@@ -131,12 +132,13 @@ def _verifiable_or_exit(target: Manifest) -> None:
         style.error(
             f"{target.name!r} uses the {target.adapter!r} adapter, which memrank implements "
             f"itself -- there is no third-party contract to verify. `verify` checks a translator "
-            f"against docs/adapter-contract.md.")
+            f"against {doc_url('adapter-contract.md')}.")
         raise typer.Exit(1)
     if target.binding is None:
         style.error(
             f"{target.name!r} declares no source binding, so there is no translator for memrank "
-            f"to launch. Add binding/launch/network (see docs/adapter-contract.md section 9).")
+            f"to launch. Add binding/launch/network (see {doc_url('adapter-contract.md')} "
+            f"section 9).")
         raise typer.Exit(1)
 
 
@@ -271,12 +273,12 @@ def render(
                                                 "the same file `memrank submit --on cloud` uses"),
     overrides: list[str] = typer.Option(None, "--set", help="key=value overrides"),
 ) -> None:
-    """Render the deployment document that runs a target, generated from its manifest.
-
-    This is what replaced the hand-authored ``deploy/ecs/taskdef.*.json.tpl``. Those had one
-    template per *adapter* with the components welded in, so ``mem0:voyage`` could not be expressed
-    in the cloud at all -- it ran bge-small under a row labelled voyage.
-    """
+    """Render the deployment document that runs a target, generated from its manifest."""
+    # This is what replaced the hand-authored per-adapter ECS task definitions, which had the
+    # components welded into one template per *adapter* -- so ``mem0:voyage`` could not be
+    # expressed in the cloud at all; it ran bge-small under a row labelled voyage. In a comment
+    # rather than the docstring because typer prints a command's docstring in `--help`, and those
+    # templates lived in a deployment directory an installed copy does not have (ATO-2125).
     from memrank.placement.cloud import CloudRenderError
 
     target = _resolve_or_exit(ref, list(overrides or []))

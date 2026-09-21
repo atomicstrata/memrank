@@ -39,8 +39,8 @@ from memrank import __version__, rate_limit
 from memrank.adapters.preflight import PreflightError, preflight
 from memrank.benchmarks import get_benchmark
 from memrank.benchmarks.refs import canonical_ref
-from memrank.cli import sync as sync_cli
 from memrank.core import QUALITY_METRIC_LABELS
+from memrank.evaluation import result as result_schema
 from memrank.evaluation.cell import (
     AdapterFactory,
     _assert_retrieved_something,
@@ -67,7 +67,7 @@ from memrank.placement.remote_argv import (
     REMOTE_VALUE_FLAGS,
 )
 from memrank.rate_limit import RateLimitGate
-from memrank.runs import checkpoint, registry
+from memrank.runs import checkpoint, push, registry
 from memrank.runs import status as run_status
 from memrank.term import style
 
@@ -400,7 +400,7 @@ def _execute_local_run(run: _LocalRun, opts: _ExecOpts) -> dict[str, Any]:
         # placements already unwound) both report; an operator interrupt does not, because an
         # HTTP request inside a KeyboardInterrupt unwind is worse than a pending record.
         if isinstance(exc, (Exception, SweepKilled)):
-            sync_cli.auto_sync(run.run_dir)
+            push.auto_sync(run.run_dir)
         raise
 
 
@@ -436,7 +436,7 @@ def _record_local_run(run: _LocalRun, out_path: Path, aggregated: dict[str, Any]
     # After `done`, so a crash mid-sync leaves a run that is correctly pending rather than
     # one that never finished. Never raises: see its docstring for why this one degrades
     # where the MLflow mirror above refuses.
-    sync_cli.auto_sync(run.run_dir)
+    push.auto_sync(run.run_dir)
 
 
 def _mark_unstarted(runs: list[_LocalRun], *, reason: str, sync: bool = False) -> None:
@@ -449,7 +449,7 @@ def _mark_unstarted(runs: list[_LocalRun], *, reason: str, sync: bool = False) -
         if run.status.data.get("state") == "queued":
             run.status.update(state="failed", error=f"not started: {reason}")
             if sync:
-                sync_cli.auto_sync(run.run_dir)
+                push.auto_sync(run.run_dir)
 
 
 def _preflight_engines(factories, benchmark_name: str, *, on: str) -> None:
@@ -625,12 +625,12 @@ def _summary_cell(c: dict[str, Any]) -> dict[str, Any]:
     bug this carries the fix for.
     """
     if c.get("status") == "not_applicable":
-        return {"adapter": c["adapter"], "status": "not_applicable",
+        return {"adapter": result_schema.adapter_of(c), "status": "not_applicable",
                 "composite": None, "reason": c.get("reason")}
     rankable = _composite_rankable(c)
     head = headline.cell_headline(c)
     return {
-        "adapter": c["adapter"],
+        "adapter": result_schema.adapter_of(c),
         "composite": c["composite"] if rankable else None,
         "substring_recall_supported": c.get("substring_recall_supported", True),
         "composite_rankable": rankable,

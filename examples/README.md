@@ -1,38 +1,34 @@
 # Memrank examples
 
-Runnable material for the most common Memrank workflows -- scripts, and one container recipe. Run
-each from the repository root.
+One folder per thing a person does, in the order the value appears. Each holds a short `run.py`
+and a README of a few lines saying what it shows and what it prints. Open 01, run it, and read a
+number with its measure and its decider; every folder after that adds one idea.
 
-| File | What it shows | Needs |
-| --- | --- | --- |
-| [`explore-benchmark.py`](explore-benchmark.py) | Load one benchmark and look at it -- no runs, nothing written. | nothing |
-| [`run-existing-target.py`](run-existing-target.py) | Evaluate a catalog target from a script, resolving the ref exactly as `memrank submit` does. | nothing |
-| [`custom-engine.py`](custom-engine.py) | Wire your own engine into the eval loop -- six methods, no registration. | nothing |
-| [`custom-benchmark.py`](custom-benchmark.py) | Wire your own benchmark in -- three methods, no registration. | nothing |
-| [`custom-target/`](custom-target/README.md) | Register an engine memrank does not ship, so `memrank submit` drives it like any other target. | nothing |
-| [`3-line-example.py`](3-line-example.py) | The smallest real run: one adapter, one benchmark, smoke slice. | a live engine |
-| [`supermemory-image/`](supermemory-image/README.md) | Build the engine image the `supermemory` target names -- no registry serves it, so the recipe ships instead. | Docker |
-| [`native-adapter/`](native-adapter/README.md) | A translator: the adapter contract over HTTP, in any language, without touching memrank. | nothing |
-
-Every script except `3-line-example.py` uses `demo`, which ships with the repository, so they run
-offline and instantly. `supermemory-image/` is not a script: it is the Docker build for an engine
-image no registry serves, and its README says what that costs to reproduce.
-
-## Prerequisites
+Run them from the repository root, or from inside any one of the folders -- nothing depends on
+where you start:
 
 ```bash
-uv sync --extra dev          # from the repository root
-uv run python examples/explore-benchmark.py
+uv sync --extra dev
+uv run python examples/01-first-result/run.py
 ```
 
-Or, with memrank already installed as a tool (see [installing memrank](../docs/install.md)),
-`python examples/explore-benchmark.py` works directly.
+| Folder | | Needs |
+| --- | --- | --- |
+| [`01-first-result/`](01-first-result/README.md) | A system memrank ships, on the evaluation memrank ships. Values, with their measures and deciders. | nothing |
+| [`02-your-own-system/`](02-your-own-system/README.md) | A memory of your own, in the four verbs its kind requires. | nothing |
+| [`03-your-own-evaluation/`](03-your-own-evaluation/README.md) | Your own tasks and context, measured by a measure memrank ships. | nothing |
+| [`04-your-own-measure/`](04-your-own-measure/README.md) | A measure you wrote, applied to a saved result loaded back. Nothing reruns. | nothing |
+| [`05-against-a-baseline/`](05-against-a-baseline/README.md) | A system against the no-context and full-context controls, paired. | nothing |
+| [`06-new-version-vs-old/`](06-new-version-vs-old/README.md) | Two versions of your own system, paired: gap, flips, caution. | nothing |
+| [`07-against-a-known-engine/`](07-against-a-known-engine/README.md) | Your system against an engine you did not write, paired. | nothing |
 
-`3-line-example.py` needs a backend for the adapter it evaluates:
+Everything above runs offline, against evaluations that ship with the repository. Nothing
+downloads a dataset, calls a paid API, or needs a key.
 
-- **AtomicMemory:** `ATOMICMEMORY_API_URL` (default `http://localhost:3070`)
-- **Mem0 OSS:** `MEM0_HTTP_URL` (default `http://localhost:8888`), or the `mem0ai` SDK installed
-- **Hindsight:** `HINDSIGHT_API_URL` (default `http://localhost:7000`)
+Each `run.py` is self-contained: it imports `memrank` and nothing else of this repository, so
+you can copy one into your own project and it runs there. What that costs is a little
+duplication between folders, which is the price of being able to read any one of them on its
+own. Nothing formats a result -- `print(result)` and `print(paired)` are memrank's own.
 
-If a backend is not reachable, the example fails with a clear connection error -- memrank does not
-silently fall back.
+[`more/`](more/README.md) is not a step in the walk: it keeps the material that drives
+memrank's previous run loop, or needs a live engine or Docker.

@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 
@@ -79,10 +79,10 @@ class NoContextAdapter(_InProcessControl):
     context_budget = "none"
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None):
+                 query_timestamp: datetime | str | None = None) -> Recall:
         with self.latency.track("retrieve"):
             pass
-        return [], {"results": []}
+        return Recall(documents=[], declared={"results": []})
 
 
 class FixedContextAdapter(_InProcessControl):
@@ -103,10 +103,10 @@ class FixedContextAdapter(_InProcessControl):
     name = "fixed-context"
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None):
+                 query_timestamp: datetime | str | None = None) -> Recall:
         with self.latency.track("retrieve"):
             docs = list(self._store.get(user_id) or self._store.get(self._isolation or "") or [])
-        return docs, {"results": [d.id for d in docs]}
+        return Recall(documents=docs, declared={"results": [d.id for d in docs]})
 
 
 class FullContextAdapter(FixedContextAdapter):

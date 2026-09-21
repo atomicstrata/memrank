@@ -24,11 +24,16 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from memrank import rate_limit
-from memrank.core import AdapterResponse, Benchmark, Document, MemoryAdapter
+from memrank.core import AdapterResponse, Benchmark, Document, MemoryAdapter, Recall
 from memrank.errors import MemrankError
 from memrank.evaluation.aggregate import _drill_unit, build_result
 from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
 from memrank.evaluation.judge_stage import _apply_judge, assert_judge_coverage
+from memrank.evaluation.measurement import (
+    latency_report,
+    pooled_declared_latency,
+    pooled_usage,
+)
 from memrank.evaluation.observer import NULL_OBSERVER, EvalObserver, _eval_plan
 from memrank.evaluation.receipt import _build_receipt
 from memrank.evaluation.result import EvalResult
@@ -322,7 +327,8 @@ def _run_units_sequential(adapter, benchmark, units, *, k, repeats, run_id_prefi
         done_queries += len(unit.queries)
         observer.unit_finished(label=label, index=unit_idx, total=len(units),
                                queries_done=done_queries, queries_total=total_queries)
-    return _Measured(per_unit_scores, per_query, adapter.latency_metrics(),
+    return _Measured(per_unit_scores, per_query,
+                     latency_report(measured, pooled_declared_latency(adapter)),
                      adapter.token_metrics(), measured.summary("retrieve"),
                      measured.summary("ingest"), outcomes)
 
@@ -356,7 +362,8 @@ def _run_one_unit(make_adapter, benchmark, unit, *, k, repeats, run_id_prefix,
             outcome = UnitOutcome.failed(unit.unit_id, stage=exc.stage, cause=exc.cause)
         else:
             outcome = UnitOutcome.ok(unit.unit_id)
-        return outcome, scored, drill, adapter.latency, adapter.tokens, measured
+        return outcome, scored, drill, pooled_declared_latency(adapter), pooled_usage(adapter), \
+            measured
     finally:
         _close_adapter(adapter)
 
@@ -378,11 +385,13 @@ def _run_units_concurrent(make_adapter, benchmark, units, *, k, repeats, run_id_
     per_unit_scores: list[dict[str, Any]] = []
     per_query: list[dict[str, Any]] = []
     outcomes: list[UnitOutcome] = []
-    # ``lat``/``tok`` merge the ADAPTERS' collectors (the published metrics shape); ``runner_lat``
-    # merges what the runner timed at its own call boundary, which is where both summaries come
-    # from -- see _ingest_with_progress on why the adapter's internals are not that boundary.
-    lat, tok, runner_lat = LatencyCollector(), TokenCollector(), LatencyCollector()
-    for outcome, scored, drill, adapter_lat, adapter_tok, measured in results:
+    # ``declared``/``tok`` pool what the ADAPTERS could say about themselves -- engine-side time
+    # and billed usage, the two things only an engine can know; ``runner_lat`` merges what the
+    # runner timed at its own call boundary, which is where every latency number the leaderboard
+    # reads comes from -- see _ingest_with_progress on why the adapter's internals are not that
+    # boundary.
+    declared, tok, runner_lat = LatencyCollector(), TokenCollector(), LatencyCollector()
+    for outcome, scored, drill, adapter_declared, adapter_tok, measured in results:
         outcomes.append(outcome)
         if outcome.is_ok:
             per_unit_scores.append(scored)
@@ -392,11 +401,12 @@ def _run_units_concurrent(make_adapter, benchmark, units, *, k, repeats, run_id_
                               failed=sum(1 for o in outcomes if not o.is_ok), total=len(units))
         # Merged for a failed unit too: whatever it managed before it raised is a real
         # measurement of this engine, and dropping it would flatter the percentiles.
-        lat.merge(adapter_lat)
+        declared.merge(adapter_declared)
         tok.merge(adapter_tok)
         runner_lat.merge(measured)
-    return _Measured(per_unit_scores, per_query, lat.as_metrics(), tok.as_metrics(),
-                     runner_lat.summary("retrieve"), runner_lat.summary("ingest"), outcomes)
+    return _Measured(per_unit_scores, per_query, latency_report(runner_lat, declared),
+                     tok.as_metrics(), runner_lat.summary("retrieve"),
+                     runner_lat.summary("ingest"), outcomes)
 
 def _ingest_with_progress(adapter: MemoryAdapter, documents: list[Document], *,
                           measured: LatencyCollector, label: str, gate: RateLimitGate,
@@ -540,7 +550,8 @@ def _ingest_one(adapter: MemoryAdapter, doc: Document, *, scope: str, label: str
 
 
 def _retrieve_one(adapter: MemoryAdapter, query, *, k: int, run_id: str, label: str,
-                  gate: RateLimitGate, observer: EvalObserver = NULL_OBSERVER):
+                  gate: RateLimitGate,
+                  observer: EvalObserver = NULL_OBSERVER) -> tuple[Recall, float]:
     """Retrieve once, waiting out a rate limit on the shared gate.
 
     No ``state_fingerprint`` check here, and that is not an oversight: retrieval is read-only, so
@@ -551,7 +562,7 @@ def _retrieve_one(adapter: MemoryAdapter, query, *, k: int, run_id: str, label: 
     that ignored the gate would keep the window saturated while ingest sat waiting on it -- the
     workers would be throttled and the account would not.
 
-    Returns ``(documents, raw, elapsed_ms)``. The timing is taken around the provider call alone
+    Returns ``(recall, elapsed_ms)``. The timing is taken around the provider call alone
     so that a gate pause never enters ``retrieve p50/p95/p99`` -- latency percentiles are what
     engines are compared on, and time spent waiting on a quota says nothing about the engine.
     """
@@ -562,8 +573,8 @@ def _retrieve_one(adapter: MemoryAdapter, query, *, k: int, run_id: str, label: 
         gate.wait()
         try:
             started = time.perf_counter()
-            docs, raw = adapter.retrieve(query["text"], k, run_id, query.get("query_timestamp"))
-            return docs, raw, (time.perf_counter() - started) * 1000.0
+            recall = adapter.retrieve(query["text"], k, run_id, query.get("query_timestamp"))
+            return recall, (time.perf_counter() - started) * 1000.0
         except Exception as exc:  # noqa: BLE001 - re-raised unless it is a rate limit
             if not _is_rate_limited(exc):
                 raise
@@ -587,14 +598,14 @@ def _retrieve_with_progress(adapter: MemoryAdapter, unit, *, k: int, repeats: in
     n = len(unit.queries)
     for pass_idx in range(repeats):
         for i, query in enumerate(unit.queries, start=1):
-            docs, raw, elapsed_ms = _retrieve_one(adapter, query, k=k, run_id=run_id,
-                                                  label=label, gate=gate,
-                                                  observer=observer)
+            recall, elapsed_ms = _retrieve_one(adapter, query, k=k, run_id=run_id,
+                                               label=label, gate=gate,
+                                               observer=observer)
             measured.record("retrieve", elapsed_ms)
             if pass_idx == 0:  # score the first measured pass
                 responses.append(AdapterResponse(
-                    query_id=query["id"], documents=docs,
-                    raw=raw if isinstance(raw, dict) else None,
+                    query_id=query["id"], documents=recall.documents,
+                    raw=recall.declared,
                     latency_ms=elapsed_ms,
                     metadata={"category": query.get("category")}))
             observer.item_done("retrieve", seconds=elapsed_ms / 1000.0, done=i, total=n,

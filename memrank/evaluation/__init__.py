@@ -13,8 +13,9 @@
 # permissions and limitations under the License.
 """The eval library: run one (adapter x benchmark) cell and hand back its result.
 
-What belongs here: the measurement loop (`cell`), its aggregation into the artifact
-dict (`aggregate`), the judge stage (`judge_stage`), the provenance receipt
+What belongs here: the measurement loop (`cell`), what an engine may declare about
+itself and what memrank measures for it (`measurement`), the aggregation into the
+artifact dict (`aggregate`), the judge stage (`judge_stage`), the provenance receipt
 (`receipt`), and the observer contract the loop narrates through (`observer`).
 
 What does not: terminals, run directories, heartbeats, placement, cloud, Typer.
@@ -25,8 +26,11 @@ are a TEMPORARY exception carried by `observer._GlobalsObserver`, the pre-split
 default; it leaves with the CLI split.)
 """
 from memrank.evaluation.api import run
+from memrank.evaluation.case import Answer, CaseRow, Passage, Subscore
 from memrank.evaluation.cell import cell_applicable, run_cell
 from memrank.evaluation.observer import EvalObserver, EvalPlan
 from memrank.evaluation.result import EvalResult
+from memrank.evaluation.score import Score
 
-__all__ = ["EvalObserver", "EvalPlan", "EvalResult", "cell_applicable", "run", "run_cell"]
+__all__ = ["Answer", "CaseRow", "EvalObserver", "EvalPlan", "EvalResult", "Passage",
+           "Score", "Subscore", "cell_applicable", "run", "run_cell"]

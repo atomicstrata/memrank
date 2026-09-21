@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memrank"
-version = "0.3.1"
-description = "Open, vendor-neutral benchmark suite for AI memory engines."
+version = "0.4.0"
+description = "Open, vendor-neutral instrument that measures how well a memory helps answer questions about what it was told earlier."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -108,7 +108,10 @@ memrank-mcp = "memrank.mcp_server:main"
 # first: it needs no engine, no credential and no download, so it must not need a checkout
 # either. `tools/internal/distribution.py` records what discovery actually shipped, and its
 # wheel-only demo check fails the build if this line stops carrying the file. ATO-2059.
-memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json"]
+# `py.typed` (PEP 561) is what tells a type checker the annotations in this package are
+# real and may be used. Without it Pyright and mypy treat an installed memrank as
+# untyped, and every hover in an editor shows `Any` however precise the signature is.
+memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json", "py.typed"]
 
 [tool.setuptools.packages.find]
 where = ["."]

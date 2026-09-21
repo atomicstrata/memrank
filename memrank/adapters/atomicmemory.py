@@ -29,7 +29,7 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:3070"
@@ -65,6 +65,9 @@ class AtomicMemoryAdapter(MemoryAdapter):
     ) -> None:
         prefix = type(self).env_prefix
         self.base_url = (base_url or os.environ.get(f"{prefix}API_URL", type(self).default_base_url)).rstrip("/")
+        # Built from the prefix rather than written out, so a wire-compatible subclass that sets
+        # its own `env_prefix` has a failure message naming ITS variable and not this engine's.
+        self.base_url_env = f"{prefix}API_URL"
         # Via the credential chokepoint (environment -> wallet), so `memrank secrets set
         # ATOMICMEMORY_API_KEY` actually reaches the adapter.
         from memrank.config import secret
@@ -165,7 +168,7 @@ class AtomicMemoryAdapter(MemoryAdapter):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         """POST a search request and shape the response into Documents."""
         client = self._http()
         payload: dict[str, Any] = {"user_id": user_id, "query": query, "limit": k}
@@ -185,7 +188,8 @@ class AtomicMemoryAdapter(MemoryAdapter):
         graph_snapshot = self._graph_snapshot(user_id)
         relation_context = self._relation_context_by_version(graph_snapshot)
         docs = self._shape_search_documents(results, user_id, relation_context)
-        return docs, {**body, "graph_snapshot": graph_snapshot}
+        return Recall(documents=docs,
+                      declared={**body, "graph_snapshot": graph_snapshot})
 
     @staticmethod
     def _shape_search_documents(

@@ -140,7 +140,14 @@ def test_rendering_argv_does_not_load_the_cli():
     done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
     loaded = set(done.stdout.split())
-    forbidden = sorted({"typer", "click", "memrank.runner"} & loaded)
+    # `click` is deliberately NOT in this set, for the reason tests/repo/test_import_weight.py
+    # states about its own `TERMINAL_ONLY`: click reaches the run path from `httpx.__init__`,
+    # which imports its own `_main` CLI module, and httpx is the HTTP library every adapter is
+    # required to use. Naming it here asserts something about somebody else's package, and
+    # since `memrank.systems` put the shipped adapter classes on the front page that assertion
+    # is permanently red. What this test guards -- Typer's execution graph -- is `typer` and
+    # `memrank.runner`, and those are what it names.
+    forbidden = sorted({"typer", "memrank.runner"} & loaded)
     assert forbidden == [], (
         f"importing the argv renderer pulled in {forbidden}. It is a pure table plus a loop; "
         f"the API imports it at module scope and must not pay for the CLI to do so.")

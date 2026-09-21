@@ -140,22 +140,29 @@ class MemoryAdapter(ABC):
     def prepare(self, isolation_unit: str) -> None: ...
     def ingest(self, documents: list[Document]) -> None: ...
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None,
-                 ) -> tuple[list[Document], dict[str, Any]]: ...
+                 query_timestamp: datetime | str | None = None) -> Recall: ...
     def cleanup(self) -> None: ...
-    def latency_metrics(self) -> dict[str, float]: ...
+
+    # Optional declarations. Only an engine can be told what a provider billed it, or
+    # see its own spend inside the hop memrank timed around it. The wall clock is
+    # memrank's own measurement and is not asked of an engine at all.
     def token_metrics(self) -> dict[str, float | None]: ...
+    def declared_latency(self) -> dict[str, list[float]]: ...
 ```
+
+`Recall` (`memrank/contract.py`) is the pair named: `documents`, the ranked list, and
+`declared`, the provider payload untouched. It replaces the bare tuple `retrieve` returned
+until 2026-09-21, whose halves only the source said apart.
 
 An adapter **must**:
 
 - Guarantee isolation. Nothing ingested under one `isolation_unit` may be visible under another.
 - Return documents **ranked best-first** from `retrieve`, and return fewer than `k` rather than
   padding.
-- Emit the required latency keys (`ingest_p50_ms`, `ingest_p95_ms`, `ingest_p99_ms`,
-  `retrieve_p50_ms`, `retrieve_p95_ms`, `retrieve_p99_ms`) and token keys
-  (`tokens_per_query_mean`, `tokens_per_query_p95`, `tokens_per_ingest_mean`,
-  `tokens_per_ingest_p95`), using memrank's collectors rather than a private metric shape.
+- Emit, **where it declares usage at all**, the four token keys (`tokens_per_query_mean`,
+  `tokens_per_query_p95`, `tokens_per_ingest_mean`, `tokens_per_ingest_p95`), using memrank's
+  `TokenCollector` rather than a private metric shape. Latency is not asked of an engine:
+  memrank times its own calls, and the run's `latency_metrics` carry that measurement.
 - Report `null` for a bucket the engine did not measure, never `0.0`.
 - **Fail loudly.** Raise on error rather than returning an empty result -- an empty list is a valid
   answer meaning "nothing matched", so a disguised failure scores exactly like the no-memory
@@ -164,7 +171,7 @@ An adapter **must**:
 
 An adapter **may** be written in any language and live outside this repository. A **translator**
 speaks the same contract over HTTP; memrank launches it, drives it, and never imports it.
-[`examples/native-adapter/`](../examples/native-adapter/README.md) is a working one in about 150 lines
+[`examples/native-adapter/`](../examples/more/native-adapter/README.md) is a working one in about 150 lines
 of standard-library Python.
 
 ## 5. Benchmark contract

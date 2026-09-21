@@ -112,16 +112,23 @@ overhead a directly-driven engine never pays. Naming it as its own class is what
 row being ranked against a direct one; quality metrics are unaffected and compare across everything.
 
 Translators MAY report `engine_ms` per call -- their own claim about time spent inside the engine,
-excluding the translator. When present it is recorded beside the wall-clock figure as
+excluding the translator. It reaches the run through `MemoryAdapter.declared_latency()`, as
+samples memrank pools and renders itself, and is recorded beside the wall-clock figure as
 `ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a reader can see how much of the
 measurement was harness rather than engine. It is a *reported* number, not a measured one: memrank
-cannot verify it, and it is never the headline.
+cannot verify it, and it is never the headline. The six wall-clock keys are memrank's own
+measurement and an engine cannot declare them at all -- a bucket that would render one is
+refused.
 
 ## Tokens
 
 Adapters call `TokenCollector.record(label, total_tokens)` after each LLM
-call. Buckets `query` and `ingest` map to the four required keys in
-`token_metrics()`.
+call. Buckets `query` and `ingest` map to the four keys in `token_metrics()`.
+
+Usage is the one measurement memrank asks an engine for, and it is a DECLARATION rather than a
+requirement: only an engine can be told what a provider billed it. Latency, by contrast, memrank
+times itself at its own call boundary and never asks for. An engine that declares nothing reports
+`null` per bucket.
 
 **Absent is not zero.** An adapter whose engine surfaces no usage data records nothing, and the
 bucket reports `null` -- not `0.0`. The distinction is the whole point: zero is a claim that the
