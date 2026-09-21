@@ -72,7 +72,7 @@ An in-process engine has nothing to launch and nothing to reach, so it uses
 `AdapterRegistration.in_process(...)`, which needs only two things: what launching it costs in
 credentials, and what the receipt should say about it. An engine memrank has to *start* -- a
 container, or a checkout it launches -- states more, because those rows are what start it. See
-[`../../docs/adding-adapters.md`](../../docs/adding-adapters.md).
+[`../../../docs/adding-adapters.md`](../../../docs/adding-adapters.md).
 
 ## The demo: a corpus too small to tell two engines apart
 
@@ -106,7 +106,7 @@ did is how benchmarks mislead. Real numbers want `locomo` or `beam`.
 
 ## Writing your own
 
-Copy [`recency_plugin.py`](recency_plugin.py) and replace the six method bodies.
+Copy [`recency_plugin.py`](recency_plugin.py) and replace the four method bodies.
 
 | Method | Yours does | The trap |
 |---|---|---|
@@ -114,8 +114,11 @@ Copy [`recency_plugin.py`](recency_plugin.py) and replace the six method bodies.
 | `ingest` | store the documents | -- |
 | `retrieve` | return `k` documents, **ranked** | `recall@k` reads the order; an unranked list scores worse than a bad ranking |
 | `cleanup` | release whatever the unit held | -- |
-| `latency_metrics` | the six required keys | use `LatencyCollector`; hand-rolled key sets drift |
-| `token_metrics` | the four required keys | `None` is not `0.0` -- absent is the absence of a measurement |
+| `token_metrics` *(optional)* | the four required keys, where the engine is told what it spent | `None` is not `0.0` -- absent is the absence of a measurement |
+
+Latency is not in the table because it is not asked of an engine: memrank times every ingest and
+retrieve at its own call boundary. A translator that can see its engine's own spend inside that
+hop declares it through `declared_latency()`, as samples, under its own bucket name.
 
 Then swap the descriptor in [`targets/`](targets/) for one naming your adapter, and point
 `adapters.plugins` at your module. Nothing in memrank changes.

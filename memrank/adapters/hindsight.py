@@ -35,7 +35,7 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:8888"
@@ -60,6 +60,7 @@ class HindsightAdapter(MemoryAdapter):
     """HTTP adapter for a self-hosted Hindsight backend."""
 
     name = "hindsight"
+    base_url_env = "HINDSIGHT_API_URL"
     version = "0.1.0"
     engine_version = os.environ.get("HINDSIGHT_ENGINE_VERSION", "unknown")
 
@@ -273,7 +274,7 @@ class HindsightAdapter(MemoryAdapter):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         if self._bank_id is None:
             raise RuntimeError("HindsightAdapter.retrieve called before prepare()")
         client = self._http()
@@ -314,7 +315,7 @@ class HindsightAdapter(MemoryAdapter):
         # engines need it; for this one it is not a meaningful request.
         results = body.get("results") or []
         docs = [self._result_to_doc(result, idx, user_id) for idx, result in enumerate(results)]
-        return docs, body
+        return Recall(documents=docs, declared=body)
 
     @staticmethod
     def _result_to_doc(result: dict[str, Any], idx: int, user_id: str) -> Document:

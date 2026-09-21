@@ -66,3 +66,20 @@ def test_duplicate_names_are_asked_once(wallet, monkeypatch):
     monkeypatch.setattr(config, "_prompt_for_secret", lambda name: calls.append(name) or "sk-x")
     config.ensure_secrets(["ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"])
     assert calls == ["ANTHROPIC_API_KEY"]
+
+
+def test_storing_a_secret_still_says_where_it_went(wallet, monkeypatch, capsys):
+    """The one line `style.say` prints here, asserted because its import moved.
+
+    `memrank/config.py` imported `memrank.term.style` at module level to serve this single
+    call, which put typer into every library caller's process (ATO-2133). The import is now
+    local to the call, and the risk of that change is a line that quietly stops appearing --
+    an operator who pasted a key and was told nothing would not know it was stored, or where.
+    """
+    monkeypatch.setattr(config, "_stdin_is_interactive", lambda: True)
+    monkeypatch.setattr(config, "_prompt_for_secret", lambda name: "sk-typed")
+
+    config.ensure_secrets(["ANTHROPIC_API_KEY"])
+
+    said = capsys.readouterr()
+    assert f"stored ANTHROPIC_API_KEY -> {wallet.store_path()}" in said.out + said.err

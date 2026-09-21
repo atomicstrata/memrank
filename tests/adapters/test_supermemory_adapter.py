@@ -158,7 +158,9 @@ def _relation_search_stub() -> dict[tuple[str, str], dict[str, Any]]:
 def test_retrieve_returns_relation_context_and_graph_snapshot():
     adapter, _stub = _adapter_with_stub(_relation_search_stub())
 
-    docs, raw = adapter.retrieve("planning color?", k=3, user_id="iso-1")
+    recall = adapter.retrieve("planning color?", k=3, user_id="iso-1")
+
+    docs, raw = recall.documents, recall.declared
 
     assert docs[0].id == "m-green"
     assert docs[0].metadata["score"] == 0.93

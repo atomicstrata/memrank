@@ -47,7 +47,9 @@ def test_an_unknown_ref_refuses_and_names_the_variants():
 
 def test_the_lazy_export_is_the_registry_factory():
     assert memrank.benchmark is from_ref
-    assert "benchmark" in memrank.__all__ and "benchmark" in dir(memrank)
+    # Off `__all__` since the seven took the front page: `memrank.evaluation("demo")`
+    # is what a person reaches for, and this stays the one-string Benchmark constructor.
+    assert "benchmark" not in memrank.__all__ and "benchmark" in dir(memrank)
 
 
 def test_raw_answers_from_the_instance_and_the_name_form_agrees():

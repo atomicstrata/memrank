@@ -14,10 +14,16 @@
 """``memrank runs sync`` -- this machine and the org's one universe are made to agree.
 
 A run is a run wherever it ran, so a finished local run belongs in the org universe exactly
-as a cloud-born one does. Two paths put it there and they share every decision below: the
-auto-sync that follows each finished run (:func:`auto_sync`, silent when signed out) and this
-verb, which reconciles everything pending. Reconciling ALL of it is the default because the
-listing already shows what is pending -- nobody should have to *know* which runs the org lacks.
+as a cloud-born one does. Two paths put it there and they share every decision: the auto-sync
+that follows each finished run (:func:`memrank.runs.push.auto_sync`, silent where there is no
+hosted side to sync to) and this verb, which reconciles everything pending. Reconciling ALL of
+it is the default because the listing already shows what is pending -- nobody should have to
+*know* which runs the org lacks.
+
+**THE PUSH IS NOT HERE.** It is :mod:`memrank.runs.push`, and this module is one of its two
+callers. It lived here, which made the automatic report a finished sweep sends reachable only
+by importing the command line -- so a library sweep pulled every verb and the argument parser
+into a caller who asked for an evaluation. That module's docstring has the rest.
 
 **BOTH DIRECTIONS.** Push was once the whole verb, and it left the other half of the disagreement
 standing: a cloud run's results stay in S3 and its local heartbeat stays at `running` until
@@ -25,18 +31,10 @@ something reconciles it, and until :mod:`memrank.runs.reconcile` existed only `w
 sweep nobody watched read as permanently running with no numbers -- 47 such runs on the machine
 where this was found. Pulling (:func:`_pull`) is that half, and it delegates the per-run work to
 the same function `watch` and `runs show` call, so three callers cannot drift into three answers.
-
-**The payload is the record.** Per-cell results with their receipts (config hash, environment
-stamp, provenance pins) and the run summary: kilobytes. The per-query transcript and the
-ingested corpus are artifacts -- tens of megabytes, and reproducible from the run dir that
-holds them -- so they are stripped here rather than shipped. Lazy artifact upload is a named
-future, not a thing this pretends to do.
 """
 from __future__ import annotations
 
-import json
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
@@ -44,8 +42,8 @@ import typer
 from memrank import settings
 from memrank.placement import run_api_client
 from memrank.runs import reconcile, registry
-from memrank.runs import record as run_record
 from memrank.runs import status as run_status
+from memrank.runs.push import push_one
 from memrank.term import style
 
 #: The states a run can be synced in. A run still going has no record yet; it syncs when it
@@ -56,17 +54,6 @@ _SYNCABLE = ("done", "failed")
 #: pair is 3 x `reconcile.ARTIFACT_WORKERS` = 24 transfers in flight -- enough to keep a home link
 #: busy across several runs, short of the point where the big cells start fighting for the disk.
 SYNC_RUN_WORKERS = 3
-
-
-def _dirty_source_run(run_dir: Path) -> bool:
-    """Whether a receipt identifies mutable source that must remain on this machine."""
-    for path in registry.cell_files(run_dir):
-        cell = json.loads(path.read_text(encoding="utf-8"))
-        provenance = cell.get("receipt", {}).get("engine_provenance", {})
-        dirty = provenance.get("properties", {}).get("memrank:source_dirty")
-        if str(dirty).lower() == "true":
-            return True
-    return False
 
 
 def is_pending(data: dict | None) -> bool:
@@ -218,42 +205,6 @@ def _pull(http, org: str, workers: int = reconcile.ARTIFACT_WORKERS,
     style.say("reconciled " + ", ".join(f"{n} {state}" for state, n in sorted(counts.items())))
 
 
-def _sync_one(http, org: str, run_dir: Path, data: dict | None) -> None:
-    """PUT one finished run and mark it synced. Raises; callers decide how loud that is."""
-    if _dirty_source_run(run_dir):
-        raise run_api_client.RunApiError(
-            f"{run_dir.name} evaluated a dirty source tree and is local-only", code="unsyncable")
-    if data is None or not (data.get("target") and data.get("benchmark")
-                            and data.get("started_at")):
-        raise run_api_client.RunApiError(
-            f"{run_dir.name} has no complete heartbeat to sync (it predates the heartbeat, "
-            f"or died before recording one)", code="unsyncable")
-    record = run_record.build(run_dir)
-    if data.get("experiment_id"):
-        record["experiment"] = {
-            key: data.get(key) for key in (
-                "experiment_id", "experiment_label", "plan_hash", "experiment_spec")}
-    payload = {"target_ref": data["target"], "benchmark": data["benchmark"],
-               "slice": data.get("slice"), "tier": _tier(run_dir),
-               "state": run_status.classify(data),
-               "started_at": data["started_at"],
-               # Read BEFORE the marker is written: annotate() restamps updated_at, and the
-               # run finished when it finished, not when this reached the API.
-               "finished_at": data.get("updated_at"), "error": data.get("error"),
-               "record": record}
-    run_api_client.sync_run(http, org, run_dir.name, payload)
-    run_status.RunStatus(run_dir, data).annotate(
-        synced_org=org, synced_at=datetime.now(timezone.utc).isoformat())
-
-
-def _tier(run_dir: Path) -> str | None:
-    """The run's tier, which only the summary records."""
-    summaries = sorted(run_dir.glob("summary__*.json"))
-    if not summaries:
-        return None
-    return json.loads(summaries[0].read_text(encoding="utf-8")).get("tier")
-
-
 def _org_or_refuse() -> str:
     """The org a sync lands in, or a refusal naming how to set one."""
     org = settings.get("defaults.org")
@@ -325,7 +276,7 @@ def sync(run_ids: list[str] = typer.Argument(None, help="run id(s); default sync
         failed = 0
         for run_dir, data in targets:
             try:
-                _sync_one(http, org, run_dir, data)
+                push_one(http, org, run_dir, data)
             except run_api_client.RunApiError as exc:
                 # One run's refusal is not the batch's: a reconciler does all the work it can,
                 # and the ones it could not do are named rather than counted.
@@ -347,39 +298,3 @@ def _client():
     except run_api_client.RunApiError as exc:
         style.error(str(exc))
         raise typer.Exit(1) from exc
-
-
-def auto_sync(run_dir: Path) -> None:
-    """Push one just-finished run, best effort. NEVER raises into the run that called it.
-
-    The run is already durably recorded before this runs, exactly as the MLflow mirror is --
-    but where that mirror raises when it is enabled and broken, this degrades to a note. The
-    difference is that a failed sync has a standing retry (`memrank runs sync`) and stays
-    visible as pending in the listing, so nothing is lost quietly; failing a finished
-    evaluation over a flaky network would destroy something that cannot be recovered.
-
-    Signed out it is silent, by contract: logged-out use accumulates records locally and
-    nothing nags.
-    """
-    if (settings.get("sync.auto") or "").strip().lower() not in ("1", "true", "yes"):
-        return
-    org = None
-    try:
-        # Session first, org second -- and silence for a missing session is the whole point of
-        # the order. Signed out there is nothing to say; signed in without an org there is,
-        # and saying it then does not nag the local-first user who never asked for an org.
-        with run_api_client.authenticated_client() as http:
-            org = settings.get("defaults.org")
-            if org is None:
-                style.note("not synced: no default org -- "
-                           "`memrank config set defaults.org <slug>`")
-                return
-            _sync_one(http, org, run_dir, run_status.read(run_dir))
-    except run_api_client.RunApiError as exc:
-        if exc.code == "no_session":
-            return
-        style.note(f"not synced to the org: {exc} -- `memrank runs sync` retries")
-    except Exception as exc:  # noqa: BLE001 - reported, retryable, and never fatal to a run
-        style.note(f"not synced to the org: {exc} -- `memrank runs sync` retries")
-    else:
-        style.note(f"synced -> org {org}")

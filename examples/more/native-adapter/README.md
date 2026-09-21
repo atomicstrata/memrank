@@ -1,6 +1,6 @@
 # Reference translator
 
-A working implementation of the [memrank adapter contract](../../docs/adapter-contract.md), in
+A working implementation of the [memrank adapter contract](../../../docs/adapter-contract.md), in
 about 150 lines of standard-library Python.
 
 Write one of these and memrank can evaluate your memory engine without a fork, a pull request, or
@@ -90,4 +90,4 @@ Three rules the reference implementation demonstrates and that are easy to get w
 Runs against a source-bound target are recorded as `development_observation` with
 `publishable: false`, and a run from a dirty working tree will not sync anywhere. That is about
 memrank having launched code from a mutable checkout, not about your engine. See
-[adapter-contract.md](../../docs/adapter-contract.md) section 10.
+[adapter-contract.md](../../../docs/adapter-contract.md) section 10.

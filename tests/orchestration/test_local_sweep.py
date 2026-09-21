@@ -345,3 +345,28 @@ def test_turning_auto_sync_off_stops_it(tmp_path, monkeypatch, api):
     _execute(tmp_path, monkeypatch)
 
     assert api["calls"] == []
+
+
+def test_an_eval_failure_reaches_the_org_but_an_interrupt_still_does_not(tmp_path, monkeypatch,
+                                                                        api):
+    """The condition that decides site 1, pinned from both sides in one place.
+
+    `auto_sync` moved out of `memrank.cli` into `memrank.runs.push` (ATO-2142), and the thing
+    that had to survive the move is not the call but the `isinstance(exc, (Exception,
+    SweepKilled))` guard around it: an eval failure IS an outcome and reports, while an
+    operator interrupt does not, because an HTTP request inside a KeyboardInterrupt unwind is
+    worse than a pending record. `test_a_killed_sweep_reaches_the_org_too` and
+    `test_an_operator_interrupt_marks_failed_but_does_not_sync` each cover one side; a guard
+    that reported for everything would pass the first and a guard that reported for nothing
+    would pass the second, so this asserts the plain-Exception side that neither pins.
+    """
+    from memrank.orchestration import sweep
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("engine exploded")
+
+    monkeypatch.setattr(sweep, "_run_and_persist", boom)
+    _execute(tmp_path, monkeypatch)
+
+    assert set(api["calls"]) == {"r1", "r2"}, (
+        "an eval failure and the sibling it stopped are both outcomes the org must learn")

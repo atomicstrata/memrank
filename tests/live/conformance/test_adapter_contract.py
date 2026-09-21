@@ -16,8 +16,9 @@
 Static checks (no backend required):
 - adapter class declares the required class attributes
 - adapter implements every abstract method
-- ``latency_metrics()`` and ``token_metrics()`` return dicts with the
-  required keys before any work has been done
+- the contract asks for NOTHING that reports a measurement memrank takes itself
+- ``token_metrics()`` -- the one declaration only an engine can make -- returns a
+  dict with the required keys before any work has been done
 
 Live checks (skip-if-unavailable): a smoke ingest+retrieve pass against
 the adapter's real backend. Configure backends via env vars; absence of
@@ -35,13 +36,19 @@ import pytest
 
 from memrank.adapters import REGISTRY
 from memrank.core import (
-    REQUIRED_LATENCY_KEYS,
     REQUIRED_TOKEN_KEYS,
     Document,
     MemoryAdapter,
 )
 
-REQUIRED_METHODS = ("prepare", "ingest", "retrieve", "cleanup", "latency_metrics", "token_metrics")
+#: The whole contract: tell it something, ask it something, and the lifecycle around both.
+#: `latency_metrics` and `token_metrics` were here and are not any more -- memrank times its own
+#: calls, and usage is declared rather than required (ATO-2136).
+REQUIRED_METHODS = ("prepare", "ingest", "retrieve", "cleanup")
+
+#: Methods an engine must NOT have to write, because memrank takes the measurement itself. A
+#: regression here is the stub-writing this step removed coming back.
+NOT_REQUIRED_METHODS = ("latency_metrics", "token_metrics")
 
 
 @pytest.fixture(params=sorted(REGISTRY.keys()))
@@ -80,8 +87,21 @@ def test_adapter_implements_required_methods(adapter_cls: type[MemoryAdapter]):
         assert callable(method), f"{adapter_cls.__name__}.{name} must be callable"
 
 
+def test_the_contract_requires_no_measurement_memrank_takes_itself(
+        adapter_cls: type[MemoryAdapter]):
+    """An engine written from the contract alone writes neither method (ATO-2136).
+
+    Asserted against the ABC rather than against the adapters, because the adapters may keep
+    theirs -- it is being REQUIRED that was the defect, and an engine that declares its usage
+    still has that recorded.
+    """
+    for name in NOT_REQUIRED_METHODS:
+        assert name not in getattr(MemoryAdapter, "__abstractmethods__", frozenset())
+    assert not hasattr(MemoryAdapter, "latency_metrics")
+
+
 def test_adapter_metric_methods_emit_required_keys(adapter_cls: type[MemoryAdapter]):
-    """Fresh-from-construction metric calls should already emit every required key."""
+    """Fresh-from-construction usage declaration should already emit every required key."""
     sig = inspect.signature(adapter_cls.__init__)
     if any(
         param.kind == inspect.Parameter.VAR_POSITIONAL
@@ -92,10 +112,7 @@ def test_adapter_metric_methods_emit_required_keys(adapter_cls: type[MemoryAdapt
         # Adapter requires constructor args we don't know about -- skip.
         pytest.skip(f"{adapter_cls.__name__} requires constructor args")
     instance = adapter_cls()
-    latency = instance.latency_metrics()
-    tokens = instance.token_metrics()
-    assert REQUIRED_LATENCY_KEYS.issubset(latency.keys())
-    assert REQUIRED_TOKEN_KEYS.issubset(tokens.keys())
+    assert REQUIRED_TOKEN_KEYS.issubset(instance.token_metrics().keys())
 
 
 # ----------------------------------------------------------------------- #

@@ -33,6 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from memrank.evaluation import result as result_schema
 from memrank.metrics import headline as headline_lib
 from memrank.term import fmt
 
@@ -174,8 +175,9 @@ def _read_info(run_id: str, cell_path: Path) -> RunInfo | None:
     head = headline_lib.cell_headline(data)
     return RunInfo(
         run_id=run_id, path=cell_path,
-        adapter=data.get("adapter") or receipt.get("adapter_name", "?"),
-        benchmark=data.get("benchmark") or receipt.get("benchmark_name", "?"),
+        adapter=result_schema.adapter_if_present(data) or receipt.get("adapter_name", "?"),
+        benchmark=(result_schema.benchmark_if_present(data)
+                   or receipt.get("benchmark_name", "?")),
         config_hash=receipt.get("config_hash"),
         composite=data.get("composite"),
         composite_rankable=data.get("composite_rankable") is not False,

@@ -20,6 +20,8 @@ green test with a real subprocess behind it. Identity, not equality, is the prop
 """
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 from memrank import runner
@@ -85,7 +87,12 @@ def test_the_runner_name_is_the_moved_object(home, name):
 
 
 def test_the_public_package_face_matches_cell():
-    import memrank.evaluation as evaluation
+    # `import memrank.evaluation as evaluation` no longer binds the package: `evaluation` is
+    # one of the seven's verbs at the top level, and the package deliberately shadows the
+    # submodule attribute so `memrank.evaluation("demo")` cannot silently be the module. The
+    # package itself is reached by its full name, which is how every caller in the tree
+    # already reaches it (`from memrank.evaluation.api import run`).
+    evaluation = importlib.import_module("memrank.evaluation")
 
     assert evaluation.run_cell is cell.run_cell
     assert evaluation.cell_applicable is cell.cell_applicable

@@ -151,7 +151,10 @@ def test_every_json_flag_is_spelled_and_described_the_same_way():
              for param in command.params
              if isinstance(param, click.Option) and "--json" in param.opts}
 
-    assert helps == {"machine-readable JSON output"}
+    # A SUBSET, not equality: on the published tree the projection may register no command
+    # carrying `--json` at all, and an empty set is that tree agreeing rather than failing.
+    # What is pinned is that every `--json` which DOES exist is worded the one way.
+    assert helps <= {"machine-readable JSON output"}
 
 
 def _all_commands(typer_app):

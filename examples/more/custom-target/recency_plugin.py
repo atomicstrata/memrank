@@ -32,8 +32,8 @@ declares an intent to be relevant; the score is what it is.
 
 from datetime import datetime
 
-from memrank import Document, MemoryAdapter
-from memrank.instrumentation import LatencyCollector, TokenCollector
+from memrank import Document, MemoryAdapter, Recall
+from memrank.instrumentation import TokenCollector
 from memrank.plugins import AdapterRegistration, register_adapter
 from memrank.secrets.requirements import EngineRequirements
 
@@ -56,7 +56,6 @@ class RecencyAdapter(MemoryAdapter):
 
     def __init__(self) -> None:
         self._store: list[Document] = []
-        self._latency = LatencyCollector()
         self._tokens = TokenCollector()
 
     def prepare(self, isolation_unit: str) -> None:
@@ -69,25 +68,23 @@ class RecencyAdapter(MemoryAdapter):
         self._store = []
 
     def ingest(self, documents: list[Document]) -> None:
-        with self._latency.track("ingest"):
-            self._store.extend(documents)
+        # Untimed on purpose: memrank times this call at its own boundary, so an engine
+        # neither has to report latency nor can flatter it.
+        self._store.extend(documents)
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None) -> tuple[list[Document], dict]:
+                 query_timestamp: datetime | str | None = None) -> Recall:
         """The k newest documents, ignoring the query entirely.
 
         Returned in ranked order, newest first, because `recall@k` reads the order. An engine
         that returns its matches unordered scores worse than one that ranks badly.
         """
-        with self._latency.track("retrieve"):
-            newest = list(reversed(self._store))[:k]
-        return newest, {"strategy": "recency", "considered": len(self._store)}
+        newest = list(reversed(self._store))[:k]
+        return Recall(documents=newest,
+                      declared={"strategy": "recency", "considered": len(self._store)})
 
     def cleanup(self) -> None:
         self._store = []
-
-    def latency_metrics(self) -> dict[str, float]:
-        return self._latency.as_metrics()
 
     def token_metrics(self) -> dict[str, float | None]:
         """No tokens are spent: nothing is embedded and no model is called.

@@ -24,7 +24,10 @@ engine must already be reachable -- `memrank.run` provisions nothing. Provisioni
 run records, heartbeats and sync are what the CLI's `submit` adds on top.
 """
 
+# The cell run, imported from its own module: `memrank.run` is now the typed run over
+# the seven, and this script is about the artifact the cell run returns.
 import memrank
+from memrank.evaluation.api import run as run_cell
 
 
 class Progress(memrank.EvalObserver):
@@ -44,10 +47,10 @@ class Progress(memrank.EvalObserver):
 
 
 def main() -> None:
-    result = memrank.run("word-overlap", "demo", repeats=1, observer=Progress())
+    result = run_cell("word-overlap", "demo", repeats=1, observer=Progress())
 
     # The typed result is the whole answer: nothing was written anywhere.
-    print(f"\ncomposite: {result.composite:.3f}  ({result.target} × {result.benchmark})")
+    print(f"\ncomposite: {result.composite:.3f}  ({result.engine_ref} × {result.evaluation})")
     print("judged:", result.judged_metrics is not None,
           "(demo scores itself; judge-protocol evals like locomo default to judged)")
     misses = [row["query_id"] for row in result.per_query if not row["hit"]]

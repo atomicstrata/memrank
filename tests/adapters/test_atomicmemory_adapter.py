@@ -116,7 +116,8 @@ def test_retrieve_sends_limit_not_top_k_and_parses_memories():
     a, stub = _adapter_with_stub(
         {"/v1/memories/search": body, "/v1/memories/audit/recent": {"mutations": []}}
     )
-    docs, raw = a.retrieve("profession?", 7, "u1")
+    recall = a.retrieve("profession?", 7, "u1")
+    docs, raw = recall.documents, recall.declared
     url, payload = stub.calls[0]
     assert url == "/v1/memories/search"
     assert payload["limit"] == 7
@@ -172,7 +173,9 @@ def _claim_update_stub() -> dict[str, dict[str, Any]]:
 def test_retrieve_normalizes_claim_update_provenance_to_graph_context():
     a, _stub = _adapter_with_stub(_claim_update_stub())
 
-    docs, raw = a.retrieve("planning color?", 5, "u1")
+    recall = a.retrieve("planning color?", 5, "u1")
+
+    docs, raw = recall.documents, recall.declared
 
     assert docs[0].id == "v-new"
     assert docs[0].metadata["memory_id"] == "m-new"

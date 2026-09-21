@@ -255,7 +255,8 @@ def verify_image_exists(*, repository: str, tag: str, region: str) -> str:
         raise ImageMissingError(
             f"image {name}:{tag} is not in the registry, so the task would fail pulling it "
             f"(CannotPullContainerError). {_available_tags_hint(ecr, name)} "
-            f"Build and push it with `scripts/internal/build-push.sh`.") from exc
+            f"Build the image and push it to {repository} under that tag, or submit one of the "
+            f"tags that is already there.") from exc
     return found["imageDetails"][0].get("imageDigest", "")
 
 

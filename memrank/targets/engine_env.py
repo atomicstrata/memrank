@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from memrank.docs import doc_url
 from memrank.errors import MemrankError
 from memrank.targets.manifest import Manifest
 
@@ -496,7 +497,7 @@ def component_env(target: Manifest) -> dict[str, str]:
                         " A native target declares no components at all: memrank does not know "
                         "which variables your engine reads, so your launch command configures it "
                         "and your translator reports the result from /memrank/v1/describe "
-                        "(docs/adapter-contract.md section 4)."
+                        f"({doc_url('adapter-contract.md')} section 4)."
                         if target.adapter == "native" else ""))
             env[var] = str(value)
     return env

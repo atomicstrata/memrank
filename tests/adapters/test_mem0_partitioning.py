@@ -87,7 +87,8 @@ def test_per_speaker_retrieve_searches_each_and_does_not_trim():
     """k per partition, concatenated. Cutting to k would be the hindsight [:k] defect again."""
     adapter, memory = _adapter({"by": "speaker"})
     adapter.ingest([_doc()])
-    docs, raw = adapter.retrieve("what happened?", 10, "run-1")
+    recall = adapter.retrieve("what happened?", 10, "run-1")
+    docs, raw = recall.documents, recall.declared
 
     assert sorted(uid for uid, _, _ in memory.searched) == ["run-1-Caroline", "run-1-Melanie"]
     assert [top_k for _, _, top_k in memory.searched] == [10, 10]

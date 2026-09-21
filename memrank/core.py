@@ -13,8 +13,10 @@
 # permissions and limitations under the License.
 """Core abstractions for Memrank.
 
-Defines the two contracts every adapter and benchmark must implement, plus the
-shared ``Document`` / ``AdapterResponse`` / ``BenchmarkUnit`` value types.
+Defines the two contracts every adapter and benchmark must implement. The value types
+they exchange -- ``Document``, ``Recall``, ``AdapterResponse``, ``BenchmarkUnit``,
+``EvalInfo`` and the required metric keys -- live in :mod:`memrank.contract` and are
+re-exported here, which is where every caller has always imported them from.
 
 The ABCs are intentionally minimal. Adapters wrap a memory engine; benchmarks
 wrap a dataset + scorer. Everything else (latency capture, token capture,
@@ -24,98 +26,31 @@ receipt generation) is composed around them by the runner.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar
+
+from memrank.contract import (
+    REQUIRED_LATENCY_KEYS as REQUIRED_LATENCY_KEYS,  # noqa: PLC0414 - re-export only
+)
+
+# Re-exported, not merely used: `memrank.core` is the import path every adapter, benchmark and
+# caller in the tree already names for these, and moving the definitions must not move that.
+from memrank.contract import (
+    REQUIRED_TOKEN_KEYS,
+    AdapterResponse,
+    BenchmarkUnit,
+    Document,
+    EvalInfo,
+    Recall,
+)
+from memrank.instrument.system import System
+from memrank.quality import DATASET_VERSION_UNSET, QUALITY_METRICS
 
 if TYPE_CHECKING:  # `judge_shape` reaches `judge`; keep that out of `core`'s import graph.
     from memrank.judging.shape import JudgeShape
 
-#: The keys ``latency_metrics`` and ``token_metrics`` must emit. Named here, beside the abstract
-#: methods that promise them, because three places assert on this shape -- the conformance suite,
-#: `memrank targets verify`, and the adapters themselves -- and a list restated per site is one
-#: edit away from three different contracts.
-REQUIRED_LATENCY_KEYS: frozenset[str] = frozenset({
-    "ingest_p50_ms", "ingest_p95_ms", "ingest_p99_ms",
-    "retrieve_p50_ms", "retrieve_p95_ms", "retrieve_p99_ms",
-})
-REQUIRED_TOKEN_KEYS: frozenset[str] = frozenset({
-    "tokens_per_query_mean", "tokens_per_query_p95",
-    "tokens_per_ingest_mean", "tokens_per_ingest_p95",
-})
 
-
-@dataclass
-class Document:
-    """A single piece of content the adapter ingests or returns.
-
-    The shape mirrors what every benchmark loader produces: a stable ``id``,
-    free-form ``content``, an optional ``user_id`` for isolation scoping, an
-    optional ``timestamp`` (ISO-8601), and an optional structured ``messages``
-    list when the source has multi-turn structure.
-
-    Adapters should treat ``content`` as the canonical text payload.
-    """
-
-    id: str
-    content: str
-    user_id: str | None = None
-    timestamp: str | None = None
-    context: str | None = None
-    messages: list[dict[str, Any]] | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    def __repr__(self) -> str:
-        # Truncated by hand rather than dataclass-generated: a corpus document is
-        # kilobytes of text, and a notebook cell showing a list of these must read as an
-        # inventory, not a transcript. The size says what the ellipsis hides.
-        size = len(self.content.encode("utf-8"))
-        head = self.content[:40].replace("\n", " ")
-        ellipsis = "…" if len(self.content) > 40 else ""
-        scope = f", user_id={self.user_id!r}" if self.user_id is not None else ""
-        return f"Document({self.id!r}{scope}, {size:,}B: {head!r}{ellipsis})"
-
-
-@dataclass
-class AdapterResponse:
-    """Output from a single adapter ``retrieve`` call against one query.
-
-    ``documents`` is the ranked list returned by the adapter; ``raw`` is the
-    untouched provider payload (kept for forensic debugging in the receipt);
-    ``latency_ms`` is wall-clock time as measured by the runner.
-    """
-
-    query_id: str
-    documents: list[Document]
-    raw: dict[str, Any] | None = None
-    latency_ms: float | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class BenchmarkUnit:
-    """A scoring unit for a benchmark.
-
-    A unit is the smallest piece of work a benchmark scores independently.
-    For LoCoMo it's a conversation; for BEAM it's a conversation x ability;
-    for LongMemEval it's a single QA item. Each unit carries its own
-    ``isolation_id`` so the adapter can scope memory state correctly.
-    """
-
-    unit_id: str
-    isolation_id: str
-    documents: list[Document]
-    queries: list[dict[str, Any]]
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    def __repr__(self) -> str:
-        # Counts, not contents: the generated repr inlined every document's full text,
-        # which made `bench.load()` in a notebook print the whole corpus.
-        return (f"BenchmarkUnit({self.unit_id!r}, documents={len(self.documents)}, "
-                f"queries={len(self.queries)})")
-
-
-class MemoryAdapter(ABC):
+class MemoryAdapter(System):
     """The contract every memory engine implements to be benchmarkable.
 
     Subclasses declare ``name``, ``version`` (the adapter's own version) and
@@ -126,15 +61,18 @@ class MemoryAdapter(ABC):
             adapter.prepare(unit.isolation_id)
             adapter.ingest(unit.documents)
             for query in unit.queries:
-                docs, meta = adapter.retrieve(query["text"], k, query["user_id"])
+                recall = adapter.retrieve(query["text"], k, query["user_id"])
             adapter.cleanup()
-        adapter.latency_metrics()
-        adapter.token_metrics()
+
+    Four lifecycle methods, and nothing that reports a measurement Memrank takes
+    itself: latency is timed at Memrank's own call boundary, so an engine neither
+    has to report it nor can flatter it (ATO-2136). What only an engine can know
+    it may DECLARE, and both declarations are optional: :meth:`token_metrics` for
+    what a provider billed it, and :meth:`declared_latency` for its own spend
+    inside the hop Memrank timed around it.
 
     Adapters MUST be deterministic given the same seed (or document
-    non-determinism explicitly). They MUST emit latency and token data via
-    Memrank's instrumentation hooks rather than measuring those axes
-    internally.
+    non-determinism explicitly).
     """
 
     name: str = "abstract"
@@ -157,6 +95,13 @@ class MemoryAdapter(ABC):
     # from `run_retrieval.py`'s ranked output, and its `full-history-session` / `no-retrieval`
     # generation modes are never scored on them at all.
     ranks_results: bool = True
+    # The environment variable that moves this adapter's engine address, named so a failure can
+    # quote it. Every adapter that talks to an engine over the network declares one; the in-process
+    # adapters leave it None, which is what makes "there is no address to change" sayable rather
+    # than an omission. Read by `memrank.adapters.preflight`, which is the only place a user is
+    # told where memrank looked -- a message that describes the setting instead of naming it sends
+    # the reader to the source to find out what it is called.
+    base_url_env: str | None = None
 
     @abstractmethod
     def prepare(self, isolation_unit: str) -> None:
@@ -178,36 +123,60 @@ class MemoryAdapter(ABC):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
-        """Return the top-k ranked documents plus a metadata dict.
+    ) -> Recall:
+        """Return what this engine recalled for one query.
 
-        The metadata dict is the raw provider response; the runner stores it
-        in the reproducibility receipt for forensic debugging.
+        A :class:`~memrank.contract.Recall`: at most ``k`` documents in the order the
+        engine ranked them -- the order IS the measurement, so never pad the list -- and
+        ``declared``, the provider response untouched, which the runner stores in the
+        reproducibility receipt for forensic debugging.
+
+        An engine with nothing to declare leaves ``declared`` empty. Failures raise; an
+        empty ``documents`` means "searched, found none".
         """
 
     @abstractmethod
     def cleanup(self) -> None:
         """Tear down state for the current isolation unit."""
 
-    @abstractmethod
-    def latency_metrics(self) -> dict[str, float]:
-        """Return ingest/retrieve p50/p95/p99 in milliseconds.
+    def declared_latency(self) -> dict[str, list[float]]:
+        """Declare timings only this engine can see. Optional, and never the wall clock.
 
-        Required keys: ``ingest_p50_ms``, ``ingest_p95_ms``, ``ingest_p99_ms``,
-        ``retrieve_p50_ms``, ``retrieve_p95_ms``, ``retrieve_p99_ms``.
+        memrank times every ingest and retrieve at its own call boundary and reports that as the
+        run's latency, so there is nothing here for an engine to report twice or to flatter. What
+        an engine CAN add is time nobody outside it can see -- a translator's ``engine_ms``, the
+        engine's own spend inside the hop memrank measured around it.
+
+        SAMPLES per bucket, in milliseconds, not percentiles: memrank pools them across the
+        adapters a ``--workers`` run builds and renders ``<bucket>_p50_ms`` / ``<bucket>_p95_ms``
+        itself, so a run at any width reports the same statistic of the same population. An engine
+        rendering its own percentiles cannot be pooled, only picked between.
+
+        The conventional buckets are ``ingest_engine`` and ``retrieve_engine``, which is what
+        `docs/adapter-contract.md` section 7 already calls the figure to quote when discussing the
+        engine rather than the harness. Declared, not verified: memrank cannot check it, and it is
+        never the headline.
         """
+        return {}
 
-    @abstractmethod
     def token_metrics(self) -> dict[str, float | None]:
-        """Return per-call token statistics.
+        """Declare per-call token usage, where this engine is told what it spent. Optional.
 
-        Required keys: ``tokens_per_query_mean``, ``tokens_per_query_p95``,
-        ``tokens_per_ingest_mean``, ``tokens_per_ingest_p95``.
+        Keys: ``tokens_per_query_mean``, ``tokens_per_query_p95``, ``tokens_per_ingest_mean``,
+        ``tokens_per_ingest_p95``. :class:`memrank.instrumentation.TokenCollector` renders them.
 
         A key whose value is ``None`` means the engine reported no usage for that bucket, which is
         the common case -- an engine that genuinely spent no tokens reports 0.0. The two are
-        different claims and must not share a value.
+        different claims and must not share a value. The default declares ``None`` throughout,
+        which is the honest answer for an engine that cannot be asked, and is the same shape
+        :meth:`describe_engine` returns ``None`` for.
+
+        Not abstract, because an engine is not improved by writing a stub: it was required of
+        everyone and never checked, and a run whose engine returned ``{}`` from both metric
+        methods completed and produced a composite (ATO-2136). What memrank REPORTS for latency
+        is its own measurement; what it reports here is this declaration.
         """
+        return dict.fromkeys(REQUIRED_TOKEN_KEYS, None)
 
     def declare_components(
         self,
@@ -321,48 +290,32 @@ class MemoryAdapter(ABC):
 
 # Human-facing labels/descriptions for a benchmark's composite quality metric,
 # keyed by Benchmark.quality_metric. Unknown kinds fall back to the raw name.
-QUALITY_METRIC_LABELS = {"substring_recall": "recall", "graph_score": "graph score",
-                         "judged_answer_correctness": "judged correctness",
-                         "judged_nugget_rubric": "judged rubric"}
-QUALITY_METRIC_DESCRIPTIONS = {
-    "substring_recall": "retrieval recall (a substring proxy), not end-to-end answer correctness",
-    "graph_score": "a relation-graph structural score (graph correctness), not retrieval coverage or answer correctness",
-    # The external benchmarks' own protocols. They ship no self-contained number, which is why
-    # these evals judge by default rather than asking -- and why `--no-judge` yields a run with no
-    # quality score at all rather than a lesser one.
-    "judged_answer_correctness": "LLM-judged answer correctness against the dataset's reference answer (judged by default; `--no-judge` reports no quality score)",
-    "judged_nugget_rubric": "LLM-judged rubric coverage, one call per atomic nugget (judged by default; `--no-judge` reports no quality score)",
-}
+#
+# DERIVED from `memrank.quality.QUALITY_METRICS`, which holds the same prose split into the
+# parts a result can carry by name -- what the number is OF, and what it is NOT. These two
+# dicts are byte-identical to the literals they replaced and every reader of them is
+# unchanged; the split exists so the caveat is reachable from a result rather than only from
+# the terminal. `tests/core/test_quality_declarations.py` pins the byte-identity.
+QUALITY_METRIC_LABELS = {kind: d.label for kind, d in QUALITY_METRICS.items()}
+QUALITY_METRIC_DESCRIPTIONS = {kind: d.description for kind, d in QUALITY_METRICS.items()}
 
-
-@dataclass(frozen=True)
-class EvalInfo:
-    """Static, declared description of an eval for ``memrank evals show``.
-
-    DECLARED, never loaded: rendering this must not construct units or touch the
-    dataset cache -- ``evals show`` is a catalog view, not a download trigger. Which
-    is also why sizes are prose claims (``units_declared``) rather than counts: a
-    real count would require ``load()``.
-    """
-
-    unit: str
-    """What one scoring unit is, e.g. ``"conversation"``."""
-    units_declared: str
-    """Prose size claim from the dataset's own description (declared, not counted)."""
-    slices: tuple[str, ...]
-    """Named slices besides full, e.g. ``("smoke", "mini")``."""
-    tiers: tuple[str, ...] = ()
-    """Named tiers, leading with the default; empty means no tier dimension."""
 
 
 class Benchmark(ABC):
     """The contract every benchmark dataset+scorer implements."""
 
     name: str = "abstract"
-    dataset_version: str = "unknown"
+    #: The version of the material this benchmark asks its questions against.
+    #: :data:`~memrank.quality.DATASET_VERSION_UNSET` -- the default -- means the author did
+    #: not state one. :data:`~memrank.quality.UNFREEZABLE` means the material CANNOT be
+    #: frozen, and a run over it makes no reproducibility claim in its receipt. The two are
+    #: deliberately different values: one is a gap, the other is an honest statement.
+    dataset_version: str = DATASET_VERSION_UNSET
     # Catalog metadata for `evals show`. Declared per benchmark with no default:
-    # a benchmark without one fails loudly the first time the catalog asks.
-    info: ClassVar[EvalInfo]
+    # a benchmark without one fails loudly the first time the catalog asks. Annotated rather
+    # than `ClassVar` so a benchmark ASSEMBLED at runtime -- `ComposedEvaluation` -- can declare
+    # its own; a class-body assignment and `cls.info` both read exactly as they did.
+    info: EvalInfo
     # Whether the deterministic substring-recall proxy is a meaningful quality
     # signal for this benchmark. False for benchmarks whose gold answers are
     # prose / not verbatim spans (e.g. BEAM ideal_responses), where substring
@@ -397,6 +350,13 @@ class Benchmark(ABC):
     # uncapped, so a capped run is not that benchmark). The runner promotes matched arms
     # accordingly; the no-memory arm ("none") is never promoted.
     context_policy: str = "matched"
+    # The scored keys this benchmark's questions EXPECT their scorer to produce -- the
+    # declaration `memrank.composition.ComposedEvaluation` checks the scorer's against when the
+    # two halves are supplied separately (ATO-2149). Empty -- the default, and what all five
+    # registered benchmarks declare -- means "whatever the scorer produces", which is what keeps
+    # somebody else's criteria acceptable over memrank's questions. Declare it only when this
+    # benchmark's own aggregation names a criterion literally and so cannot take another's.
+    criterion_names: ClassVar[tuple[str, ...]] = ()
     # Task/scoring definition version (lm-eval-harness pattern). Bump on any
     # BREAKING change to how this benchmark loads or scores, so version-vs-version
     # comparison can flag "not directly comparable" instead of silently comparing
@@ -516,3 +476,14 @@ class Benchmark(ABC):
     @abstractmethod
     def report_template(self) -> str:
         """Markdown template used to render the per-benchmark report."""
+
+
+#: The engine, under the noun the four-noun model uses. The same class object rather than a
+#: subclass, so ``isinstance(x, MemoryAdapter)`` and every registered adapter keep holding
+#: while both names are live. `MemoryAdapter` is deprecated and goes at plan step 22.
+MemoryEngine = MemoryAdapter
+
+#: The evaluation, under the same rule. `Benchmark` is deprecated and goes at step 22 -- it
+#: is also the field's word for a fixed set of tests with a scoreboard, which is what memrank
+#: is not.
+Evaluation = Benchmark

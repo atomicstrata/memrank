@@ -252,7 +252,12 @@ class _BoundedTyper(typer.Typer):
 
 #: Named once because the root callback below would otherwise silently replace it with its
 #: own docstring -- Typer prefers the callback's help over the app's.
-_APP_HELP = "Open, vendor-neutral benchmark suite for AI memory engines."
+_APP_HELP = (
+    "Memrank is an open, vendor-neutral instrument: it measures how well a memory helps "
+    "answer questions about what it was told earlier. You bring the engine, and your own "
+    "questions if you have them; memrank brings everything between and writes down what "
+    "produced the number."
+)
 
 
 app = _BoundedTyper(

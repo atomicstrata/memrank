@@ -43,7 +43,7 @@ from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
 from memrank.config import ConfigError
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_HTTP_URL = "http://localhost:8888"
@@ -112,6 +112,9 @@ class Mem0Adapter(MemoryAdapter):
             module = _mem0_module()
             self.engine_version = getattr(module, "__version__", None) or "unknown"
         self.base_url = (base_url or os.environ.get("MEM0_HTTP_URL", _DEFAULT_HTTP_URL)).rstrip("/")
+        # Only meaningful over HTTP: an in-process SDK has no address, and naming a variable that
+        # moves nothing is worse than saying there is none.
+        self.base_url_env = "MEM0_HTTP_URL" if self.mode == "http" else None
         # Per-request HTTP timeout, overridable via MEM0_TIMEOUT_S. Whole-document ingestion of a
         # large benchmark doc (e.g. BEAM) is one synchronous call whose LLM extraction can outrun a
         # small timeout, so the cloud sets this generously.
@@ -495,7 +498,7 @@ class Mem0Adapter(MemoryAdapter):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         """Search every partition this unit wrote, and return everything they gave back.
 
         Unpartitioned (matched mode) that is one search under one id -- unchanged.
@@ -515,11 +518,13 @@ class Mem0Adapter(MemoryAdapter):
             merged: list[Document] = []
             raws: list[dict[str, Any]] = []
             for partition in partitions:
-                docs, raw_one = self._retrieve_one(query, k, partition)
-                merged.extend(docs)
-                raws.append(raw_one)
-            return merged, {"results": [r.get("results", []) for r in raws],
-                            "partitions": partitions}
+                one = self._retrieve_one(query, k, partition)
+                merged.extend(one.documents)
+                raws.append(one.declared)
+            return Recall(
+                documents=merged,
+                declared={"results": [r.get("results", []) for r in raws],
+                          "partitions": partitions})
         return self._retrieve_one(query, k, user_id or self._user_id_for(None))
 
     def _retrieve_one(
@@ -527,7 +532,7 @@ class Mem0Adapter(MemoryAdapter):
         query: str,
         k: int,
         uid: str,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         if self.mode == "sdk":
             with self.latency.track("retrieve"):
                 results = self._memory.search(query, **self._search_kwargs(k, uid))
@@ -568,7 +573,8 @@ class Mem0Adapter(MemoryAdapter):
             if entry.get("metadata"):
                 metadata.update(entry["metadata"])
             docs.append(Document(id=entry_id, content=content, user_id=uid, metadata=metadata))
-        return docs, raw if isinstance(raw, dict) else {"results": entries}
+        return Recall(documents=docs,
+                      declared=raw if isinstance(raw, dict) else {"results": entries})
 
     # ------------------------------------------------------------------ #
     # Helpers

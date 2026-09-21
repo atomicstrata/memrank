@@ -72,12 +72,15 @@ def _no_default_to_configure(login: str) -> None:
     of which the server calls default. Both leave the machine signed in but unable to submit,
     so neither may be silent.
     """
-    # Names the thing to send and the command that answers it. "Ask an operator" leaves a
-    # new user guessing what to ask for; membership cannot be self-served yet.
+    # Names the thing to send, not the command that answers it. The granting command is
+    # operator tooling that does not ship, so quoting it told the one person who cannot run it
+    # exactly what to type (ATO-2125). What the reader needs is the login to send and the org
+    # slug to ask for.
     style.say(f"  {style.caution('!')} no default org -- submissions need one. "
-              f"Send an operator your GitHub login ({login}); they run:\n"
-              f"      scripts/internal/manage-users.py user grant {login} --org <slug>\n"
-              f"      Already a member? `memrank config set defaults.org <slug>`")
+              f"Ask an operator to grant your GitHub login ({login}) membership of an org, "
+              f"then run:\n"
+              f"      memrank config set defaults.org <slug>\n"
+              f"      Already a member? The same command names the org you want to submit to.")
 
 
 def _configure_after_login(token: str) -> None:

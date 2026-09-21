@@ -1,62 +1,97 @@
-# Adding an adapter
+# Adding a system
 
-An adapter is your engine, wrapped in six methods so Memrank can drive it like any other. Memrank
-supplies everything around it: the run loop, isolation between units, latency and token
-instrumentation, cost accounting, scoring, judging where you ask for one, and the receipt that
-records what actually ran.
+A **system** is the thing under test. Its kind is the class you subclass, so a kind cannot be
+declared wrong: a **memory** is told things, asked later for what is relevant, and cleared on
+request. Memrank supplies everything around it -- the run loop, isolation between groups of
+tasks, latency and token instrumentation, cost accounting, the measures that turn what was
+observed into named values, and the receipt that records what actually ran.
 
-You do not have to put your adapter inside this package to run it, and you do not have to give it a
-name. Pass the instance.
+You do not have to put your system inside this package to run it, and you do not have to give
+it a name. Pass the instance.
 
-## 1. Run your own engine: pass the instance
+**One note on names.** The memory kind's class is still spelled `MemoryAdapter` in the source,
+and `memrank.Memory` is the same class object under the name the seven words use -- either
+spelling gives one type, and every adapter already written is a `Memory`. The command line
+keeps its own older vocabulary too: *target* for a named system, *adapter* for the class that
+drives it. Renaming the classes is a later change; nothing below depends on which spelling you
+read.
 
-`memrank.run` takes a `MemoryAdapter` instance wherever it takes a target ref, so an engine that
-exists only in your codebase runs the same loop, and returns the same `EvalResult`, as the shipped
-targets:
+## 1. Run your own system: pass the instance
+
+`memrank.run(system, evaluation)` takes the instance, so a system that exists only in your
+codebase runs the same loop as the ones memrank ships:
 
 ```python
 import memrank
-from memrank import Document, MemoryAdapter
-from memrank.instrumentation import LatencyCollector, TokenCollector
+from memrank import Document, Recall
 
 
-class MyAdapter(MemoryAdapter):
+class MyMemory(memrank.Memory):
     name = "myengine"           # a label on the result, not an address
-    version = "0.1.0"           # adapter version
-    engine_version = "1.2.3"    # the engine you're wrapping
-
-    def __init__(self):
-        self.latency = LatencyCollector()
-        self.tokens = TokenCollector()
+    version = "0.1.0"           # your class's own version
+    engine_version = "1.2.3"    # the engine you are wrapping
 
     def prepare(self, isolation_unit: str) -> None: ...
     def ingest(self, documents: list[Document]) -> None: ...
-    def retrieve(self, query, k, user_id, query_timestamp=None): ...
+    def retrieve(self, query, k, user_id, query_timestamp=None) -> Recall: ...
     def cleanup(self) -> None: ...
-    def latency_metrics(self): return self.latency.as_metrics()
-    def token_metrics(self):   return self.tokens.as_metrics()
 
 
-result = memrank.run(MyAdapter(), "demo", repeats=1)
-print(result.composite, result.adapter)
+result = memrank.run(MyMemory(), memrank.evaluation("demo"))
+print(result.values_of("demo-score")[0].value, result.system.name, result.system.kind)
 ```
 
-Those six methods are the whole third-party contract; [adapter-contract.md](adapter-contract.md)
-states each one in full. Nothing here touches the registry, the command line, a configuration
-setting or a file inside `memrank/` -- and the second argument is an eval the same way: a catalog
-ref, or a `Benchmark` instance of your own (see [adding a benchmark](adding-benchmarks.md)).
+Those four verbs are the whole third-party contract, and they are abstract: a run refuses
+before touching anything when one is missing, with a stated reason rather than a `TypeError`
+from somewhere inside. [adapter-contract.md](adapter-contract.md) states each one in full.
+
+`retrieve` returns a `Recall`: the documents in the order your system ranked them -- the order
+**is** the measurement, so return at most `k` and never pad -- and `declared`, whatever your
+system wants to say about the call, recorded untouched. Both halves land on the trace.
+
+Nothing in those four verbs reports a measurement memrank takes itself: memrank times every
+ingest and retrieve at its own call boundary, so latency is neither your job nor something
+your system could flatter.
+
+**The one exception is token usage**, because only a system can be told what a provider billed
+it. A system that knows declares it by recording into a `TokenCollector` and returning
+`self.tokens.as_metrics()` from an optional `token_metrics()`:
+
+```python
+from memrank.instrumentation import TokenCollector
+
+class MyMemory(memrank.Memory):
+    def __init__(self):
+        self.tokens = TokenCollector()          # `self.tokens` by that name: a run at
+                                                # --workers N sums the collectors it built
+    def token_metrics(self):
+        return self.tokens.as_metrics()
+```
+
+Declaring nothing is fine and is the common case: the result then reports `None` for each
+token bucket, which says nobody counted rather than claiming the system spent zero.
+
+There is a second, narrower declaration: `declared_latency()`, for time only your system can
+see inside the hop memrank measured around it -- a translator's `engine_ms`. Return SAMPLES
+per bucket, in milliseconds, and memrank pools them across workers and renders
+`<bucket>_p50_ms` / `<bucket>_p95_ms` itself. A bucket that would render one of memrank's own
+six keys is refused: a system does not report the number the reader reads.
+
+Nothing here touches the registry, the command line, a configuration setting or a file inside
+`memrank/` -- and the second argument is an evaluation the same way: `memrank.evaluation("demo")`,
+or an `Evaluation` of your own (see [adding an evaluation](adding-benchmarks.md)).
 
 The runnable version of exactly this, offline and in about a second, is
-[`examples/custom-engine.py`](../examples/custom-engine.py):
+[`examples/02-your-own-system/`](../examples/02-your-own-system/README.md):
 
 ```bash
-python examples/custom-engine.py
+uv run python examples/02-your-own-system/run.py
 ```
 
-**What the instance route does not reach.** An engine passed as an object has no catalog ref, so
+**What the instance route does not reach.** A system passed as an object has no catalog ref, so
 there is no address, no variant digest and no provenance for the build. `memrank submit`, cloud
 placement and `workers > 1` all need a ref, and the run's evidence class is
-`development_observation`, `publishable: false`. Reaching those means giving the engine a name,
+`development_observation`, `publishable: false`. Reaching those means giving the system a name,
 which is [Making it runnable by name](#making-it-runnable-by-name-sharing-the-cli-and-the-cloud).
 
 ## 2. Use the instrumentation collectors
@@ -74,28 +109,27 @@ After each LLM round-trip, record token counts:
 self.tokens.record_call("query", input_tokens=usage.in_, output_tokens=usage.out)
 ```
 
-Adapters that internally measure latency differently (e.g., reporting only
-the engine's processing time, not network RTT) may call `record` directly
-with the value they want surfaced.
+A system that internally measures latency differently (e.g. reporting only its own processing
+time, not network RTT) may call `record` directly with the value it wants surfaced.
 
-A bucket you never sampled reports `None`, meaning "not reported" -- never zero, which would claim
-you measured it.
+A bucket you never sampled reports `None`, meaning "not reported" -- never zero, which would
+claim you measured it.
 
 ## Transport and dependency neutrality
 
-The `MemoryAdapter` subclass *is* the neutral boundary -- neutrality does **not**
+The `memrank.Memory` subclass *is* the neutral boundary -- neutrality does **not**
 mean "everything over HTTP". Some engines expose an HTTP API; others ship only
 as an in-process library/SDK. Both are first-class:
 
-- **memrank core depends on nothing vendor-specific.** It only knows the
-  `MemoryAdapter` interface.
-- **The adapter owns its transport.** Wrap an HTTP API *or* a vendor SDK --
+- **memrank core depends on nothing vendor-specific.** It only knows the memory kind's four
+  verbs.
+- **The system owns its transport.** Wrap an HTTP API *or* a vendor SDK --
   whatever the engine provides. An SDK-only engine is a valid, expected case.
-- **Vendor SDKs are optional extras.** For an in-tree adapter, declare them in `pyproject.toml`
-  (`memrank[<engine>]`); either way, import them lazily inside the adapter and fail loud
+- **Vendor SDKs are optional extras.** For an in-tree system, declare them in `pyproject.toml`
+  (`memrank[<engine>]`); either way, import them lazily inside the class and fail loud
   with an install hint if missing -- never make core import a vendor package.
 - **Label the transport honestly.** Set `transport` to the real surface
-  (`"http"` / `"sdk"` / `"in-process"`). If your adapter supports more than one,
+  (`"http"` / `"sdk"` / `"in-process"`). If your system supports more than one,
   set it per instance in `__init__` -- latency is only comparable within a
   transport class (see `docs/methodology.md`), so a wrong label misleads readers.
 - **Record the engine's internal config** (the LLM/embedder it uses) where you
@@ -104,40 +138,41 @@ as an in-process library/SDK. Both are first-class:
 ## Making it runnable by name: sharing, the CLI and the cloud
 
 Everything above runs from Python and stays in your own repository. Do the rest of this document
-when the engine should be runnable **by name** -- from the command line, at `workers > 1`, in the
-cloud, or by other people. Registration decides where the code lives and what may address it; it
-never changes what the six methods do, and it never changes what may be claimed about a measurement.
+when the system should be runnable **by name** -- from the command line, at `workers > 1`, in the
+cloud, or by other people. This is where the command line's own vocabulary starts: a **target** is
+its word for a named system. Registration decides where the code lives and what may address it; it
+never changes what the four verbs do, and it never changes what may be claimed about a measurement.
 
 There are three ways to take that step, and the right one depends on who you are.
 
 | | **Register from outside** | **Write an in-tree adapter** | **Write a translator** |
 |---|---|---|---|
-| What you write | the same class, plus one `register_adapter` call | a Python `MemoryAdapter` subclass, in this repo | a program serving [the adapter contract](adapter-contract.md), in any language |
+| What you write | the same class, plus one `register_adapter` call | a Python `memrank.Memory` subclass, in this repo | a program serving [the translator contract](adapter-contract.md), in any language |
 | Where it lives | your repository | `memrank/adapters/` | your repository |
 | Needs a PR? | no | yes, plus entries in ~8 tables and 6 test lists | no |
 | Works today on | `--on local`, sweeps and `workers > 1`, on a machine you configured; not the cloud, which carries only the manifests inside the package | every placement, including cloud | `--on local`, from a source checkout |
 | Evidence class | derives from how the artifact was bound | artifact-backed, publishable | `development_observation`, `publishable: false` |
 | Verify with | `memrank targets verify <ref>` | `pytest tests/live/conformance/test_adapter_contract.py` | `memrank targets verify <ref>` |
 
-[`examples/custom-target/`](../examples/custom-target/README.md) wires a twenty-line engine all
+[`examples/more/custom-target/`](../examples/more/custom-target/README.md) wires a twenty-line engine all
 three ways and runs offline; it is the fastest way to see what each one buys.
 
-**Write an in-tree adapter** when an engine should appear on the public leaderboard. Publishable
+**Write an in-tree system** when an engine should appear on the public leaderboard. Publishable
 evidence requires a pinned, reproducible artifact, which a source-launched engine is not. Sections
 [3](#3-register-the-adapter-in-tree) to [6](#6-submit-a-pr) are that route.
 
 **Write a translator** when your engine is not Python, or when you would rather memrank never
-imported your code -- read [adapter-contract.md](adapter-contract.md) and copy
-[`examples/native-adapter/`](../examples/native-adapter/).
+imported your code -- read [the translator contract](adapter-contract.md) and copy
+[`examples/native-adapter/`](../examples/more/native-adapter/).
 
 **Register from outside** when you want the in-tree driving model -- your own Python
-`MemoryAdapter`, your own target descriptors, the full `memrank submit` lifecycle -- without the
+`memrank.Memory`, your own target descriptors, the full `memrank submit` lifecycle -- without the
 class living here. The mechanics are in
 [Registering an adapter from outside](#registering-an-adapter-from-outside) below.
 
-### 3. Register the adapter (in-tree)
+### 3. Register the system (in-tree)
 
-Add the class to `memrank/adapters/__init__.py`:
+Add the class to `memrank/adapters/__init__.py`, which is still the registry's file name:
 
 ```python
 from memrank.adapters.myengine import MyAdapter
@@ -146,7 +181,7 @@ REGISTRY["myengine"] = MyAdapter
 
 ### 4. Make it a target (stack engines)
 
-An adapter alone only supports `--adapter myengine` against a backend you stood
+A registered class alone only supports `--adapter myengine` against a backend you stood
 up yourself. For `memrank submit myengine ... --on local|cloud` to launch the
 engine, every chokepoint below needs an entry -- each one fails loudly (or is
 covered by an enumeration test) when missing, so work through the list until
@@ -253,18 +288,18 @@ Static checks (class attributes, abstract method coverage, metric key
 shape) run unconditionally. Live smoke tests skip cleanly if your engine
 is not reachable.
 
-The conformance suite is what a shared adapter is held to. For an engine you only pass as an
+The conformance suite is what a shared system is held to. For a system you only pass as an
 instance, `memrank targets verify` and your own tests are the equivalent -- the most consequential
-check either one runs is that state does not leak between isolation units.
+check either one runs is that state does not leak between groups of tasks.
 
 #### Write tests beside the others
 
-The conformance suite proves your adapter satisfies the contract. Anything you
-assert about *your* adapter's own behavior goes in `tests/adapters/`, one file per
-adapter, named `test_<name>_adapter.py` alongside the ones already there.
+The conformance suite proves your system satisfies the contract. Anything you
+assert about *your* system's own behavior goes in `tests/adapters/`, one file per
+system, named `test_<name>_adapter.py` alongside the ones already there.
 
 `tests/adapters/` is for behavior that needs no live backend -- request shapes,
-partitioning, config resolution, what the adapter does with a refusal. Anything
+partitioning, config resolution, what the system does with a refusal. Anything
 that skips when your engine is not running belongs in `tests/live/` instead, which
 is the one directory in the tree organized by what a test *needs* rather than what
 it is about. [`tests/README.md`](../tests/README.md) states the rule for every
@@ -273,17 +308,17 @@ directory, and it is worth reading once before you add a file.
 ### 6. Submit a PR
 
 Per the vendor-neutral charter, AtomicStrata commits to reviewing valid
-adapter PRs within 7 days. Include in your PR:
+PRs within 7 days. Include in your PR:
 
-- adapter source under `memrank/adapters/<name>.py`
+- the class under `memrank/adapters/<name>.py`
 - registry entry
 - tests under `tests/adapters/`
 - documentation for any new env vars
 - a brief note on how to stand up the backend locally
 
-### Registering an adapter from outside
+### Registering a system from outside
 
-Keep the Python `MemoryAdapter` and the full lifecycle, but let the class live in your own
+Keep the Python `memrank.Memory` and the full lifecycle, but let the class live in your own
 repository. `memrank/plugins.py` exposes `register_adapter`, which takes the adapter class **and
 every table row that drives it** as one object:
 
@@ -321,7 +356,7 @@ is not importable fails every command until the path is restored or the setting 
 (`memrank config set adapters.plugins ""`). That is the price of a name, and it is why the instance
 route asks for neither.
 
-An in-process engine has nothing to launch and nothing to reach, so it uses
+An in-process system has nothing to launch and nothing to reach, so it uses
 `AdapterRegistration.in_process(...)` instead, which asks only what launching it costs in
 credentials and what the receipt should say about it.
 

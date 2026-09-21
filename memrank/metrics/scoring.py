@@ -24,9 +24,13 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
-from memrank.core import Document
+from memrank.composition import Scorer
+from memrank.core import AdapterResponse, BenchmarkUnit, Document
 
 _PUNCT_WS = re.compile(r"[^\w\s]", flags=re.UNICODE)
 _WS = re.compile(r"\s+")
@@ -107,3 +111,54 @@ def spec_from_query(query: dict) -> EvidenceSpec:
         evidence_doc_ids=list(query.get("evidence_doc_ids") or []),
         kind=str(query.get("kind") or "positive"),
     )
+
+
+#: The category a query that declares none is counted under.
+UNCATEGORIZED = "uncategorized"
+
+
+class SpanRecall(Scorer):
+    """memrank's deterministic scorer, under a name a person can import and point at.
+
+    It is the scorer the demo benchmark has always used -- ``score_query(spec_from_query(q),
+    documents)`` per query, the mean over a unit's queries -- lifted out of that benchmark's
+    import namespace so somebody who brings only questions does not have to write a
+    :meth:`~memrank.core.Benchmark.score` of their own to get a number (ATO-2135).
+
+    The name says what it decides and no more. It marks whether a query's gold SPANS appear
+    verbatim in a retrieved document; it is a retrieval proxy and never a claim about whether an
+    answer to the question would be correct. :attr:`METRIC_LABEL` is the string it writes into
+    every unit it scores, so the caveat travels with the number rather than with the
+    documentation.
+    """
+
+    #: The kind of number this scorer produces, in `Benchmark.quality_metric`'s vocabulary.
+    quality_metric = "substring_recall"
+    #: The one scored key an aggregation may be written over.
+    criterion_names = ("composite",)
+    identity = "span-recall"
+    #: The per-unit honest label, carried in the scored dict's ``metric`` key.
+    METRIC_LABEL = "evidence_recall (retrieval proxy; not answer correctness)"
+
+    def hit(self, query: dict[str, Any], retrieved: list[Document]) -> MatchResult:
+        """Mark one query against what came back for it."""
+        return score_query(spec_from_query(query), retrieved)
+
+    def score(self, unit: BenchmarkUnit,
+              responses: Sequence[AdapterResponse]) -> dict[str, Any]:
+        """Mark one unit: composite, per-category breakdown, query count and the label."""
+        by_id = {r.query_id: r for r in responses}
+        per_category: dict[str, list[int]] = defaultdict(list)
+        all_hits: list[int] = []
+        for query in unit.queries:
+            response = by_id.get(query["id"])
+            marked = 1 if self.hit(query, response.documents if response else []).hit else 0
+            all_hits.append(marked)
+            per_category[query.get("category", UNCATEGORIZED)].append(marked)
+        composite = sum(all_hits) / len(all_hits) if all_hits else 0.0
+        return {
+            "composite": composite,
+            "per_category": {c: sum(v) / len(v) for c, v in per_category.items()},
+            "n_queries": len(all_hits),
+            "metric": self.METRIC_LABEL,
+        }

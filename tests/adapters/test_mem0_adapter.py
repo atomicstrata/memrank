@@ -45,7 +45,7 @@ def test_http_search_sends_top_k_and_no_similarity_floor():
     a = Mem0Adapter(mode="http")
     a._client = _StubClient()  # type: ignore[assignment]
     a.prepare("u1")
-    docs, _ = a.retrieve("profession?", 9, "u1")
+    docs = a.retrieve("profession?", 9, "u1").documents
     url, payload = a._client.calls[0]  # type: ignore[attr-defined]
     assert url == "/search"
     assert payload["top_k"] == 9
@@ -68,7 +68,7 @@ def test_sdk_search_scopes_user_top_k_and_permissive_threshold():
 
     a._memory = _FakeMem()  # type: ignore[assignment]
     a._isolation = "u1"
-    docs, _ = a.retrieve("drink?", 7, "u1")
+    docs = a.retrieve("drink?", 7, "u1").documents
     assert calls["filters"] == {"user_id": "u1"}  # scoped to the user
     assert calls["top_k"] == 7
     assert calls["threshold"] == 0.0  # permissive -> return the top-k

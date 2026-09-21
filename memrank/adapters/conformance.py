@@ -28,10 +28,11 @@ in the tool examines.
 
 from __future__ import annotations
 
-from memrank.core import REQUIRED_LATENCY_KEYS, REQUIRED_TOKEN_KEYS, Document, MemoryAdapter
+from memrank.core import REQUIRED_TOKEN_KEYS, Document, MemoryAdapter
+from memrank.docs import doc_url
 from memrank.placement.base import Requirement
 
-_DOC = "docs/adapter-contract.md"
+_DOC = doc_url("adapter-contract.md")
 _UNIT_A = "memrank-verify-unit-a"
 _UNIT_B = "memrank-verify-unit-b"
 _USER = "memrank-verify-user"
@@ -76,7 +77,7 @@ def _ingest(adapter: MemoryAdapter) -> Requirement:
 def _ranking(adapter: MemoryAdapter) -> Requirement:
     """Retrieve must return documents ranked best-first -- that ordering IS the measurement."""
     try:
-        documents, _ = adapter.retrieve(_QUERY, k=5, user_id=_USER)
+        documents = adapter.retrieve(_QUERY, k=5, user_id=_USER).documents
     except Exception as exc:  # noqa: BLE001
         return Requirement("retrieve", False, str(exc), f"see {_DOC} section 4")
     if not documents:
@@ -101,7 +102,7 @@ def _isolation(adapter: MemoryAdapter) -> Requirement:
     try:
         adapter.cleanup()
         adapter.prepare(_UNIT_B)
-        leaked, _ = adapter.retrieve(_QUERY, k=5, user_id=_USER)
+        leaked = adapter.retrieve(_QUERY, k=5, user_id=_USER).documents
         adapter.cleanup()
     except Exception as exc:  # noqa: BLE001
         return Requirement("isolation", False, str(exc), f"see {_DOC} section 4")
@@ -115,12 +116,18 @@ def _isolation(adapter: MemoryAdapter) -> Requirement:
 
 
 def _metrics(adapter: MemoryAdapter) -> Requirement:
-    """Both metric methods must emit their required keys after real work."""
+    """The engine's usage DECLARATION must be well shaped, where it makes one.
+
+    Latency is no longer asked of the engine: memrank times every ingest and retrieve at its own
+    call boundary, so there is nothing here for an engine to get wrong or to flatter (ATO-2136).
+    What remains is the one measurement only the engine can make -- what a provider billed it --
+    and this checks the shape of that declaration, not whether one was made.
+    """
     try:
-        latency, tokens = adapter.latency_metrics(), adapter.token_metrics()
+        tokens = adapter.token_metrics()
     except Exception as exc:  # noqa: BLE001
         return Requirement("metrics", False, str(exc), f"see {_DOC} section 5")
-    missing = sorted((REQUIRED_LATENCY_KEYS - set(latency)) | (REQUIRED_TOKEN_KEYS - set(tokens)))
+    missing = sorted(REQUIRED_TOKEN_KEYS - set(tokens))
     if missing:
         return Requirement("metrics", False, f"missing {', '.join(missing)}",
                            "these keys are what the leaderboard reads")

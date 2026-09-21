@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 
@@ -60,7 +60,7 @@ class WordOverlapAdapter(MemoryAdapter):
             self._store[self._isolation].extend(documents)
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None):
+                 query_timestamp: datetime | str | None = None) -> Recall:
         with self.latency.track("retrieve"):
             q = _tokens(query)
             fallback = self._store.get(self._isolation or "", [])
@@ -70,7 +70,7 @@ class WordOverlapAdapter(MemoryAdapter):
             ]
             ranked = [d for score, d in sorted(scored, key=lambda x: x[0], reverse=True)
                       if score > 0][:k]
-        return ranked, {"results": [d.id for d in ranked]}
+        return Recall(documents=ranked, declared={"results": [d.id for d in ranked]})
 
     def cleanup(self) -> None:
         # Destructive: drop this isolation's stored docs (matches cleanup_is_destructive).

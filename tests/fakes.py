@@ -9,6 +9,7 @@ from memrank.core import (
     BenchmarkUnit,
     Document,
     MemoryAdapter,
+    Recall,
 )
 
 
@@ -35,8 +36,9 @@ class FakeAdapter(MemoryAdapter):
         self.ingest_calls += 1
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None):
-        return list(self.responses.get(query, [])), {"query": query}
+                 query_timestamp: datetime | str | None = None) -> Recall:
+        return Recall(documents=list(self.responses.get(query, [])),
+                      declared={"query": query})
 
     def cleanup(self) -> None:
         self.responses = {}
