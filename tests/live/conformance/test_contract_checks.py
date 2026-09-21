@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from memrank.adapters.conformance import contract_checks
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
 
 
 class FakeTranslator(MemoryAdapter):
@@ -41,12 +41,11 @@ class FakeTranslator(MemoryAdapter):
         self.store[self.unit or "shared"].extend(documents)
 
     def retrieve(self, query: str, k: int, user_id: str,
-                 query_timestamp: datetime | str | None = None
-                 ) -> tuple[list[Document], dict[str, Any]]:
+                 query_timestamp: datetime | str | None = None) -> Recall:
         found = list(self.store.get(self.unit or "shared", []))
         if not self.ranks:
             found.reverse()
-        return found[:k], {}
+        return Recall(documents=found[:k])
 
     def cleanup(self) -> None:
         if self.isolates and self.unit is not None:

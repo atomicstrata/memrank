@@ -67,7 +67,7 @@ def _hindsight_returning(n: int) -> tuple[HindsightAdapter, _StubClient]:
 def test_hindsight_keeps_every_result_the_engine_returned():
     """The engine already decided how much fits its token budget; k is not its shape."""
     adapter, _ = _hindsight_returning(25)
-    docs, _raw = adapter.retrieve("when did we meet?", 10, "u1")
+    docs = adapter.retrieve("when did we meet?", 10, "u1").documents
     assert len(docs) == 25          # not truncated to k=10
 
 

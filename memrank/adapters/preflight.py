@@ -30,22 +30,39 @@ class PreflightError(MemrankError):
     """Raised when an adapter is not ready to be benchmarked."""
 
 
-#: What to do about an engine that is not there. Two standard remedies, named at the moment of
-#: failure: "no engine is running" is a fact about the machine, and the user should not have to
-#: already know how this repo starts one.
-_REMEDIES = ("start the shared engines with `scripts/internal/backends.sh up` and re-run, or run against "
-             "a disposable stack with `--on local`")
+#: Where an in-process adapter says its engine lives. Not a URL, because there is nothing to
+#: connect to and quoting a placeholder address would send the reader looking for a server.
+_NO_ADDRESS = "<in-process>"
+
+
+def _remedies(adapter: MemoryAdapter) -> str:
+    """What to do about an engine that is not answering, in this installation's own terms.
+
+    Two remedies, named at the moment of failure: point memrank at the engine that IS running, or
+    have memrank start one. "No engine is running" is a fact about the machine, and the reader
+    should not have to already know how memrank is told where to look.
+
+    Every path named here exists in an installed copy. The message this replaced sent the reader
+    to a shell script in the maintainers' own checkout -- which the person who most needs this
+    message, an outsider whose engine memrank cannot reach, does not have (ATO-2125).
+    """
+    env = getattr(adapter, "base_url_env", None)
+    settings = (f"the {env} environment variable or the adapter's `base_url` argument"
+                if env else "the adapter's `base_url` argument")
+    return (f"memrank sent that request and nothing answered. Point it somewhere else with "
+            f"{settings}, or have memrank start a disposable engine of its own by re-running "
+            f"with `--on local`.")
 
 
 def preflight(adapter: MemoryAdapter) -> None:
     """Probe ``adapter`` with a trivial retrieve; raise PreflightError on failure."""
-    url = getattr(adapter, "base_url", "<in-process>")
+    url = getattr(adapter, "base_url", _NO_ADDRESS)
     try:
         adapter.prepare(_PROBE_ISOLATION)
         adapter.retrieve("preflight", 1, _PROBE_ISOLATION, None)
     except Exception as exc:
         raise PreflightError(
-            f"engine {adapter.name!r} is not answering at {url}: {exc}\n  {_REMEDIES}"
+            f"engine {adapter.name!r} is not answering at {url}: {exc}\n  {_remedies(adapter)}"
         ) from exc
     finally:
         # Cleanup talks to the same engine (AtomicMemory's resets its isolation source over

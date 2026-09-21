@@ -22,14 +22,72 @@ API projection, the uploader). Two rules keep that contract honest, both pinned 
 - ``judged_metrics`` is ABSENT when no judge ran, never null -- absent means "no judge
   ran"; null would claim a judge ran and produced nothing.
 - ``rollup`` and ``benchmark_config`` are spread LAST, so a benchmark-declared key
-  shadows a closed one exactly as the two trailing ``**`` spreads always have.
+  shadows a closed one exactly as the two trailing ``**`` spreads always have. The spread
+  position is unchanged and still pinned there -- what changed is that a key which WOULD
+  shadow a closed field is now refused at assembly (:class:`ShadowedResultField`) instead of
+  replacing it silently.
+
+**THE KEYS ARE NAMED HERE AND NOWHERE ELSE.** A result dict's identity keys --
+``adapter`` and ``benchmark`` -- were read by literal subscript in nine modules, so every
+one of them was a second place the artifact vocabulary was interpreted and a tenth edit
+whenever it changes. The four accessors below are the only place those two strings appear,
+and ``tests/repo/test_result_vocabulary.py`` enumerates every module to keep it that way.
+Translating them into the OUTWARD vocabulary is a separate, single job, and
+:func:`memrank.api.run_projection.identity_of` is the one place it happens.
+
+Strict and tolerant are separate functions rather than one with a default, because which of
+the two a caller wants is a real distinction here: a curator pairing battles must fail on a
+row with no engine, while a listing built from artifacts on disk must render a half-written
+cell rather than raise out of the whole listing. A single accessor with a default would make
+every caller look tolerant and hide which ones actually are.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, fields
 from typing import Any
 
+from memrank.errors import MemrankError
+from memrank.evaluation.case import CaseRow, rows_of
 from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
+from memrank.evaluation.score import Score, score_of
+
+#: The artifact's two identity keys. Referenced by the accessors below rather than written at
+#: each call site, so renaming the artifact's own vocabulary is an edit to these two lines.
+_ADAPTER_KEY = "adapter"
+_BENCHMARK_KEY = "benchmark"
+
+
+def adapter_of(result: Mapping[str, Any]) -> Any:
+    """The engine this result measured. Raises ``KeyError`` when the result names none."""
+    return result[_ADAPTER_KEY]
+
+
+def benchmark_of(result: Mapping[str, Any]) -> Any:
+    """The evaluation this result ran. Raises ``KeyError`` when the result names none."""
+    return result[_BENCHMARK_KEY]
+
+
+def adapter_if_present(result: Mapping[str, Any]) -> Any:
+    """The engine this result measured, or ``None`` on a result that names none."""
+    return result.get(_ADAPTER_KEY)
+
+
+def benchmark_if_present(result: Mapping[str, Any]) -> Any:
+    """The evaluation this result ran, or ``None`` on a result that names none."""
+    return result.get(_BENCHMARK_KEY)
+
+
+class ShadowedResultField(MemrankError):
+    """A benchmark declared a run-level key that a fixed result field already owns.
+
+    The two open surfaces -- ``rollup()`` and ``config_for_receipt()`` -- are spread LAST into
+    the artifact dict, so before this existed a benchmark that happened to name one of its
+    keys ``composite`` (or ``k``, or ``receipt``) replaced the result's own value and nothing
+    said so: the artifact stayed well-formed, the run reported success, and the number a
+    reader ranked on was the benchmark's rather than the measurement's. Every fixed field
+    added to the result widens that surface, which is why this is loud rather than a note.
+    """
 
 
 @dataclass(frozen=True)
@@ -99,8 +157,65 @@ class EvalResult:
     target: str | None = None
 
     @property
+    def engine(self) -> str:
+        """The engine this result measured, under the noun the four-noun model uses.
+
+        ``adapter`` is the field, because it is also the artifact's key and that key is
+        renamed behind a schema version by a later step. This is the name a person reads
+        and writes in Python, available now and unaffected by that rename.
+        """
+        return self.adapter
+
+    @property
+    def evaluation(self) -> str:
+        """The evaluation this result applied, under the noun the four-noun model uses."""
+        return self.benchmark
+
+    @property
+    def engine_ref(self) -> str | None:
+        """The catalog name this engine ran as, or ``None`` when an instance was passed.
+
+        The same value as the ``target`` field, which is the command line's noun for it --
+        in machine learning a *target* is the expected answer, and in operations it is a
+        deployment destination, so neither reading is what this holds.
+        """
+        return self.target
+
+    @property
     def is_applicable(self) -> bool:
         return self.status != "not_applicable"
+
+    @property
+    def cases(self) -> tuple[CaseRow, ...]:
+        """Every case measured, typed -- what was asked, recalled, answered and decided.
+
+        A view over ``per_query``, derived on each read and stored nowhere: the artifact
+        dict is unchanged, and so is every allowlist that selects keys out of it. Use this
+        to read a run; use ``per_query`` only where the artifact's own shape is the point.
+        """
+        return rows_of(self.per_query)
+
+    @property
+    def score(self) -> Score:
+        """The headline number and the honest declarations that travel with it.
+
+        What the number is OF and what it is NOT lived in
+        ``core.QUALITY_METRIC_DESCRIPTIONS``, keyed by ``quality_metric`` and reachable from
+        the terminal only, so ``quality_metric: "substring_recall"`` had to speak for itself.
+        It does not, which is why that constant exists. This carries it.
+        """
+        return score_of(self.to_dict())
+
+    @property
+    def reproducible(self) -> bool:
+        """Whether this run can claim reproducibility at all.
+
+        ``False`` for a benchmark whose material CANNOT be frozen
+        (:data:`~memrank.quality.UNFREEZABLE`), which is a different statement from a
+        benchmark author who never set a dataset version. The receipt says the same thing;
+        this is the same fact reachable from the result.
+        """
+        return bool(self.receipt.get("reproducible", True))
 
     @property
     def headline(self):
@@ -115,19 +230,48 @@ class EvalResult:
         return cls(adapter=adapter_name, benchmark=benchmark_name, composite=None,
                    status="not_applicable", reason=reason)
 
+    def __post_init__(self) -> None:
+        """Refuse a benchmark-declared key that a fixed field already owns.
+
+        At assembly rather than in ``to_dict``, because assembly is where the benchmark that
+        declared the key is still identifiable and where nothing has consumed the result yet.
+        ``to_dict`` is called repeatedly by several readers; a refusal belongs at the one
+        point the result comes into being.
+        """
+        self._refuse_shadowing("rollup", self.rollup)
+        self._refuse_shadowing("config_for_receipt", self.benchmark_config)
+
+    def _refuse_shadowing(self, surface: str, declared: dict[str, Any]) -> None:
+        """Raise when ``declared`` names a fixed field, saying which benchmark and which key.
+
+        ``surface`` is the benchmark METHOD that produced the keys, because that is what the
+        author has to edit -- "a rollup key collides" sends someone to the wrong method half
+        the time.
+        """
+        shadowed = sorted(set(declared) & _CONTRACT_FIELDS)
+        if not shadowed:
+            return
+        keys = ", ".join(repr(key) for key in shadowed)
+        raise ShadowedResultField(
+            f"benchmark {self.benchmark!r} declared {surface}() key(s) {keys}, which the "
+            f"result already owns as fixed field(s) of its own. Those keys are spread into "
+            f"the artifact last, so each would have replaced a measured value silently. "
+            f"Rename them in {self.benchmark}'s {surface}(); the names that are taken are "
+            f"the fields of memrank.evaluation.result.EvalResult.")
+
     def to_dict(self) -> dict[str, Any]:
         """The exact artifact dict, in the construction order the schema has always had."""
         if self.status == "not_applicable":
             return {
-                "adapter": self.adapter,
-                "benchmark": self.benchmark,
+                _ADAPTER_KEY: self.adapter,
+                _BENCHMARK_KEY: self.benchmark,
                 "status": "not_applicable",
                 "composite": None,
                 "reason": self.reason,
             }
         out: dict[str, Any] = {
-            "adapter": self.adapter,
-            "benchmark": self.benchmark,
+            _ADAPTER_KEY: self.adapter,
+            _BENCHMARK_KEY: self.benchmark,
             "composite": self.composite,
             "per_unit": self.per_unit,
             "per_query": self.per_query,
@@ -168,3 +312,12 @@ class EvalResult:
         if self.target is not None:
             out["target"] = self.target
         return out
+
+
+#: Every field the result owns itself -- the closed half of the schema, against which the two
+#: open surfaces are checked. Derived from the dataclass rather than written out again, so a
+#: field added to the class above is protected by the guard without a second edit; that is the
+#: whole point, since it is added fields that enlarge the hazard. The two open surfaces are
+#: excluded because they are the containers being checked, not fields a key can shadow.
+_CONTRACT_FIELDS: frozenset[str] = frozenset(
+    f.name for f in fields(EvalResult) if f.name not in ("rollup", "benchmark_config"))

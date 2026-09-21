@@ -32,7 +32,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from memrank.errors import MemrankError
-from memrank.term import style
 
 _DOTENV_LOADED = False
 
@@ -396,6 +395,15 @@ def ensure_secrets(names: Sequence[str]) -> None:
         if not value:
             raise ConfigError(f"{name} was left blank; nothing stored.")
         wallet.put(name, value)
+        # Local, and it is the only use of `style` in this module. `memrank.term.style` imports
+        # `typer` -- the command-line framework -- and `memrank.config` is on the library run
+        # path, so a module-level import here put the whole terminal stack into the process of
+        # every caller who only ever called `memrank.run(...)`. This line is reached solely
+        # when a human at a terminal has just been asked for a credential, which a library run
+        # never is: it refuses above when there is no terminal to ask on.
+        # `tests/repo/test_import_weight.py` holds a completed run to that budget.
+        from memrank.term import style
+
         style.say(f"stored {name} -> {wallet.store_path()}")
 
 
@@ -404,9 +412,16 @@ _AWS_CONTEXT_FIELDS: tuple[str, ...] = (
     "task_role_arn", "artifact_bucket", "runner_repository", "engines_repository", "secret_arns")
 
 
-# What scripts/internal/aws-context.sh writes by default. Looked for in the working directory so the common
-# case needs no environment variable at all: requiring one to point at a file we told you to create
-# at a specific path is ceremony, not safety.
+#: The required keys as a message renders them. Built from :data:`_AWS_CONTEXT_FIELDS` rather
+#: than written out again, so the list a failure quotes cannot drift from the list it checks --
+#: the three messages below used to send the reader to a generator script instead, which is
+#: operator tooling and absent from an installed copy (ATO-2125). The FILE is the contract, and
+#: an operator running their own ECS can write it by hand from these names.
+_AWS_CONTEXT_KEY_LIST = ", ".join(_AWS_CONTEXT_FIELDS)
+
+# Where the context is looked for by default: the working directory, so the common case needs no
+# environment variable at all. Requiring one to point at a file we told you to create at a
+# specific path is ceremony, not safety.
 DEFAULT_AWS_CONTEXT = ".aws-context.json"
 
 
@@ -442,15 +457,16 @@ def aws_context() -> dict:
     if not configured and not Path(path).exists():
         raise ConfigError(
             f"no AWS context for --on cloud: {DEFAULT_AWS_CONTEXT!r} is not in the working "
-            f"directory and MEMRANK_AWS_CONTEXT is unset. It holds the cluster, subnet, roles, log "
-            f"group, bucket and secret ARNs. Generate it with "
-            f"`scripts/internal/aws-context.sh > {DEFAULT_AWS_CONTEXT}`.")
+            f"directory and MEMRANK_AWS_CONTEXT is unset. Write it as a JSON object with the "
+            f"keys {_AWS_CONTEXT_KEY_LIST} -- the coordinates of the ECS cluster the run launches "
+            f"into -- or point MEMRANK_AWS_CONTEXT at a copy you already have.")
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise ConfigError(
-            f"MEMRANK_AWS_CONTEXT points at {path!r}, which does not exist. "
-            f"Regenerate it with `scripts/internal/aws-context.sh > {path}`.") from exc
+            f"MEMRANK_AWS_CONTEXT points at {path!r}, which does not exist. Point it at an "
+            f"existing file, or write one there as a JSON object with the keys "
+            f"{_AWS_CONTEXT_KEY_LIST}.") from exc
     except json.JSONDecodeError as exc:
         raise ConfigError(f"{path!r} is not valid JSON: {exc}") from exc
 
@@ -459,6 +475,7 @@ def aws_context() -> dict:
         raise ConfigError(
             f"{path!r} is missing {', '.join(missing)} (generated_at "
             f"{data.get('generated_at', 'unknown')}). It is probably from an older schema or a "
-            f"partial write -- regenerate with `scripts/internal/aws-context.sh > {path}`.")
+            f"partial write -- every one of {_AWS_CONTEXT_KEY_LIST} must be present and "
+            f"non-empty.")
     return data
 

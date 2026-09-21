@@ -154,7 +154,7 @@ than asking you to trust that someone did.
 - **A benchmark of your own** -- [adding a benchmark](adding-benchmarks.md), the same way.
 - **An engine, without writing Python at all** -- write a translator that speaks the
   [adapter contract](adapter-contract.md) over HTTP, in any language.
-  [`examples/native-adapter/`](../examples/native-adapter/README.md) is a working one.
+  [`examples/native-adapter/`](../examples/more/native-adapter/README.md) is a working one.
 
 A change that affects how anything is scored needs a matching change to
 [methodology.md](methodology.md). That is not a review preference: a

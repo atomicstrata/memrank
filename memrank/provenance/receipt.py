@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from memrank.provenance import environment, install
+from memrank.quality import is_reproducible
 from memrank.secrets.names import is_secret_key
 
 #: The receipt layout THIS memrank writes. Version 3 adds a centrally-derived evidence class so a
@@ -94,6 +95,15 @@ class Receipt:
     # What claims this run is eligible to support. Derived from execution facts, never selected by
     # the operator: a workspace process is useful development signal but is not a published build.
     evidence: dict[str, Any] = field(default_factory=dict)
+    # Whether a reproducibility claim can honestly be made for this run at all. Derived from
+    # ``dataset_version``, never asserted: a benchmark whose material CANNOT be frozen declares
+    # ``memrank.quality.UNFREEZABLE`` and this goes False, so the receipt states the limit rather
+    # than reporting a version it cannot support. Distinct from ``evidence``, which grades what
+    # was OBSERVED about the engine; this grades what the MATERIAL allows.
+    #
+    # Defaults True: every record written before this field existed was over frozen material, and
+    # a legacy artifact must not be read as making a disclaimer nobody made.
+    reproducible: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -258,6 +268,7 @@ def build_receipt(
         extra=extra or {},
         engine_provenance=engine_provenance or {},
         evidence=evidence or {"class": "reproducible_evidence", "publishable": True},
+        reproducible=is_reproducible(dataset_version),
     )
 
 

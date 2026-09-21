@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from memrank.docs import doc_url
 from memrank.errors import MemrankError
 
 # Provider -> the API-key env var it needs. Empty string == keyless (local/in-process) provider.
@@ -109,7 +110,7 @@ def get_requirements(engine: str) -> EngineRequirements:
             f"no engine registered as {engine!r}; known: {', '.join(sorted(REQUIREMENTS))}. "
             f"If it is provided by a plugin, name that plugin's module in the `adapters.plugins` "
             f"setting (`memrank config set adapters.plugins <module>`) and make sure the module is "
-            f"importable -- see docs/adding-adapters.md.")
+            f"importable -- see {doc_url('adding-adapters.md')}.")
     return REQUIREMENTS[engine]
 
 

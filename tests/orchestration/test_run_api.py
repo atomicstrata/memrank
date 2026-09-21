@@ -22,7 +22,11 @@ from __future__ import annotations
 
 import pytest
 
+# `memrank.run` is now the typed run over the seven (memrank/instrument/); the cell run
+# that produces an `EvalResult` is imported from its own module, which is where the CLI
+# and the cloud reach it too.
 import memrank
+from memrank.evaluation.api import run as run_cell
 from memrank.judging.judge import JudgeConfig
 from tests.fakes import FakeAdapter, FakeBenchmark, JudgeFakeBenchmark, make_fake_completer
 
@@ -36,7 +40,7 @@ def isolated(tmp_path, monkeypatch):
 
 
 def test_a_catalog_ref_runs_end_to_end_and_writes_nothing(isolated, capsys):
-    result = memrank.run("word-overlap", "demo", repeats=1)
+    result = run_cell("word-overlap", "demo", repeats=1)
 
     assert isinstance(result, memrank.EvalResult)
     assert result.composite == 0.8, "the same score the CLI's demo sweep records"
@@ -50,7 +54,7 @@ def test_a_catalog_ref_runs_end_to_end_and_writes_nothing(isolated, capsys):
 def test_instances_run_without_any_resolution(isolated):
     adapter = FakeAdapter(name="fake", responses={"q1": [], "q2": []})
 
-    result = memrank.run(adapter, FakeBenchmark(), repeats=1)
+    result = run_cell(adapter, FakeBenchmark(), repeats=1)
 
     assert isinstance(result, memrank.EvalResult)
     assert result.target is None, "no ref was given, so none is invented"
@@ -59,7 +63,7 @@ def test_instances_run_without_any_resolution(isolated):
 
 def test_the_judge_default_asks_the_benchmark(isolated):
     """`demo` scores itself, so judge=None means unjudged -- same rule as the CLI's."""
-    result = memrank.run("word-overlap", "demo", repeats=1)
+    result = run_cell("word-overlap", "demo", repeats=1)
 
     assert result.judged_metrics is None
 
@@ -69,7 +73,7 @@ def test_an_explicit_judge_config_is_used_as_given(isolated):
     adapter = FakeAdapter("fake", {q["text"]: [] for q in bench.load()[0].queries})
     cfg = JudgeConfig(no_context_control=False, completer=make_fake_completer())
 
-    result = memrank.run(adapter, bench, repeats=1, judge=cfg)
+    result = run_cell(adapter, bench, repeats=1, judge=cfg)
 
     assert result.judged_metrics is not None
     assert result.judged_metrics["n_judged"] == 2
@@ -79,7 +83,7 @@ def test_judge_false_forces_an_unjudged_run(isolated):
     bench = JudgeFakeBenchmark()
     adapter = FakeAdapter("fake", {q["text"]: [] for q in bench.load()[0].queries})
 
-    result = memrank.run(adapter, bench, repeats=1, judge=False)
+    result = run_cell(adapter, bench, repeats=1, judge=False)
 
     assert result.judged_metrics is None
 
@@ -101,14 +105,14 @@ def test_an_observer_hears_the_run(isolated):
             events.append(f"unit_finished:{queries_done}/{queries_total}")
 
     adapter = FakeAdapter(name="fake", responses={"q1": [], "q2": []})
-    memrank.run(adapter, FakeBenchmark(), repeats=1, observer=Collector())
+    run_cell(adapter, FakeBenchmark(), repeats=1, observer=Collector())
 
     assert events == ["planned:1u/1d/2r", "unit_started:1/1", "ingest:1/1",
                       "retrieve:1/2", "retrieve:2/2", "unit_finished:2/2"]
 
 
 def test_the_lazy_exports_resolve_and_dir_lists_them():
-    assert memrank.run.__module__ == "memrank.evaluation.api"
+    assert memrank.run.__module__ == "memrank.instrument.run"
     assert memrank.EvalResult.__module__ == "memrank.evaluation.result"
     assert {"run", "EvalResult", "EvalObserver", "EvalPlan", "JudgeConfig"} <= set(dir(memrank))
     with pytest.raises(AttributeError):

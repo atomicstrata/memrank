@@ -1,56 +1,63 @@
-# The memrank adapter contract, v1
+# The memrank system contract, v1
 
-This is the wire contract between memrank and a **translator** -- a program you write that memrank
-drives like any other engine, and which forwards to your memory system however it likes.
+This is the wire contract between memrank and a **translator** -- a program you write that
+memrank drives as the system under test, and which forwards to your memory system however it
+likes.
 
-Write one and memrank can evaluate an engine it has never seen, in any language, with no fork and
-no pull request. memrank never imports your code, never resolves a version of it, and never needs
-to know what language it is in. The contract is a process, not a package.
+Write one and memrank can measure a system it has never seen, in any language, with no fork and
+no pull request. memrank never imports your code, never resolves a version of it, and never
+needs to know what language it is in. The contract is a process, not a package.
 
-Companion documents: [adding-adapters.md](adding-adapters.md) (when to write a translator versus an
-in-tree adapter) and [methodology.md](methodology.md) (what each measured axis means, and the
+**One note on names.** This file is still called `adapter-contract.md`, the JSON field that
+names your translator is still `adapter`, and the command line still calls a named system a
+*target*. Those are wire and command-line facts and they have not moved; *system* is the word
+the Python surface uses for the same thing. Renaming the file and the field is a later change.
+
+Companion documents: [adding a system](adding-adapters.md) (when to write a translator versus a
+class in this tree) and [methodology.md](methodology.md) (what each measured axis means, and the
 comparability rules a translator is subject to).
 
 ---
 
 ## 1. What a translator is, and why the shapes are fixed
 
-memrank talks to an engine as an HTTP service. A translator is an HTTP service too, so memrank
+memrank talks to a system as an HTTP service. A translator is an HTTP service too, so memrank
 cannot tell the difference -- it provisions it, waits for readiness, drives the four lifecycle
-operations, and tears it down using exactly the machinery that runs a built-in engine.
+operations, and tears it down using exactly the machinery that runs a system memrank ships.
 
-What a translator does *inside* is entirely yours: call an SDK, open a socket, spawn a subprocess,
-render documents into whatever shape your engine wants, page through results, retry. That is the
-part of an adapter that genuinely cannot be configuration, and it belongs to you.
+What a translator does *inside* is entirely yours: call an SDK, open a socket, spawn a
+subprocess, render documents into whatever shape your system wants, page through results,
+retry. That is the part that genuinely cannot be configuration, and it belongs to you.
 
-What is **not** yours is the shape of what comes back. memrank is a comparator: a scorer computes
-recall@k against ground truth, and a leaderboard puts two engines' numbers side by side. That only
-means something if every engine answers in the same shape. So the request and response bodies below
-are fixed, and a field that is absent is an error rather than a default.
+What is **not** yours is the shape of what comes back. memrank is a comparator: a measure
+computes recall@k against ground truth, and a reader puts two systems' values side by side.
+That only means something if every system answers in the same shape. So the request and
+response bodies below are fixed, and a field that is absent is an error rather than a default.
 
-This is deliberately unlike a self-describing protocol such as MCP, where a server announces its own
-schemas. MCP can afford that because a language model consumes its output and can interpret
+This is deliberately unlike a self-describing protocol such as MCP, where a server announces its
+own schemas. MCP can afford that because a language model consumes its output and can interpret
 anything. Nothing downstream of memrank can interpret anything: it computes.
 
 ## 2. Transport and lifecycle
 
 A translator serves HTTP on a port memrank tells it to bind, and implements five endpoints under
-`/memrank/v1/`. memrank drives them in this order, once per benchmark unit:
+`/memrank/v1/`. memrank drives them in this order, once per **unit** -- the stretch of tasks
+that share state, which the Python surface calls a group:
 
 ```
 GET  /memrank/v1/describe        once, at startup -- also the readiness probe
 POST /memrank/v1/prepare         per unit
 POST /memrank/v1/ingest          per unit, possibly several times
-POST /memrank/v1/retrieve        per query in the unit
+POST /memrank/v1/retrieve        per task in the unit
 POST /memrank/v1/cleanup         per unit
 ```
 
 All request and response bodies are `application/json`, UTF-8.
 
 **Readiness.** memrank polls `GET /memrank/v1/describe` until it answers with a status below 500,
-then starts the run. Do not answer before your engine can actually serve traffic: "ready" means
-"can answer the question memrank is about to ask", not "the port is open". A translator that reports
-ready too early turns an engine start-up failure into a benchmark result.
+then starts the run. Do not answer before your system can actually serve traffic: "ready" means
+"can answer the task memrank is about to put", not "the port is open". A translator that reports
+ready too early turns a start-up failure into a measurement.
 
 ## 3. The `Document` shape
 
@@ -82,14 +89,14 @@ ready too early turns an engine start-up failure into a benchmark result.
 | `messages` | array \| null | Present when the source has multi-turn structure. |
 | `metadata` | object | Always present, possibly empty. |
 
-**On `timestamp`.** If your engine supports temporal reasoning, pass this through. Engines that
-ignore it and stamp ingestion time instead date every memory to the moment of the benchmark run,
-which silently destroys any temporal question in the eval.
+**On `timestamp`.** If your system supports temporal reasoning, pass this through. A system that
+ignores it and stamps ingestion time instead dates every memory to the moment of the run, which
+silently destroys every temporal task in the evaluation.
 
 **On `messages` versus `content`.** Both describe the same material. `content` is the canonical
 text; `messages` is the structured form when one exists. Use whichever your engine wants -- if it
 takes a message list, use `messages`; if it takes free text, use `content`. Rendering one into the
-other is your job, and is exactly the kind of engine-specific transformation this contract exists
+other is your job, and is exactly the kind of system-specific transformation this contract exists
 to let you own.
 
 ## 4. The endpoints
@@ -118,25 +125,25 @@ Identity and capabilities. Called once at startup, and used as the readiness pro
 |---|---|---|
 | `contract_version` | yes | Must be `"v1"`. memrank refuses a version it does not implement. |
 | `adapter.name` / `.version` | yes | Your translator's own identity, recorded in the receipt. |
-| `engine.name` / `.version` | yes | The system under test. Use `"unknown"` only if you genuinely cannot determine it. |
-| `components.llm` | yes | `{provider, model}`, or `null` if the engine uses no LLM. |
-| `components.embedder` | yes | `{provider, model, dims}`, or `null` if the engine has no embedder. |
+| `engine.name` / `.version` | yes | The system under test, under the wire's own older field name. Use `"unknown"` only if you genuinely cannot determine it. |
+| `components.llm` | yes | `{provider, model}`, or `null` if the system uses no LLM. |
+| `components.embedder` | yes | `{provider, model, dims}`, or `null` if the system has no embedder. |
 | `capabilities.graph_snapshot` | yes | Whether `retrieve` returns `raw.graph_snapshot`. |
 | `capabilities.context_budget` | yes | `"matched"` for every real engine. See section 6. |
 
-**`components` is the authority, and this is the important part.** For a built-in engine, memrank
-injects component configuration through env vars it knows by name and the manifest merely *asserts*
-what was configured. It cannot do that for your engine -- it does not know which variables your
-process reads. So the direction inverts: **you** configure your engine inside your own launch
+**`components` is the authority, and this is the important part.** For a system memrank ships,
+memrank injects component configuration through env vars it knows by name and the manifest merely
+*asserts* what was configured. It cannot do that for yours -- it does not know which variables your
+process reads. So the direction inverts: **you** configure your system inside your own launch
 command, and you **report** the result here. memrank records what you report and marks the run
-`verified: "engine"`, which is a stronger provenance claim than most built-in engines can make.
+`verified: "engine"`, which is a stronger provenance claim than most shipped systems can make.
 
-A `null` component means "this engine has no such part" -- a positive statement. Do not use `null`
+A `null` component means "this system has no such part" -- a positive statement. Do not use `null`
 to mean "I did not check": report the real value or fail to start.
 
 ### `POST /memrank/v1/prepare`
 
-Begin a fresh benchmark unit. **Nothing ingested under a previous `isolation_unit` may be visible
+Begin a fresh unit. **Nothing ingested under a previous `isolation_unit` may be visible
 to this one.** How you achieve that is yours -- a namespace, a fresh collection, a tenant id, a
 wiped directory.
 
@@ -148,8 +155,8 @@ wiped directory.
 {}
 ```
 
-Isolation is not a nicety. If state leaks between units, every score after the first is measuring an
-engine that has already seen the answers.
+Isolation is not a nicety. If state leaks between units, every value after the first is measuring a
+system that has already seen the answers.
 
 ### `POST /memrank/v1/ingest`
 
@@ -166,11 +173,11 @@ Load documents into the current unit. May be called more than once per unit.
 | Field | Required | Notes |
 |---|---|---|
 | `usage.total_tokens` | no | Omit the whole `usage` object if you cannot measure it. See section 5. |
-| `engine_ms` | no | Milliseconds your engine spent, excluding your own overhead. See section 7. |
+| `engine_ms` | no | Milliseconds your system spent, excluding your own overhead. See section 7. |
 
 ### `POST /memrank/v1/retrieve`
 
-Answer one query against the current unit.
+Answer one task's prompt against the current unit.
 
 ```json
 // request
@@ -192,21 +199,22 @@ Answer one query against the current unit.
 
 | Field | Required | Notes |
 |---|---|---|
-| `documents` | yes | **Ranked, best first.** This ordering is what recall@k measures. |
-| `raw` | yes | Your engine's untouched response, stored in the receipt for forensics. Any JSON object. |
+| `documents` | yes | **Ranked, best first.** The order IS the measurement: it is the rank, and memrank never re-sorts. |
+| `raw` | yes | Your system's untouched response. It lands on the trace as what the system declared, and is never read as a measurement. Any JSON object. |
 | `usage` | no | As above. |
 | `engine_ms` | no | As above. |
 
-`query_timestamp` may be `null`. When present it is the moment the question is being asked, which
-matters for engines that reason about time.
+`query_timestamp` may be `null`. When present it is the moment the task is being put, which
+matters for a system that reasons about time.
 
-**On `k`.** It is a request for the top *k*, and most engines have a matching parameter. If yours
+**On `k`.** It is a request for the top *k*, and most systems have a matching parameter. If yours
 does not model result counts at all -- some pack a token budget instead -- return what it returns and
 say so in your README. Do not pad the list to reach `k`, and do not invent scores. memrank caps
 every target at the same `--token-budget` regardless, which is the fairness control that makes the
 comparison legitimate.
 
-Put a relevance score, if you have one, in each returned document's `metadata.score`.
+Put a relevance figure, if you have one, in each returned document's `metadata.score` -- report
+what your system computed, never invent one.
 
 ### `POST /memrank/v1/cleanup`
 
@@ -220,41 +228,42 @@ End the current unit and release its state.
 {}
 ```
 
-Called even when a unit fails. Make it safe to call twice, and safe to call before any `prepare`.
+Called even when a unit fails -- a failed task is a trace with a reason, and the run does not stop
+on it. Make it safe to call twice, and safe to call before any `prepare`.
 
 ## 5. Token usage: absent is not zero
 
-If your engine reports token consumption, pass it through as `usage.total_tokens`. If it does not,
+If your system reports token consumption, pass it through as `usage.total_tokens`. If it does not,
 **omit the `usage` object entirely.**
 
-Do not send `{"usage": {"total_tokens": 0}}`. Zero is a claim that your engine consumed no tokens.
-Absence is an admission that nobody counted. memrank keeps these distinct all the way to the
-leaderboard, where an unmeasured cell renders as `n/a` and a measured zero renders as zero.
+Do not send `{"usage": {"total_tokens": 0}}`. Zero is a claim that your system consumed no tokens.
+Absence is an admission that nobody counted. memrank keeps these distinct all the way out: a value
+nobody measured is `None`, and a measured zero is zero.
 
 ## 6. Context budget
 
 `capabilities.context_budget` must be `"matched"` for any real memory system. It means the retrieved
-context you return will be capped at the shared `--token-budget` that every target is held to -- the
-project's central fairness control, so a row cannot win by returning more text.
+context you return will be capped at the shared `--token-budget` that every system is held to -- the
+project's central fairness control, so a system cannot win by returning more text.
 
 The other two values exist only for memrank's own baseline arms and are not available to a
 translator: `"uncapped"` for the full-context control, `"none"` for the no-memory control.
 
 ## 7. Latency, and why a translator is its own transport class
 
-memrank measures wall-clock time around each call it makes to you. That measurement necessarily
-includes your translator's own overhead -- an extra process and an extra network hop that a
-directly-driven engine does not pay.
+memrank measures wall-clock time around each call it makes to you, at its own call boundary. That
+measurement necessarily includes your translator's own overhead -- an extra process and an extra
+network hop that a directly-driven system does not pay.
 
 Rather than pretend this is comparable, memrank declares translator-backed targets as
 `transport: translator`, and [methodology.md](methodology.md) already rules that latency compares
-only within a transport class. So a translator row is compared against other translator rows, and
-never silently ranked against an engine memrank drives directly. Quality metrics are unaffected and
+only within a transport class. So a translator is compared against other translators, and never
+silently ranked against a system memrank drives directly. Quality measures are unaffected and
 compare across everything.
 
-Report `engine_ms` when you can. It is recorded alongside the wall-clock figure so a reader can see
-how much of the measured time was yours, and it is the number to quote when you want to talk about
-the engine rather than the harness.
+Report `engine_ms` when you can. It lands on the trace as something the system declared, beside
+memrank's own wall-clock figure, so a reader can see how much of the measured time was yours -- and
+it is the number to quote when you want to talk about the system rather than the instrument.
 
 ## 8. Errors
 
@@ -264,15 +273,17 @@ Return a non-2xx status with a JSON body:
 {"error": "myengine rejected the batch: document 12 exceeds the 100k character limit"}
 ```
 
-memrank fails the run and surfaces your message. **Never swallow an error and return an empty
-result.** An empty `documents` list is a legitimate answer meaning "nothing matched", and an engine
-that returns it on failure scores exactly like the no-memory control arm -- which reads as a real,
-publishable finding rather than a broken integration. This has happened before to a built-in engine
-and went unnoticed across every run until the numbers were audited.
+memrank records the failure on that task's trace, with the step and your message, and carries on.
+**Never swallow an error and return an empty result.** An empty `documents` list is a legitimate
+answer meaning "nothing matched", and a system that returns it on failure measures exactly like the
+no-memory control arm -- which reads as a real, publishable finding rather than a broken
+integration. This has happened before to a system memrank ships and went unnoticed across every run
+until the numbers were audited.
 
 ## 9. Declaring a target
 
-Put the descriptor next to the translator it launches, in a folder you own:
+*Target* is the command line's word for a named system. Put the descriptor next to the translator
+it launches, in a folder you own:
 
 ```
 ~/evals/
@@ -330,8 +341,8 @@ does not have that problem.
 directory.
 
 Do **not** declare a `components:` block on a native target. memrank cannot deliver component
-configuration to an engine whose environment it does not know, so declaring one is refused; your
-launch command configures the engine and `describe` reports it.
+configuration to a system whose environment it does not know, so declaring one is refused; your
+launch command configures the system and `describe` reports it.
 
 ### Credentials your translator needs
 
@@ -352,7 +363,7 @@ your shell history, a config file, or the run record. A declared secret that res
 refused at preflight, naming every missing one at once, rather than failing inside your translator
 on the first call.
 
-memrank interprets none of these. It does not know or care whether your engine wants a bearer
+memrank interprets none of these. It does not know or care whether your system wants a bearer
 token, a username and password, or three fields it has never heard of.
 
 ### Comparing against the catalog
@@ -365,27 +376,27 @@ memrank submit myengine:dev,mem0,hindsight demo
 
 Each target is provisioned and torn down before the next begins. Quality compares across all of
 them; latency compares only within a transport class, so your `translator` row is never silently
-ranked against a directly-driven `http` engine (section 7). Evidence is per row -- yours is a
+ranked against a directly-driven `http` system (section 7). Evidence is per row -- yours is a
 `development_observation` while the catalog rows keep whatever they had.
 
 ## 10. Evidence class
 
 A source-bound target runs locally and is recorded as `development_observation` with
-`publishable: false`. That is not a judgement about your engine -- it is that memrank launched code
+`publishable: false`. That is not a judgement about your system -- it is that memrank launched code
 from a mutable working tree, so the run identifies a checkout rather than a reproducible artifact.
 Runs like this never sync to the org universe when the tree is dirty, and never reach the public
 leaderboard.
 
 Publishable evidence requires a pinned, reproducible artifact. That path is not open to translators
-yet; see [adding-adapters.md](adding-adapters.md) for the in-tree adapter route in the meantime.
+yet; see [adding a system](adding-adapters.md) for the in-tree route in the meantime.
 
 ## 11. Conformance
 
 `memrank targets verify <ref>` launches your target and asserts this document: the `describe` shape
 and contract version, that a second `prepare` does not see the first unit's documents, that
 `retrieve` returns ranked documents, and that usage is either absent or a number. Run it before you
-trust any number your translator produces.
+trust any value your translator produces.
 
 A reference implementation -- about a hundred lines, standard library only -- is in
-[`examples/native-adapter/`](../examples/native-adapter/). It wraps an in-memory dictionary rather
-than a real engine, so it is a template to copy, not a system to benchmark.
+[`examples/native-adapter/`](../examples/more/native-adapter/). It wraps an in-memory dictionary rather
+than a real engine, so it is a template to copy, not a system worth measuring.

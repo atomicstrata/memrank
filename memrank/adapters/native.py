@@ -41,7 +41,8 @@ from typing import Any
 import httpx
 
 from memrank.adapters import errors as adapter_errors
-from memrank.core import Document, MemoryAdapter
+from memrank.core import Document, MemoryAdapter, Recall
+from memrank.docs import doc_url
 from memrank.errors import MemrankError
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
@@ -57,7 +58,7 @@ CONTRACT_VERSION = "v1"
 _SECTIONS = ("adapter", "engine", "components", "capabilities")
 _ROLES = ("llm", "embedder")
 _CAPABILITIES = ("graph_snapshot", "context_budget")
-_CONTRACT_DOC = "docs/adapter-contract.md"
+_CONTRACT_DOC = doc_url("adapter-contract.md")
 
 
 class ContractError(MemrankError):
@@ -170,6 +171,7 @@ class NativeAdapter(MemoryAdapter):
     """
 
     name = "native"
+    base_url_env = "NATIVE_API_URL"
     version = "0.1.0"
     engine_version = "unknown"
     transport = "translator"
@@ -306,7 +308,7 @@ class NativeAdapter(MemoryAdapter):
         k: int,
         user_id: str,
         query_timestamp: datetime | str | None = None,
-    ) -> tuple[list[Document], dict[str, Any]]:
+    ) -> Recall:
         """Ask one query and rebuild the ranked documents the scorer reads."""
         payload = {
             "query": query,
@@ -324,7 +326,8 @@ class NativeAdapter(MemoryAdapter):
                 f"{type(entries).__name__}; see {_CONTRACT_DOC} section 4.")
         documents = [_to_document(entry, index, user_id) for index, entry in enumerate(entries)]
         raw = body.get("raw")
-        return documents, raw if isinstance(raw, dict) else {"raw": raw}
+        return Recall(documents=documents,
+                      declared=raw if isinstance(raw, dict) else {"raw": raw})
 
     def _record(self, body: dict[str, Any], *, token_bucket: str, latency_bucket: str) -> None:
         """Record the optional usage and engine-side timing a response may carry.
@@ -346,12 +349,24 @@ class NativeAdapter(MemoryAdapter):
     # Metrics
     # ------------------------------------------------------------------ #
 
-    def latency_metrics(self) -> dict[str, float]:
-        """The six required wall-clock keys, plus engine-side time where reported.
+    def declared_latency(self) -> dict[str, list[float]]:
+        """The translator's claim about its engine alone -- time memrank's hop cannot see.
 
-        The required keys include this adapter's own hop, because that is what memrank actually
-        measured. The ``*_engine_*`` keys are the translator's claim about its engine alone, and
-        are the figures to quote when discussing the engine rather than the harness.
+        Samples rather than percentiles, so memrank pools them across the adapters a ``--workers``
+        run builds and renders one statistic of one population. The wall-clock keys are memrank's
+        own measurement and are not declared here: they include this adapter's hop, because that
+        is what memrank actually measured.
+        """
+        return {bucket: samples
+                for bucket in ("ingest_engine", "retrieve_engine")
+                if (samples := self.latency.samples(bucket))}
+
+    def latency_metrics(self) -> dict[str, float]:
+        """The six wall-clock keys this adapter timed internally, plus engine-side time.
+
+        No longer read by the run loop -- memrank times its own calls and asks
+        :meth:`declared_latency` for the rest (ATO-2136). Kept because callers outside the loop
+        still ask an adapter what it saw.
         """
         metrics = self.latency.as_metrics()
         for bucket in ("ingest", "retrieve"):

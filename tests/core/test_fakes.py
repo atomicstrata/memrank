@@ -8,8 +8,8 @@ def test_fake_adapter_counts_calls_and_returns_configured_docs():
     unit = FakeBenchmark().load()[0]
     a.prepare(unit.isolation_id)
     a.ingest(unit.documents)
-    out, _ = a.retrieve("q?", 10, unit.isolation_id)
+    a.retrieve("q?", 10, unit.isolation_id)
     a.cleanup()
     assert a.ingest_calls == 1
-    assert [d.id for d in a.retrieve("q1", 10, "u", None)[0]] == []  # unknown q -> []
+    assert [d.id for d in a.retrieve("q1", 10, "u", None).documents] == []  # unknown q -> []
     assert a.latency_metrics()["retrieve_p50_ms"] >= 0.0

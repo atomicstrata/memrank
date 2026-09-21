@@ -15,7 +15,7 @@ It is stated per target because the answer differs per target, and two of the fo
 |---|---|---|---|
 | `hindsight`, `hindsight:matched` | `ghcr.io/vectorize-io/hindsight:0.6.2` | **Yes** -- the vendor's own published image, anonymous pull | the same bytes we measured |
 | `atomicmemory` | `ghcr.io/atomicstrata/atomicmemory-core:latest` | **Yes** -- public package, anonymous pull | the same bytes we measured |
-| `supermemory` | built from a recipe; no registry serves it | **You build it** -- [`examples/supermemory-image/`](../examples/supermemory-image/README.md) | the same recipe, your own build |
+| `supermemory` | built from a recipe; no registry serves it | **You build it** -- [`examples/supermemory-image/`](../examples/more/supermemory-image/README.md) | the same recipe, your own build |
 | `mem0` | a patched fork, built privately | **No** | mem0's own server, run by you |
 
 The control arms -- `no-context`, `fixed-context`, `full-context` -- and the `word-overlap`
@@ -70,9 +70,9 @@ server over HTTP:
 export MEM0_HTTP_URL=http://localhost:8888
 ```
 
-Then either drive the adapter directly (see [`examples/custom-engine.py`](../examples/custom-engine.py)
-for the shape) or write a target manifest of your own and point `targets.path` at it, exactly as
-[`examples/custom-target/`](../examples/custom-target/README.md) does. What you will be measuring
+Then either drive the system directly (see
+[`examples/02-your-own-system/`](../examples/02-your-own-system/README.md) for the shape) or write a target manifest of your own and point `targets.path` at it, exactly as
+[`examples/more/custom-target/`](../examples/more/custom-target/README.md) does. What you will be measuring
 is upstream mem0, which is not the same system as our fork -- and that difference is the honest
 reason this page exists rather than a caveat at the bottom of a leaderboard.
 
@@ -87,7 +87,7 @@ only self-hostable artifact that speaks the adapter's API is the prebuilt `super
 binary, and that binary is **closed-source**. We may not hand it on, so the container we built is
 not distributed.
 
-What ships instead is the build: [`examples/supermemory-image/`](../examples/supermemory-image/README.md)
+What ships instead is the build: [`examples/supermemory-image/`](../examples/more/supermemory-image/README.md)
 is the Dockerfile our own image was built from. It fetches the binary at *your* build time from the
 vendor's own public installer, so nothing is redistributed and what lands on your machine comes
 from supermemory.

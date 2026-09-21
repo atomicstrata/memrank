@@ -53,7 +53,7 @@ from memrank.cli import runs_show as runs_show_cli
 from memrank.cli import sync as sync_cli
 from memrank.cli import watch as watch_cli
 from memrank.metrics import headline
-from memrank.placement import run_api_client
+from memrank.placement import hosted, run_api_client
 from memrank.runs import registry
 from memrank.runs import status as run_status
 from memrank.runs.status import PLATFORM_STATES, UNKNOWN_STATE
@@ -255,12 +255,12 @@ def _rows() -> list[RunRow]:
     return rows
 
 
-def _platform_rows(*, mine: bool, limit: int) -> tuple[list[RunRow], str | None]:
-    """The org universe's rows, plus what went wrong if it could not be consulted.
+def _platform_rows(*, mine: bool,
+                   limit: int) -> tuple[list[RunRow], hosted.Unavailable | None]:
+    """The org universe's rows, plus why it could not be consulted, if it could not be.
 
-    The second value states the PROBLEM only -- never its consequence. The same problem means
-    "showing local runs instead" to a bare listing and "cannot answer at all" to ``--org``, and
-    a message that assumed one of those told the other user something untrue.
+    Both whether that second value is worth printing and how it is phrased belong to
+    :mod:`memrank.placement.hosted`, not here.
     """
     try:
         # The session is resolved before the org, because signing in also configures the org:
@@ -269,21 +269,20 @@ def _platform_rows(*, mine: bool, limit: int) -> tuple[list[RunRow], str | None]
         with run_api_client.authenticated_client() as http:
             org = settings.get("defaults.org")
             if org is None:
-                return [], "no default org is configured -- `memrank config set defaults.org <slug>`"
+                return [], hosted.no_org()
             body = run_api_client.list_runs(http, org, mine=mine, limit=limit)
     except run_api_client.RunApiError as exc:
-        # The client's own refusals, already phrased for a person: not signed in, the credential
-        # store would not answer, a 403. Passed through rather than wrapped in "could not be
-        # listed", which would bury the reason under a restatement of the symptom.
-        return [], str(exc)
+        return [], hosted.refused(exc)
     except Exception as exc:  # noqa: BLE001 - a network fault must not break a local listing
-        return [], f"the memrank API is unreachable: {exc}"
+        return [], hosted.unreachable(exc)
     rows = [_platform_row(p) for p in body.get("runs", [])]
     if mine and body.get("scope") != "mine":
         # The server ignored `mine` -- it predates the parameter. Captioning these as this
         # user's would be a lie produced by a version skew, so say what they actually are.
-        return rows, ("this deployment cannot scope a listing to you, so every submitter's "
-                      "runs are shown")
+        # Broken rather than absent: this listing DID reach an org, and misattributing other
+        # people's runs is exactly the kind of thing a local-only user must still be told.
+        return rows, hosted.Unavailable(
+            "this deployment cannot scope a listing to you, so every submitter's runs are shown")
     return rows, None
 
 
@@ -300,13 +299,16 @@ def _listing(*, org_wide: bool, fetch: int) -> tuple[list[RunRow], list[str]]:
     # two Keychain prompts). The call itself already reports a missing session as a typed
     # refusal, so the outcome of trying is the answer.
     platform, problem = _platform_rows(mine=not org_wide, limit=fetch)
-    if problem and org_wide:
+    if problem is None:
+        return _merge(local, platform), []
+    if org_wide:
         # Explicitly remote: answering it from local records would be fabrication, so the
         # problem is fatal here -- and the consequence is the opposite of the bare listing's.
         raise typer.BadParameter(f"{problem}\n`--org` has nothing to read without it")
-    if problem:
-        return _merge(local, platform), [f"{problem}; showing this machine's runs"]
-    return _merge(local, platform), []
+    if not hosted.worth_saying(problem):
+        # A machine with no hosted side answered a local question locally. Nothing happened.
+        return _merge(local, platform), []
+    return _merge(local, platform), [f"{problem}; showing this machine's runs"]
 
 
 def _score_value(row: RunRow) -> float | None:
@@ -377,7 +379,8 @@ def legacy_notice() -> str | None:
     if legacy is None:
         return None
     return (f"{legacy} holds runs from before the registry moved to {registry.runs_root()}. "
-            f"Copy them with `uv run python scripts/internal/one-offs/migrate-runs.py {legacy}`.")
+            f"Copy the run directories across to keep them; an id already present there belongs "
+            f"to a different run, so do not overwrite it.")
 
 
 #: The listing's shape. Widths are MINIMUMS -- a legacy id is four characters wider than a

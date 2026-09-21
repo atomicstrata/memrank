@@ -43,10 +43,17 @@ def test_an_explicit_path_still_wins(tmp_path, monkeypatch):
 
 
 def test_no_file_anywhere_says_how_to_make_one():
+    """The FILE is the contract, so the message states its keys rather than a generator.
+
+    The generator is operator tooling under `scripts/`, which does not ship; an installed copy
+    that was sent there had nothing to run (ATO-2125). Every required key, named, is what an
+    operator running their own ECS can actually act on.
+    """
     with pytest.raises(ConfigError) as exc:
         aws_context()
     assert DEFAULT_AWS_CONTEXT in str(exc.value)
-    assert "aws-context.sh" in str(exc.value)
+    for key in ("cluster", "subnet", "execution_role_arn", "secret_arns"):
+        assert key in str(exc.value)
 
 
 def test_an_explicit_path_that_does_not_exist_is_not_silently_replaced(tmp_path, monkeypatch):

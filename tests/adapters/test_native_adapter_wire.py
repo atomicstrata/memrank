@@ -95,7 +95,8 @@ def test_retrieve_rebuilds_documents_in_order():
         {"id": "a", "content": "first", "metadata": {"score": 3}},
         {"id": "b", "content": "second"},
     ], "raw": {"matched": 2}}
-    documents, raw = prepared(retrieve=body).retrieve("q", k=5, user_id="u1")
+    recall = prepared(retrieve=body).retrieve("q", k=5, user_id="u1")
+    documents, raw = recall.documents, recall.declared
     assert [d.id for d in documents] == ["a", "b"]
     assert documents[0].metadata["score"] == 3
     assert documents[1].user_id == "u1"

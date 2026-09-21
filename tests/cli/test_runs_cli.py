@@ -347,14 +347,16 @@ def test_org_is_an_explicitly_remote_ask_and_fails_loudly(signed_in, runs_dir):
     assert result.exit_code != 0
 
 
-def test_logged_out_lists_local_and_says_so(runs_dir, monkeypatch):
+def test_logged_out_lists_local_and_says_nothing_about_it(runs_dir, monkeypatch):
+    """A local question, answered locally: there is no hosted side to have failed. The full
+    rule, in both directions, is tests/cli/test_hosted_notes.py's."""
     local = registry.new_run_dir("demo")
     _heartbeat(local, target="word-overlap")
 
     result = runner.invoke(app, ["runs", "ls"])
     assert result.exit_code == 0
     assert local.name in result.stdout
-    assert "not signed in" in result.stderr
+    assert "not signed in" not in result.stderr
 
 
 def test_logged_out_org_errors_and_names_the_fix(runs_dir):
