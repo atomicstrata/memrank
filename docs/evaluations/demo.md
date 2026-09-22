@@ -6,8 +6,8 @@ from memrank.evaluations import Demo
 evaluation = Demo()
 ```
 
-One small hand-written conversation and five questions about it -- the evaluation a first number
-is taken on.
+One small hand-written conversation and five questions about it -- the dependency-free smoke
+evaluation.
 
 ## How it works
 
@@ -22,7 +22,7 @@ for it.
 
 ## Why it matters
 
-It is the only evaluation that needs nothing whatever: no download, no key, no service. That is
+It needs no download, no key and no service. That is
 what makes it the one to check an installation, a system you just wrote, or a
 [measure](../reference/measure.md) of your own against.
 

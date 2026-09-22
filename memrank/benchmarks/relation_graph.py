@@ -97,6 +97,7 @@ class RelationGraphBenchmark(Benchmark):
             "# Relation Graph report - {adapter}\n\n"
             "- Composite graph score: **{composite}**\n"
             "- Dataset: {dataset_version}\n"
+            "\n## Per-category graph scores\n{per_category_md}\n"
         )
 
     def _fixtures(self) -> list[dict[str, Any]]:

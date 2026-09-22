@@ -26,6 +26,7 @@ and not two, and an instance carries exactly the fields the string form produces
 ================  ==================================================================
 name              what it needs
 ================  ==================================================================
+SQuAD()           nothing -- 32 bundled passages, 64 questions
 Demo()            nothing -- a bundled synthetic scenario
 RelationGraph()   nothing -- in-repo fixtures
 LoCoMo()          a one-time download, or LOCOMO_DATA_PATH; judging for any quality
@@ -45,10 +46,10 @@ from memrank.instrument.evaluation import Evaluation
 
 
 class _Shipped(Evaluation):
-    """What the five below share: taking on the fields of an evaluation already built.
+    """What the shipped classes share: taking on the fields of an evaluation already built.
 
     Each subclass differs only in which benchmark it loads. Spelling the six field names out in
-    five constructors would make a new field five edits and four chances to forget one.
+    each constructor would make a new field require repeated edits.
     """
 
     def _adopt(self, built: Evaluation) -> None:
@@ -58,11 +59,28 @@ class _Shipped(Evaluation):
                             metadata=built.metadata)
 
 
+class SQuAD(_Shipped):
+    """32 bundled SQuAD v1.1 passages and 64 questions, with no download or API key.
+
+    Measures full-passage retrieval recall, not answer-span or end-to-end answer correctness.
+    The first 32 paragraphs and first two questions per paragraph follow source array order.
+    `slice="smoke"` is the same bundled mode. `slice="full"` downloads and verifies the complete dev set; `data_path` or SQUAD_DATA_PATH
+    selects a local v1.1 file. A missing or corrupt selected source raises; there is no fallback.
+    """
+
+    def __init__(self, slice: str | None = None, k: int = 10,
+                 data_path: str | None = None) -> None:
+        from memrank.benchmarks.squad import SQuADBenchmark
+
+        built = evaluation(SQuADBenchmark(slice=slice, k=k, data_path=data_path))
+        self._adopt(built)
+
+
 class Demo(_Shipped):
     """One hand-crafted multi-session scenario: 5 questions about what it was told earlier.
 
-    Needs nothing -- the scenario is bundled, synthetic and offline, so this is the evaluation
-    a first number is taken on. Measures a substring retrieval proxy (`word-match`) plus the
+    Needs nothing -- the scenario is bundled, synthetic and offline. This dependency-free smoke
+    evaluation measures a substring retrieval proxy (`word-match`) plus the
     benchmark's own evidence recall, latency and failure rate; no judge, no key.
 
     `data_path` (or DEMO_DATA_PATH) points the loader at a scenario of your own, which is then
@@ -146,6 +164,9 @@ class BEAM(_Shipped):
 #: The same table the module docstring carries, in the form `memrank.catalog()` prints. One
 #: entry per name in `memrank.benchmarks.REGISTRY`, which `tests/instrument` holds it to.
 SHIPPED: tuple[ShippedEvaluation, ...] = (
+    ShippedEvaluation("SQuAD", "squad",
+                      "full-passage retrieval recall, not answer-span or end-to-end answer correctness",
+                      "nothing -- 32 bundled passages, 64 questions"),
     ShippedEvaluation("Demo", "demo", "a substring retrieval proxy and evidence recall",
                       "nothing -- a bundled synthetic scenario"),
     ShippedEvaluation("RelationGraph", "relation_graph", "a structural graph score",
@@ -158,4 +179,4 @@ SHIPPED: tuple[ShippedEvaluation, ...] = (
                       "a one-time download, or BEAM_DATA_PATH"),
 )
 
-__all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph"]
+__all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph", "SQuAD"]

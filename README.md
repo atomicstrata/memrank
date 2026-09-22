@@ -23,10 +23,10 @@ uv add memrank                  # or, into a virtualenv you already have: pip in
 ```
 
 ```python
-from memrank.evaluations import Demo
+from memrank.evaluations import SQuAD
 from memrank.systems import TFIDF
 
-evaluation = Demo()
+evaluation = SQuAD()
 result = evaluation.run(system=TFIDF())
 
 print(result)
@@ -34,8 +34,9 @@ print(result)
 
 [`TFIDF`](https://github.com/atomicstrata/memrank/blob/main/docs/systems/tfidf.md) is keyword search
 weighted by how rare each word is, and it ships with the package.
-[`Demo`](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations/demo.md) is five
-questions about a short conversation. Neither needs an engine, a key or the network.
+[`SQuAD`](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations/squad.md) supplies
+32 bundled passages and 64 questions. This measures full-passage retrieval recall, not
+answer-span or end-to-end answer correctness. Neither needs an engine, a key or the network.
 [Installing memrank](https://github.com/atomicstrata/memrank/blob/main/docs/install.md) covers uv,
 Python versions and upgrading.
 
@@ -190,7 +191,11 @@ also ships a memory engine, AtomicMemory, which this tool evaluates and which ha
 no-memory control arm in our own runs -- which is why the floor and the ceiling above are in the
 package rather than in a report of ours.
 
-## License
+## Licences
 
-Apache 2.0 -- see [LICENSE](https://github.com/atomicstrata/memrank/blob/main/LICENSE). Methodology
-questions and disagreements: open an issue. Anything else: hello@atomicstrata.ai
+Memrank's code is [Apache-2.0](https://github.com/atomicstrata/memrank/blob/main/LICENSE).
+The bundled SQuAD subset is [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/);
+its [notice](https://github.com/atomicstrata/memrank/blob/main/memrank/benchmarks/data/SQUAD-NOTICE.md)
+credits the creators and passage sources and records the selection and reformatting.
+
+Methodology questions and disagreements: open an issue. Anything else: hello@atomicstrata.ai

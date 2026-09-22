@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memrank"
-version = "0.4.3"
+version = "0.4.4"
 description = "Open, vendor-neutral tool for reproducible, auditable evaluation of memory systems."
 readme = "README.md"
 license = "Apache-2.0"
@@ -104,14 +104,12 @@ memrank-mcp = "memrank.mcp_server:main"
 # outage is the worst time to remember where a script lives.
 
 [tool.setuptools.package-data]
-# The demo scenario ships inside the package because the demo is the benchmark a stranger runs
-# first: it needs no engine, no credential and no download, so it must not need a checkout
-# either. `tools/internal/distribution.py` records what discovery actually shipped, and its
-# wheel-only demo check fails the build if this line stops carrying the file. ATO-2059.
+# Offline evaluations and their separate data licence notices must ship in the wheel.
+# `tools/internal/distribution.py` records the installed contents.
 # `py.typed` (PEP 561) is what tells a type checker the annotations in this package are
 # real and may be used. Without it Pyright and mypy treat an installed memrank as
 # untyped, and every hover in an editor shows `Any` however precise the signature is.
-memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json", "py.typed"]
+memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json", "benchmarks/data/*.md", "py.typed"]
 
 [tool.setuptools.packages.find]
 where = ["."]

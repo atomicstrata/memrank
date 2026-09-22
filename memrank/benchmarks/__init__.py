@@ -31,9 +31,11 @@ from memrank.benchmarks.demo import DemoBenchmark
 from memrank.benchmarks.locomo import LoCoMoBenchmark
 from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
 from memrank.benchmarks.relation_graph import RelationGraphBenchmark
+from memrank.benchmarks.squad import SQuADBenchmark
 from memrank.core import Benchmark
 
 REGISTRY: dict[str, type[Benchmark]] = {
+    "squad": SQuADBenchmark,
     "demo": DemoBenchmark,
     "locomo": LoCoMoBenchmark,
     "beam": BEAMBenchmark,
@@ -152,6 +154,7 @@ __all__ = [
     "LoCoMoBenchmark",
     "LongMemEvalBenchmark",
     "RelationGraphBenchmark",
+    "SQuADBenchmark",
     "REGISTRY",
     "cache_root",
     "dataset_download_notice",
