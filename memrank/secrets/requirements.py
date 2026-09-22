@@ -80,6 +80,9 @@ REQUIREMENTS: dict[str, EngineRequirements] = {
     # perfectly launchable. The vendor states what their engine needs in their own README.
     "native": EngineRequirements("native"),
     "word-overlap": EngineRequirements("word-overlap"),  # in-process; no requirements
+    # The two named lexical methods (ATO-2259). In-process, keyless, no dependency.
+    "tfidf": EngineRequirements("tfidf"),
+    "bm25": EngineRequirements("bm25"),
     # The mandatory baseline arms (PRD_Memrank_v2.md:86). In-process and keyless: they retrieve
     # nothing or everything, so they call no provider. A judged run still needs the JUDGE's key,
     # which is a run-level requirement gathered separately by runner.run_credentials().

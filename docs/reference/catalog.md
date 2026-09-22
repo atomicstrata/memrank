@@ -1,9 +1,7 @@
 # catalog
 
-## An instance, first
-
-You have installed memrank and you do not know a single name. What can you measure, and what
-can you measure it against? One call answers both:
+`memrank.catalog()` prints every system and every evaluation that ships, so you do not have to
+know a name to find one. This page is about reading that table.
 
 ```python
 import memrank
@@ -12,10 +10,12 @@ memrank.catalog()
 ```
 
 ```console
-memrank ships 9 system(s) and 5 evaluation(s).
+memrank ships 11 system(s) and 5 evaluation(s).
 
 systems -- `from memrank.systems import WordOverlap`, or `memrank.system("word-overlap")`
 
+  TFIDF         'tfidf'           memory   nothing -- in-process, offline
+  BM25          'bm25'            memory   nothing -- in-process, offline
   WordOverlap   'word-overlap'    memory   nothing -- in-process, offline
   NoContext     'no-context'      control  nothing -- the floor: retrieves nothing, answers closed-book
   FixedContext  'fixed-context'   control  nothing -- the corpus unranked, capped by the token budget
@@ -42,30 +42,23 @@ evaluations -- `from memrank.evaluations import Demo`, or `memrank.evaluation("d
 
 ## What it is
 
-The catalog is what memrank ships, printed. It is not one of the seven words and not a thing
-you build -- it is the door onto the ones memrank already has.
-
-Every row carries three things: the **Python name** you can import and an editor can follow,
-the **string** the same thing answers to, and **what it needs from you** -- a running engine, a
+Every row carries three things: the **Python name** you can import and an editor can follow, the
+**string** the same thing answers to, and **what it needs from you** -- a running engine, a
 download, an environment variable, or nothing at all. That third column is the useful one:
 `WordOverlap` and `Demo` need nothing, which is why they are what a first result is made of.
 
 `catalog()` both prints and returns, because there are two readers. A person runs it for the
 table; a program reads `catalog().systems` and `catalog().evaluations` for the entries.
 
-The two forms are the same things:
-
-- `from memrank.systems import WordOverlap` gives you the class -- the form to use when you
-  want to pass options, subclass, or have an editor follow the definition.
-- `memrank.system("word-overlap")` gives you an instance from the string -- the form a config
-  file and the command line have, and the one to use when the name is data rather than code.
+The two forms reach the same things. `from memrank.systems import WordOverlap` gives you the
+class -- use it to pass options, to subclass, or to have an editor follow the definition.
+`memrank.system("word-overlap")` gives you an instance from the string -- use it when the name
+is data rather than code.
 
 ## Who supplies what
 
-| You supply | Memrank supplies |
-|---|---|
-| nothing | nine systems and five evaluations, with what each one needs stated |
-| a name, once you have found one | both ways to reach it: the class and the string |
+Memrank supplies eleven [systems](system.md) and five [evaluations](evaluation.md), with what
+each one needs stated, and both ways to reach each of them. You supply nothing.
 
 ## The Python names
 
@@ -78,23 +71,17 @@ print(memrank.system("word-overlap").name)
 print(memrank.evaluation("demo").name)
 ```
 
-```console
-9 systems, 5 evaluations
-word-overlap
-demo
-```
-
 - `memrank.catalog()` -- prints the table and returns it.
-- `memrank.systems` -- the module: `WordOverlap`, `NoContext`, `FixedContext`, `FullContext`,
-  `AtomicMemory`, `Hindsight`, `Supermemory`, `Mem0`, `Native`.
+- `memrank.systems` -- the module: `TFIDF`, `BM25`, `WordOverlap`, `NoContext`, `FixedContext`,
+  `FullContext`, `AtomicMemory`, `Hindsight`, `Supermemory`, `Mem0`, `Native`.
 - `memrank.evaluations` -- the module: `Demo`, `RelationGraph`, `LoCoMo`, `LongMemEval`,
   `BEAM`.
 - `memrank.system("<name>")` and `memrank.evaluation("<name>")` -- the same things by string.
 
 ## Going deeper
 
-- [system](system.md) and [evaluation](evaluation.md) -- what these entries are instances of.
-- [Adding a system](../systems.md) -- getting your own into the catalog, when it should
-  be reachable by name.
-- [Engine images](../misc/engine-images.md) -- per shipped memory engine, whether you can actually
-  obtain the container to run it.
+- [Systems that ship](../systems/README.md) and [evaluations that ship](../evaluations/README.md)
+  -- one page each.
+- [Adding a system](../systems.md) -- getting your own into the catalog.
+- [Engine images](../misc/engine-images.md) -- per shipped memory engine, whether you can obtain
+  the container to run it.

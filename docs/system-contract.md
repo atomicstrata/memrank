@@ -4,23 +4,20 @@ This is the wire contract between memrank and a **translator** -- a program you 
 memrank drives as the [system](reference/system.md) under test, and which forwards to your
 memory system however it likes.
 
-Write one and memrank can measure a system it has never seen, in any language, with no fork and
-no pull request. memrank never imports your code, never resolves a version of it, and never
-needs to know what language it is in. The contract is a process, not a package.
+The contract is a process, not a package: memrank never imports your code, never resolves a
+version of it, and never needs to know what language it is in. So it can measure a system it has
+never seen, with no fork and no pull request.
 
 A reference implementation -- about a hundred lines, standard library only -- is in
 [`examples/more/native-adapter/`](../examples/more/native-adapter/). It wraps an in-memory
-dictionary rather than a real system, so it is a template to copy, not a system worth measuring.
+dictionary, so it is a template to copy rather than a system worth measuring.
 
-**One note on names.** The JSON field that names your translator is still `adapter`, and the
-field that names the thing under test is still `engine`. Those are wire facts and they have not
-moved; *system* is the word the Python surface uses for the same thing, and it is the word this
-document and this file's name use. Renaming the fields is a later change.
+**One note on names.** On the wire, `adapter` names your translator and `engine` names the thing
+under test. *System* is the Python surface's word for the second, and the word this document
+uses. Renaming the fields is a later change.
 
-Companion documents: [adding a system](systems.md) (when to write a translator versus a
-class in this tree), [methodology.md](methodology.md) (what each measured axis means, and the
-comparability rules a translator is subject to), and [the reference folder](reference/README.md)
-(one page per word memrank uses).
+[Adding a system](systems.md) says when to write a translator rather than a class in this tree,
+and [methodology.md](methodology.md) has the comparability rules a translator is subject to.
 
 ---
 
@@ -34,15 +31,11 @@ What a translator does *inside* is entirely yours: call an SDK, open a socket, s
 subprocess, render documents into whatever shape your system wants, page through results,
 retry. That is the part that genuinely cannot be configuration, and it belongs to you.
 
-What is **not** yours is the shape of what comes back. memrank is a comparator: a
-[measure](reference/measure.md) computes recall@k against ground truth, and a reader puts two
-systems' values side by side. That only means something if every system answers in the same
-shape. So the request and response bodies below are fixed, and a field that is absent is an
-error rather than a default.
-
-This is deliberately unlike a self-describing protocol such as MCP, where a server announces its
-own schemas. MCP can afford that because a language model consumes its output and can interpret
-anything. Nothing downstream of memrank can interpret anything: it computes.
+What is **not** yours is the shape of what comes back. A reader puts two systems' values side by
+side, which means something only when every system answers in the same shape. So the request and
+response bodies below are fixed, a field that is absent is an error rather than a default, and a
+translator does not announce schemas of its own the way a self-describing protocol does. Nothing
+downstream of memrank interprets: it computes.
 
 ## 2. Transport and lifecycle
 
@@ -100,11 +93,9 @@ translator that reports ready too early turns a start-up failure into a measurem
 ignores it and stamps ingestion time instead dates every memory to the moment of the run, which
 silently destroys every temporal task in the [evaluation](reference/evaluation.md).
 
-**On `messages` versus `content`.** Both describe the same material. `content` is the canonical
-text; `messages` is the structured form when one exists. Use whichever your system wants -- if it
-takes a message list, use `messages`; if it takes free text, use `content`. Rendering one into the
-other is your job, and is exactly the kind of system-specific transformation this contract exists
-to let you own.
+**On `messages` versus `content`.** They are the same content in two forms: `content` is the
+canonical text, `messages` the structured form when one exists. Use whichever your system takes,
+and render one into the other yourself.
 
 ## 4. The endpoints
 
@@ -138,12 +129,12 @@ Identity and capabilities. Called once at startup, and used as the readiness pro
 | `capabilities.graph_snapshot` | yes | Whether `retrieve` returns `raw.graph_snapshot`. |
 | `capabilities.context_budget` | yes | `"matched"` for every real system. See section 6. |
 
-**`components` is the authority, and this is the important part.** For a system memrank ships,
-memrank injects component configuration through env vars it knows by name and the manifest merely
-*asserts* what was configured. It cannot do that for yours -- it does not know which variables your
-process reads. So the direction inverts: **you** configure your system inside your own launch
-command, and you **report** the result here. memrank records what you report and marks the run
-`verified: "engine"`, which is a stronger provenance claim than most shipped systems can make.
+**`components` is the authority.** For a system memrank ships, memrank injects component
+configuration through env vars it knows by name, and the manifest merely *asserts* what was
+configured. It cannot do that for yours, because it does not know which variables your process
+reads. So the direction inverts: **you** configure your system in your own launch command and
+**report** the result here. memrank records what you report and marks the run
+`verified: "engine"`, a stronger provenance claim than most shipped systems can make.
 
 A `null` component means "this system has no such part" -- a positive statement. Do not use `null`
 to mean "I did not check": report the real value or fail to start.
@@ -268,37 +259,32 @@ two, so a reader can always tell which is which.
 
 ## 5. Token usage: absent is not zero
 
-If your system reports token consumption, pass it through as `usage.total_tokens`. If it does not,
-**omit the `usage` object entirely.**
+Pass token consumption through as `usage.total_tokens` where your system reports it, and **omit
+the `usage` object entirely** where it does not.
 
-Do not send `{"usage": {"total_tokens": 0}}`. Zero is a claim that your system consumed no tokens.
-Absence is an admission that nobody counted. memrank keeps these distinct all the way out: a value
-nobody measured is `None`, and a measured zero is zero.
+Do not send `{"usage": {"total_tokens": 0}}`. Zero claims your system consumed no tokens; absence
+admits nobody counted. memrank keeps the two distinct all the way out.
 
 ## 6. Context budget
 
-`capabilities.context_budget` must be `"matched"` for any real memory system. It means the retrieved
-context you return will be capped at the shared `--token-budget` that every system is held to -- the
-project's central fairness control, so a system cannot win by returning more text.
+`capabilities.context_budget` must be `"matched"` for any real memory system. It means the
+context you return is capped at the shared `--token-budget` every system is held to, so a system
+cannot win by returning more text.
 
 The other two values exist only for memrank's own baseline arms and are not available to a
 translator: `"uncapped"` for the full-context control, `"none"` for the no-memory control.
 
 ## 7. Latency, and why a translator is its own transport class
 
-memrank measures wall-clock time around each call it makes to you, at its own call boundary. That
-measurement necessarily includes your translator's own overhead -- an extra process and an extra
-network hop that a directly-driven system does not pay.
+memrank measures wall-clock time at its own call boundary, which necessarily includes your
+translator's overhead -- an extra process and an extra hop a directly-driven system does not pay.
+So memrank declares translator-backed systems as `transport: translator`, and
+[methodology.md](methodology.md) rules that latency compares only within a transport class: a
+translator is compared against other translators and never silently ranked against a system
+memrank drives directly. Quality measures compare across everything.
 
-Rather than pretend this is comparable, memrank declares translator-backed systems as
-`transport: translator`, and [methodology.md](methodology.md) already rules that latency compares
-only within a transport class. So a translator is compared against other translators, and never
-silently ranked against a system memrank drives directly. Quality measures are unaffected and
-compare across everything.
-
-Report `engine_ms` when you can. It lands on the trace as something the system declared, beside
-memrank's own wall-clock figure, so a reader can see how much of the measured time was yours -- and
-it is the number to quote when you want to talk about the system rather than the instrument.
+Report `engine_ms` where you can. It lands on the trace beside memrank's own wall-clock figure,
+so a reader can see how much of the measured time was yours.
 
 ## 8. Errors
 
@@ -310,10 +296,9 @@ Return a non-2xx status with a JSON body:
 
 memrank records the failure on that task's trace, with the step and your message, and carries on.
 **Never swallow an error and return an empty result.** An empty `documents` list is a legitimate
-answer meaning "nothing matched", and a system that returns it on failure measures exactly like the
-no-memory control arm -- which reads as a real, publishable finding rather than a broken
-integration. This has happened before to a system memrank ships and went unnoticed across every run
-until the numbers were audited.
+answer meaning "nothing matched", so a system that returns it on failure measures exactly like the
+no-memory control arm and reads as a real finding rather than a broken integration. This has
+happened to a system memrank ships, and went unnoticed until the values were audited.
 
 ## Not core: declaring a target, and the command line
 
@@ -370,16 +355,14 @@ shared, or committed, and a colleague needs only their own `targets.path` line. 
 defaults to the directory the descriptor was read from, and a relative value is resolved against
 it, so `launch.command` runs from the folder root.
 
-**The folder can be anything.** Its own repo, an uncommitted scratch directory, or a `bench/`
-subfolder inside your system's repo -- memrank records which it got rather than requiring a shape.
-If there is a git repository it records the commit, dirty flag and working-tree delta (from a
-subfolder, that is the *containing* repo's commit -- the right answer for that layout). If there is
-not, it records `memrank:workspace_unversioned` and no commit, rather than an empty one. Both are
+**The folder can be anything** -- its own repo, a scratch directory, or a `bench/` subfolder
+inside your system's repo. Where there is a git repository memrank records the commit, dirty flag
+and working-tree delta (from a subfolder, that is the *containing* repo's commit); where there is
+not, it records `memrank:workspace_unversioned` and no commit rather than an empty one. Both are
 `development_observation`.
 
 One caveat for the `bench/`-inside-the-system layout: checking out an old revision takes the
-translator with it, so it cannot evaluate revisions that predate the integration. A separate folder
-does not have that problem.
+translator with it, so it cannot evaluate revisions that predate the integration.
 
 `{port}` expands to `network.port`. The command is split into argv and executed directly in
 `binding.root` -- there is no implicit shell, so use `sh -lc '...'` explicitly if you need one.
@@ -403,14 +386,11 @@ secrets:                                     # or a rename, if the two differ
 secrets: [MYENGINE_USER, MYENGINE_PASSWORD]  # whatever shape your auth takes
 ```
 
-Each is resolved through memrank's one chokepoint -- process environment, then org secrets, then the
-encrypted wallet -- so `memrank secrets set MYENGINE_TOKEN` is enough and the value never appears in
-your shell history, a config file, or the run record. A declared secret that resolves nowhere is
-refused at preflight, naming every missing one at once, rather than failing inside your translator
-on the first call.
-
-memrank interprets none of these. It does not know or care whether your system wants a bearer
-token, a username and password, or three fields it has never heard of.
+Each is resolved through memrank's one chokepoint -- process environment, then org secrets, then
+the encrypted wallet -- so `memrank secrets set MYENGINE_TOKEN` is enough and the value never
+appears in your shell history, a config file or the run record. A declared secret that resolves
+nowhere is refused at preflight, naming every missing one at once. memrank interprets none of
+them, whatever shape your auth takes.
 
 #### Comparing against the catalog
 
@@ -428,13 +408,13 @@ ranked against a directly-driven `http` system (section 7). Evidence is per row 
 ### 10. Evidence class
 
 A source-bound target runs locally and is recorded as `development_observation` with
-`publishable: false`. That is not a judgement about your system -- it is that memrank launched code
-from a mutable working tree, so the run identifies a checkout rather than a reproducible artifact.
-Runs like this never sync to the org universe when the tree is dirty, and never reach the public
+`publishable: false`. That is not a judgement about your system: memrank launched code from a
+mutable working tree, so the run identifies a checkout rather than a reproducible artifact. Such
+runs never sync to the org universe when the tree is dirty, and never reach the public
 leaderboard.
 
-Publishable evidence requires a pinned, reproducible artifact. That path is not open to translators
-yet; see [adding a system](systems.md) for the in-tree route in the meantime.
+Publishable evidence requires a pinned, reproducible artifact, and that path is not open to
+translators yet. [Adding a system](systems.md) has the in-tree route in the meantime.
 
 ### 11. Conformance
 

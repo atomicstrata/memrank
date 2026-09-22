@@ -1,12 +1,10 @@
 # Reference: the seven words, one page each
 
-Memrank is a Python package and `evaluation.run(system=...)` is its entry point. Seven
-words describe everything it does, and two readings sit above them. This folder holds one page
-per word. Each page opens with a concrete instance, then says what the word means, then says
-who supplies it and what memrank supplies, then names the Python you would type.
+`evaluation.run(system=...)` is the package's entry point. Seven words describe everything it
+does, and two readings sit above them. One page each, in the same shape: a one-line definition
+and a snippet, what the word means, who supplies it, and the Python you would type.
 
-Each page stands on its own. You do not have to read them in order, and nothing here assumes
-you have read another one.
+Each page stands on its own, and nothing here assumes you have read another one.
 
 | Word | What it is | Who supplies it |
 |---|---|---|
@@ -28,7 +26,7 @@ Two readings sit above the seven:
 ## Where to go from here
 
 - [The README](../../README.md) -- what memrank is, and a first result.
-- [Adding a system](../systems.md) -- bringing your own thing under test.
-- [Adding an evaluation](../evaluations.md) -- bringing your own tasks and measures.
-- [Methodology](../methodology.md) -- what a number does and does not license you to say.
+- [Adding a system](../systems.md) -- your own thing under test.
+- [Adding an evaluation](../evaluations.md) -- your own tasks and measures.
+- [Methodology](../methodology.md) -- what a value does and does not license you to say.
 - [`examples/`](../../examples/README.md) -- one folder per thing a person does.
