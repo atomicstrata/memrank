@@ -16,31 +16,23 @@ it reads from a [trace](reference/trace.md) and who decided the number it produc
 
 The last two rows say what they are rather than implying a measure that does not exist. Token
 usage is what a system says a provider billed it; cost is derived arithmetic over a price table.
-Neither is memrank deciding, and neither is presented as though it were.
 
-The contract behind those columns -- what a measure declares, what a `Value` carries, why absent
-is never zero -- is [`docs/measures.md`](measures.md), and what each word means is
-[`docs/reference/`](reference/README.md). This page says what the numbers licence you to claim.
+[`docs/measures.md`](measures.md) is the contract behind those columns. This page says what the
+values licence you to claim.
 
 ## Quality
 
-Three shipped measures produce a quality number, and they are not interchangeable.
+Three shipped measures produce a quality value, and they are not interchangeable.
 
-**`<evaluation>-score`** applies a named in-tree evaluation's own `score()` over the traces that
-evaluation produced. Its scope is the run because the evaluation's unit **is** the group: one
-value per group, and nothing that combines them, so no run-level number is invented on an
-evaluation's behalf.
+**`<evaluation>-score`** is one value per group and nothing that combines them, so no run-level
+value is invented on an evaluation's behalf.
 
-**`word-match`** asks whether the expected spans appear verbatim in something the system
-recalled -- the arithmetic of `memrank.SpanRecall`, applied per task. It is **retrieval
-correctness and never answer correctness**, and it says so in the `why` of every value it
-produces, so the caveat travels with the number.
+**`word-match`** is **retrieval correctness and never answer correctness**, and says so in the
+`why` of every value it produces, so the caveat travels with the value.
 
-**`judge`** has a model adjudicate the answer against what was expected; its value is a bool and
-its `why` is the model's rationale. A model is the only decider that can say an answer was right.
-It is never bundled into a shipped evaluation, because that would put a key and a bill on the
-path of a first run, and running it without a key raises rather than deciding anything: there is
-no mode in which this measure decides something with nobody having judged it.
+**`judge`** is the only one whose decider can say an answer was right, because a model
+adjudicated it. It is never bundled into a shipped evaluation -- that would put a key and a bill
+on the path of a first run -- and running it without a key raises rather than deciding anything.
 
 **Metric applicability (`substring_recall_supported`).** Some evaluations (BEAM, and the judged
 tiers of LoCoMo and LongMemEval) have prose gold answers, so the substring proxy is structurally
@@ -56,13 +48,12 @@ row) intentionally keep the raw `composite` for inspection -- but always paired 
 a valid quality score only when `substring_recall_supported` is true; otherwise rank from a
 judged run.**
 
-**A published row requires a complete record, not a score.** The leaderboard admits
-any run whose provenance and quality declarations are complete, and then reports
-whatever quality it has: the judged score, a self-contained composite, or `withheld`.
-It does not require a `composite`, which the three external benchmarks stopped
-defining -- requiring one silently dropped every judged run of them between
-2026-08-13 and 2026-08-25. A run with no quality number still publishes its latency,
-cost and token measurements, which are real measurements regardless.
+**A published row requires a complete record, not a score.** The leaderboard admits any run
+whose provenance and quality declarations are complete, and reports whatever quality it has: the
+judged score, a self-contained composite, or `withheld`. It does not require a `composite`,
+which the three external benchmarks stopped defining -- requiring one silently dropped every
+judged run of them between 2026-08-13 and 2026-08-25. A run with no quality value still
+publishes its latency, cost and token measurements.
 
 **A failed unit leaves the denominator, and says so.** A cell attempts every unit and
 records what happened to each. A unit whose ingest, retrieval or scoring raises is recorded as
@@ -94,30 +85,28 @@ newer run of the same thing under test and replaces its row. Both rows currently
 under the adapter's name, and are told apart by `config_hash` in their provenance.
 
 **Slice evaluations are plumbing, not measurements.** A `smoke`/`mini` slice
-(`beam:100k-smoke`, `locomo:mini`) exists to debug ingest, retrieval, judging and
-cloud dispatch cheaply -- it selects the *first* N units of the dataset, and the
-first units are not a fair sample. Measured on the first full judged BEAM 100k
-tier (run `20260813-184519__beam__100k__c37986`): conversation 1 scores 0.318,
-the first five average 0.217, the full 20-conversation tier 0.158 -- a smoke
-number flatters every engine by ~2x. So **a slice number is never quoted as a
-score; measurement claims come from full tiers.** Two structural guards make
-this more than a convention: the leaderboard's `board_key` segregates rows by
-tier and slice, so slice numbers cannot blend into tier comparisons; and the
-bias is positional and therefore identical across engines, so same-slice
-*rankings* stay directionally useful for debugging even though their absolute
-values are not. (Decision recorded closing M6 of
+(`beam:100k-smoke`, `locomo:mini`) exists to debug ingest, retrieval, judging and cloud dispatch
+cheaply. It selects the *first* N units of the dataset, and the first units are not a fair
+sample: measured on the first full judged BEAM 100k tier (run
+`20260813-184519__beam__100k__c37986`), conversation 1 scores 0.318, the first five average
+0.217 and the full 20-conversation tier 0.158, so a smoke figure flatters every engine by ~2x.
+**A slice figure is never quoted as a score; measurement claims come from full tiers.** Two
+structural guards make that more than a convention: the leaderboard's `board_key` segregates
+rows by tier and slice, so slice figures cannot blend into tier comparisons; and the bias is
+positional and therefore identical across engines, so same-slice *rankings* stay directionally
+useful for debugging even though their absolute values are not. (Decision recorded closing M6 of
 the BEAM protocol-fidelity plan.)
 
 ## Latency
 
-`latency` is run-scope, reads `timings_ms`, and its decider is memrank: wall-clock time
-(`perf_counter`) taken at memrank's own call boundary around each step, never a number an engine
-reported about itself. It reports p50 and p95 per step by nearest rank, and every value carries
-the sample count it was taken over, because a percentile over three samples is a different object
-from one over three hundred. [The command line](misc/command-line.md)'s older run loop takes the
-same measurement through `LatencyCollector.track` and reports p50/p95/p99 per `ingest()` and
-`retrieve()` by linear interpolation on the sorted distribution. Latency is reported, never
-asserted on, and ranked only within a transport class -- see **Transport matters** below.
+`latency` is wall-clock time (`perf_counter`) taken at memrank's own call boundary around each
+step, never a figure an engine reported about itself. It reports p50 and p95 per step by nearest
+rank, and every value carries the sample count it was taken over, because a percentile over
+three samples is a different object from one over three hundred. [The command
+line](misc/command-line.md)'s older run loop takes the same measurement through
+`LatencyCollector.track` and reports p50/p95/p99 per `ingest()` and `retrieve()` by linear
+interpolation on the sorted distribution. Latency is reported, never asserted on, and ranked
+only within a transport class -- see **Transport matters** below.
 
 Systems MAY record additional internal-only timings (e.g., AtomicMemory's extraction phase) by
 calling `LatencyCollector.record` directly. These appear in the per-cell JSON but are not part of
@@ -135,14 +124,14 @@ never seen. A translator is an extra process and an extra hop, so its measured l
 overhead a directly-driven engine never pays. Naming it as its own class is what stops a translator
 row being ranked against a direct one; quality metrics are unaffected and compare across everything.
 
-Translators MAY report `engine_ms` per call -- their own claim about time spent inside the engine,
-excluding the translator. It reaches the trace as `declared.engine_timings`, through
-`Memory.declared_latency()`, as samples memrank pools and renders itself, and is recorded
-beside the wall-clock figure as `ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a
-reader can see how much of the measurement was harness rather than engine. It is a *reported*
-number, not a measured one: memrank cannot verify it, its decider is the system rather than
-memrank, and it is never the headline. The six wall-clock keys are memrank's own measurement and
-an engine cannot declare them at all -- a bucket that would render one is refused.
+Translators MAY report `engine_ms` per call -- their own claim about time spent inside the
+engine, excluding the translator. It reaches the trace as `declared.engine_timings`, through
+`Memory.declared_latency()`, as samples memrank pools and renders itself beside the wall-clock
+figure as `ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a reader can see how
+much of the measurement was harness rather than engine. It is *reported*, not measured: memrank
+cannot verify it, its decider is the system, and it is never the headline. The six wall-clock
+keys are memrank's own measurement and an engine cannot declare them at all -- a bucket that
+would render one is refused.
 
 ## Tokens
 
@@ -153,11 +142,9 @@ times itself at its own call boundary and never asks for. A system that knows re
 of `token_metrics()`; they reach the trace as `declared.tokens`, whose decider is the system.
 
 **Absent is not zero.** A system whose engine surfaces no usage data records nothing, and the
-bucket reports `null` -- not `0.0`. Zero is a claim that the engine consumed no tokens; null
-admits nobody counted. Of the engines measured so far only some report usage at all, so conflating
-the two would fabricate an efficiency win for every engine that simply stays quiet. An unmeasured
-cell renders as `n/a`; a genuine measured zero renders as zero. The rule is memrank's everywhere,
-and [`docs/measures.md`](measures.md) states it once for every value.
+bucket reports `null`. Only some of the engines measured so far report usage at all, so
+conflating the two would fabricate an efficiency win for every engine that stays quiet. An
+unmeasured cell renders as `n/a`; a measured zero renders as zero.
 
 ## Cost
 
@@ -177,11 +164,11 @@ that renders it is labelled accordingly.
 `--token-budget` (default 5000) caps **two** things: the `$/query` estimate, and the context text
 actually handed to the reader on a judged run. The second is the one that matters methodologically.
 
-Without a shared cap, "better recall" and "returned more text" are indistinguishable -- an engine
-could win simply by injecting a larger prompt. Holding every target to the same budget means a row
-reflects *what a system chose to retrieve*, not *how much*. This is the field problem
-memrank exists to answer: vendors self-publish at a different retrieval token budget per row, and
-no disinterested party has re-run them under one fixed judge and matched budgets.
+Without a shared cap, "better recall" and "returned more text" are indistinguishable: an engine
+could win by injecting a larger prompt. Holding every target to the same budget means a row
+reflects *what a system chose to retrieve*, not *how much*. That is the field problem memrank
+exists to answer -- vendors self-publish at a different retrieval token budget per row, and no
+disinterested party has re-run them under one fixed judge and matched budgets.
 
 Truncation is hard: the concatenated context is cut at the budget, mid-sentence if necessary. Each
 judged query records `context_tokens_sent` and `context_truncated`, so a context-starved run is
@@ -220,15 +207,16 @@ ref means the configuration that vendor ships. memrank's comparison arm carries 
 its matched variants moved to the research lane. A target's `context_budget`, not its name, is what
 says which it is.
 
-`fixed-context` is the arm that belongs on every row, and it is the *token-matched* one by design: same context
-size as the engine under test, so the only variable is selection. `full-context` is deliberately rare
--- a benchmark whose knowledge base fits inside a current context window cannot hold headline status,
-which is why LoCoMo (16k-26k tokens) is runnable but labelled non-discriminative.
+`fixed-context` is the arm that belongs on every row, and it is the *token-matched* one by
+design: same context size as the engine under test, so the only variable is selection.
+`full-context` is deliberately rare -- a benchmark whose knowledge base fits inside a current
+context window cannot hold headline status, which is why LoCoMo (16k-26k tokens) is runnable but
+labelled non-discriminative.
 
-Two honest limits. **Ingest order is not neutral**: `fixed-context` reads from the start, so a corpus whose
-answers cluster late is disadvantaged in a way ranked retrieval is not. And **`no-context` is only
-meaningful judged** -- unjudged it is scored on retrieval alone, and since it retrieves nothing it can
-only score on *negative* queries (the ones a system should decline), which says nothing about memory.
+Two honest limits. **Ingest order is not neutral**: `fixed-context` reads from the start, so a
+corpus whose answers cluster late is disadvantaged in a way ranked retrieval is not. And
+**`no-context` is only meaningful judged** -- unjudged it is scored on retrieval alone, and since
+it retrieves nothing it can only score on *negative* queries, which says nothing about memory.
 The runner emits a notice when that happens.
 
 `word-overlap` is a separate thing: naive token-overlap retrieval, a dumb-*memory* floor rather than a
@@ -277,8 +265,8 @@ the engines beside it. The control is MemDelta's; ours is a reproduction of it.
 
 What it found there is worth stating because it is the reason the control exists: at that
 grid's shipped settings a majority of a retrieval score was reachable by drawing at random,
-and a retriever that ignores the query did not clear the floor at any setting. A level quoted
-without its random floor overstates what retrieval contributed.
+and a retriever that ignores the query did not clear the floor at any setting. A level quoted without its random floor
+overstates what retrieval contributed.
 
 It is **not a shipped arm**: `memrank list-adapters` does not offer it, no benchmark run adds
 it, and it is not a registered adapter. It is a measurement arm, and what remains undone is
@@ -300,33 +288,32 @@ Every run writes a `Receipt` (see `memrank/provenance/receipt.py`) capturing:
 
 ### Development observations versus reproducible evidence
 
-`memrank submit TARGET EVAL` starts a source-bound named target from the checkout declared in its
-central target file. It is the engine-development loop: each run gets a fresh native process, but it
-does not run an immutable executable artifact. Its receipt therefore records the source commit, dirty
-flag, an opaque hash of tracked and untracked changes, native platform, and launcher identity as
-`development_observation` with `publishable: false`. The machine-local checkout path is excluded from
-the receipt and synchronized record.
+`memrank submit TARGET EVAL` starts a source-bound named target from the checkout declared in
+its central target file. It is the engine-development loop: each run gets a fresh native process,
+but it does not run an immutable executable artifact. Its receipt records the source commit,
+dirty flag, an opaque hash of tracked and untracked changes, native platform and launcher
+identity as `development_observation` with `publishable: false`. The machine-local checkout path
+is excluded from the receipt and the synchronized record.
 
-Clean development observations retain their scores and may synchronize into a private organization
-for comparison. Dirty-tree observations stay local. Public leaderboard ingestion excludes both. A
-clean Git tree does not promote one to reproducible evidence: a commit identifies source, not the
-compiled executable or its toolchain.
+Clean development observations retain their scores and may synchronize into a private
+organization for comparison; dirty-tree observations stay local; public leaderboard ingestion
+excludes both. A clean git tree does not promote one to reproducible evidence: a commit
+identifies source, not the compiled executable or its toolchain.
 
-Likewise, `--on none` against an already-running HTTP engine is an `endpoint_observation` unless the
-engine exposes a resolved executable identity. This mode remains useful for rapid diagnostics, but
-its long-lived state and unpinned process make it ineligible for publication.
+Likewise, `--on none` against an already-running HTTP engine is an `endpoint_observation` unless
+the engine exposes a resolved executable identity. It is useful for rapid diagnostics, and its
+long-lived state and unpinned process make it ineligible for publication.
 
 Artifact-backed local and cloud runs remain the evaluator path. Their image digest identifies the
-executable artifact; publication still requires the dataset, configuration, models, platform, and
+executable artifact; publication still requires the dataset, configuration, models, platform and
 methodology pins described elsewhere in this document.
 
-The vendor-neutral charter requires every published number to ship with
-its receipt. If a third party cannot reproduce a Memrank-published number
-within the receipt's noise band, AtomicStrata investigates within 7 days.
+The vendor-neutral charter requires every published value to ship with its receipt. Where a third
+party cannot reproduce a memrank-published value within the receipt's noise band, AtomicStrata
+investigates within 7 days.
 
 ## Determinism
 
-Adapters MUST be deterministic given the same seed, or document their
-non-determinism explicitly. The runner re-seeds `random` per cell. Stoch-
-astic engines (e.g., LLM-extraction with non-zero temperature) should
-either pin temperature to 0 or run multiple seeds and report the spread.
+Adapters MUST be deterministic given the same seed, or document their non-determinism explicitly.
+The runner re-seeds `random` per cell. Stochastic engines -- LLM extraction at a non-zero
+temperature -- should either pin temperature to 0 or run multiple seeds and report the spread.

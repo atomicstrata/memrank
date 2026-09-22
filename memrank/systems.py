@@ -27,6 +27,8 @@ command line keeps the older spellings it prints.
 ============  =======  ===============================================================
 name          kind     what it needs
 ============  =======  ===============================================================
+TFIDF         memory   nothing -- in-process, offline
+BM25          memory   nothing -- in-process, offline
 WordOverlap   memory   nothing -- in-process, offline
 NoContext     control  nothing -- the floor: retrieves nothing, answers closed-book
 FixedContext  control  nothing -- the corpus unranked, capped by the token budget
@@ -46,17 +48,21 @@ trying to reach. `memrank.catalog()` prints this table at runtime.
 from __future__ import annotations
 
 from memrank.adapters.atomicmemory import AtomicMemory
+from memrank.adapters.bm25 import BM25
 from memrank.adapters.controls import FixedContext, FullContext, NoContext
 from memrank.adapters.hindsight import Hindsight
 from memrank.adapters.mem0 import Mem0
 from memrank.adapters.native import Native
 from memrank.adapters.supermemory import Supermemory
+from memrank.adapters.tfidf import TFIDF
 from memrank.adapters.word_overlap import WordOverlap
 from memrank.instrument.catalog import ShippedSystem
 
 #: The same table the module docstring carries, in the form `memrank.catalog()` prints. One
 #: entry per name in `memrank.adapters.REGISTRY`, which `tests/instrument` holds it to.
 SHIPPED: tuple[ShippedSystem, ...] = (
+    ShippedSystem("TFIDF", "tfidf", "memory", "nothing -- in-process, offline"),
+    ShippedSystem("BM25", "bm25", "memory", "nothing -- in-process, offline"),
     ShippedSystem("WordOverlap", "word-overlap", "memory", "nothing -- in-process, offline"),
     ShippedSystem("NoContext", "no-context", "control",
                   "nothing -- the floor: retrieves nothing, answers closed-book"),
@@ -77,7 +83,9 @@ SHIPPED: tuple[ShippedSystem, ...] = (
 )
 
 __all__ = [
+    "BM25",
     "SHIPPED",
+    "TFIDF",
     "AtomicMemory",
     "FixedContext",
     "FullContext",

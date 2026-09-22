@@ -21,6 +21,7 @@ registered adapter satisfies the contract.
 from __future__ import annotations
 
 from memrank.adapters.atomicmemory import AtomicMemory
+from memrank.adapters.bm25 import BM25
 from memrank.adapters.controls import (
     FixedContext,
     FullContext,
@@ -30,12 +31,17 @@ from memrank.adapters.hindsight import Hindsight
 from memrank.adapters.mem0 import Mem0
 from memrank.adapters.native import Native
 from memrank.adapters.supermemory import Supermemory
+from memrank.adapters.tfidf import TFIDF
 from memrank.adapters.word_overlap import WordOverlap
 from memrank.core import Memory
 
 REGISTRY: dict[str, type[Memory]] = {
     "atomicmemory": AtomicMemory,
     "word-overlap": WordOverlap,
+    # The two named lexical methods, in plain Python: a reader recognises what is being run,
+    # and neither costs a dependency (ATO-2259).
+    "tfidf": TFIDF,
+    "bm25": BM25,
     "mem0": Mem0,
     "hindsight": Hindsight,
     "supermemory": Supermemory,
@@ -82,7 +88,9 @@ NoContextAdapter = NoContext
 
 
 __all__ = [
+    "BM25",
     "REGISTRY",
+    "TFIDF",
     "AtomicMemory",
     "FixedContext",
     "FullContext",

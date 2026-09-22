@@ -1,19 +1,14 @@
 # measure
 
-## An instance, first
+A **measure** is one named rule that reads [traces](trace.md) and produces named values. Four
+ship with the package:
 
-A **measure** is one named rule that reads what happened and produces named numbers. Four ship
-with the package:
-
-- **`word-match`** -- did the expected words actually appear in something the system recalled?
-  For `q_job`, whose expected span is `marine biologist`, it is 1.0 when that phrase is in a
-  recalled document and 0.0 when it is not. Decided by a fixed rule, and it is retrieval, not
-  answer correctness -- it says so on every value it produces.
-- **`latency`** -- how long ingest and retrieve took, at memrank's own call boundary. Decided
-  by memrank's clock.
-- **`failure-rate`** -- how many traces carry an error. Decided by memrank's bookkeeping.
-- **`judge`** -- was the answer actually right? Decided by a model, which is why it needs a key
-  and the others do not.
+| Measure | What it answers | Decided by |
+|---|---|---|
+| `word-match` | did the expected words appear in something the system recalled? It is retrieval, not answer correctness, and says so on every value | a fixed rule |
+| `latency` | how long ingest and retrieve took, at memrank's own call boundary | memrank's clock |
+| `failure-rate` | how many traces carry an error | memrank's bookkeeping |
+| `judge` | was the answer right? | a model, which is why it needs a key and the others do not |
 
 ```python
 import memrank
@@ -22,41 +17,35 @@ word_match = memrank.WordMatch()
 print(word_match.name, word_match.scope.value, word_match.reads, word_match.decider.value)
 ```
 
-```console
-word-match task ('recalled',) rule
-```
-
 ## What it is
 
 A measure declares three things **before** it runs:
 
-1. **`scope`** -- `Scope.TASK` (one value per task) or `Scope.RUN` (one value for the whole
-   run);
-2. **`reads`** -- which [trace](trace.md) fields and which other measures' values it needs;
-3. **`decider`** -- who is responsible for the number. `Decider.MEMRANK` is memrank's own clock
+1. **`scope`** -- `Scope.TASK` (one value per task) or `Scope.RUN` (one for the whole run);
+2. **`reads`** -- which trace fields and which other measures' values it needs;
+3. **`decider`** -- who is responsible for the value. `Decider.MEMRANK` is memrank's own clock
    and bookkeeping, `Decider.RULE` a fixed rule, `Decider.MODEL` a model that adjudicated, and
    `Decider.SYSTEM` the system's own word.
 
-The declaration is not decoration. A measure that reads a name nothing in the run produces is
-refused *before* the run, naming what is available, rather than raising halfway through one.
+A measure that reads a name nothing in the run produces is refused *before* the run, naming what
+is available, rather than raising halfway through one.
 
-Measuring is not inside the run loop. That is what lets a measure you thought of afterwards run
-over traces already stored: `memrank.measure(result, MyMeasure())` returns a new result with
+Measuring is not inside the run loop, so a measure you thought of afterwards runs over traces
+already stored: `memrank.measure(result, MyMeasure())` returns a new [result](result.md) with
 the extra values in it, and the system is never touched again.
 
-A measure that produces several numbers names each under its own name -- `latency.retrieve.p50`
-and `latency.retrieve.p95` are two values of one measure, told apart by name and never by
-position. Memrank invents no overall score across measures.
+A measure that produces several values names each one -- `latency.retrieve.p50` and
+`latency.retrieve.p95` are told apart by name and never by position. Memrank invents no overall
+score across measures.
 
 A measure that could not decide returns `None` with the reason, never `0.0`.
 
 ## Who supplies what
 
-| You supply | Memrank supplies |
-|---|---|
-| a measure of your own, when you have a question the shipped ones do not answer | `WordMatch`, `Latency`, `FailureRate` and `Judge` |
-| its `name`, `scope`, `reads` and `decider` | the refusal when `reads` names something nothing produces |
-| the `measure()` method: traces and values in, values out | the traces to run it over, during the run or long after |
+Memrank supplies the four above, the traces to run a measure over, and the refusal when `reads`
+names something nothing produces. You supply a measure of your own when the shipped ones do not
+answer your question: its `name`, `scope`, `reads`, `decider`, and a `measure()` method taking
+traces and values and returning values.
 
 ## The Python names
 
@@ -86,10 +75,6 @@ measured = memrank.measure(result, RecalledCount())
 print(measured.values_of("recalled-count")[0].value)
 ```
 
-```console
-2.0
-```
-
 - `memrank.Measure` -- the base class. You set `name`, `scope`, `reads`, `decider` and write
   `measure(traces, values)`.
 - `memrank.Scope` -- `TASK`, `RUN`.
@@ -98,12 +83,10 @@ print(measured.values_of("recalled-count")[0].value)
   `value`, `why`.
 - `memrank.WordMatch`, `memrank.Latency`, `memrank.FailureRate`, `memrank.Judge` -- the four
   that ship. They are ordinary measures and nothing more.
-- `memrank.measure(result, *measures)` -- applying measures to a [result](result.md) already
-  stored.
+- `memrank.measure(result, *measures)` -- applying measures to a result already stored.
 
 ## Going deeper
 
+- [The measures memrank ships](../measures.md) -- each one in full.
+- [Methodology](../methodology.md) -- what a value licenses you to say.
 - [`examples/04-your-own-measure/`](../../examples/04-your-own-measure/) -- a working one.
-- [Adding an evaluation](../evaluations.md) -- bundling measures into an evaluation.
-- [Methodology](../methodology.md) -- what each shipped measure actually measures, and what a
-  number licenses you to say.

@@ -1,16 +1,14 @@
 # Adding an evaluation
 
-> An [**evaluation**](reference/evaluation.md) is a named, versioned bundle: its
-> [tasks](reference/task.md), the [measures](reference/measure.md) it ships with, and the rule
-> for when the system's state is cleared.
+An [**evaluation**](reference/evaluation.md) bundles its [tasks](reference/task.md), the
+[measures](reference/measure.md) that read them, and the rule for when the system's state is
+cleared. This page is the long version of that reference page.
 
-No scoring lives in it -- scoring lives in **measures**, which an evaluation only bundles. That
-separation is the point: bringing your own questions does not mean writing your own measure, and
-bringing your own measure does not mean writing questions.
+No scoring lives in the evaluation: it lives in the measures, which an evaluation only bundles.
+Writing your own questions and writing your own measure are separate choices.
 
 memrank's own evaluations and yours are the same kind of object. You do not have to put yours
-inside this package to run it, you do not have to register it anywhere, and you do not have to
-give it a name anyone else can resolve.
+inside this package, register it anywhere, or give it a name anyone else can resolve.
 
 ## 1. Write the evaluation directly
 
@@ -35,14 +33,12 @@ result = tickets.run(system=memrank.system("word-overlap"))
 print(result.values_of("word-match")[0].value)
 ```
 
-That is the whole of it. Nothing above touches a registry, a configuration file, a name the
-command line can resolve, or a file inside `memrank/`.
+Nothing above touches a registry, a configuration file, a name the command line can resolve, or
+a file inside `memrank/`.
 
-A [**task**](reference/task.md) carries the context to give the system first, the prompt, and
-what a correct outcome looks like -- and no rule about correctness. `Expected` is where that
-description lives: `answers`, `required_spans`, `forbidden_spans`, `evidence_doc_ids`, `rubric`,
-and `polarity`, which is `"negative"` for a task whose correct outcome is that the wrong memory
-is *not* surfaced.
+A [**task**](reference/task.md) describes a correct outcome in `Expected` and decides nothing
+about it. `polarity="negative"` is the case worth knowing here: the correct outcome is that the
+wrong memory is *not* surfaced.
 
 Tasks that share state carry the same `group`. A [run](reference/run.md) gives a group's
 documents once, in first-seen order and deduplicated by id, and clears between groups -- never
@@ -50,13 +46,11 @@ inside one. `Clearing.PER_TASK` and `Clearing.AT_END` are the other two rules, a
 [result](reference/result.md) records which one was in force and whether the system could be
 observed to have cleared.
 
-`version` is the version of what this evaluation asks. Where its material cannot be frozen,
-say so rather than inventing a version:
-`memrank.instrument.evaluation.UNFREEZABLE` is that statement, and it is recorded in every
-result. A gap and an honest statement are different values.
-
-Two results can be laid side by side only when they share the evaluation *and* its version, so
-changing the tasks under a name that stays the same is what makes a comparison quietly wrong.
+`version` is the version of what this evaluation asks. Two results can be laid side by side only
+when they share the evaluation *and* its version, so changing the tasks under a name that stays
+the same is what makes a comparison quietly wrong. Where what the evaluation asks cannot be
+frozen, `memrank.instrument.evaluation.UNFREEZABLE` says so and is recorded in every result,
+rather than a version being invented.
 
 Where the tasks themselves come from is yours: a literal in the file, a CSV beside your script,
 a database, a support queue. memrank reads them off the `Evaluation` and asks nothing about
@@ -76,11 +70,10 @@ A [measure](reference/measure.md) is a named rule from traces to values. It decl
 [`docs/measures.md`](measures.md) is that contract in full, and it is the page to read before
 writing one.
 
-`measures=` on the evaluation is the set that comes with it -- what a person who runs your
-evaluation gets without asking for anything. Because measuring is not inside the run loop, one
-you think of afterwards runs over [traces](reference/trace.md) already stored --
-`memrank.measure(result, MyMeasure())`, with the system never touched again. A measure that
-reads a name nothing in the run produces is refused before the run.
+`measures=` is what a person who runs your evaluation gets without asking. Measuring is not
+inside the run loop, so one you think of afterwards runs over [traces](reference/trace.md)
+already stored -- `memrank.measure(result, MyMeasure())`, with the system never touched again. A
+measure that reads a name nothing in the run produces is refused before the run.
 
 [`examples/04-your-own-measure/`](../examples/04-your-own-measure/README.md) is a worked one,
 applied to a result loaded back off disk.
@@ -89,18 +82,15 @@ applied to a result loaded back off disk.
 
 ## Not core: named evaluations, and what the command line resolves
 
-> **Not core.** memrank's interface is the Python package, and everything above is it. What
-> follows describes an older surface that is kept working but not developed: the catalog of
-> evaluations that can be reached **by name** -- from
-> [the command line](misc/command-line.md), in the cloud, in a sweep, or by other people.
+**memrank's interface is the Python package, and everything above is it.** What follows is an
+older surface, kept working but not developed: the catalog of evaluations reachable **by name**,
+from [the command line](misc/command-line.md), in the cloud, in a sweep, or by other people. Read
+on only if yours should have a name others can type.
 
 That surface keeps its own older words, listed in full under
 [its vocabulary](misc/command-line.md#its-vocabulary): an *eval* is its word for a named
-evaluation, and `Benchmark` is the class a name resolves to. A *unit* is one scoring context
-inside a benchmark, and it becomes a task group when the benchmark is converted.
-
-You do not need any of it to write and run an evaluation. Read on only if yours should have a
-name others can type.
+evaluation, `Benchmark` is the class a name resolves to, and a *unit* is one scoring context
+inside a benchmark, which becomes a task group when the benchmark is converted.
 
 ### Naming one: `Benchmark`, with `load()` and `score()`
 
@@ -184,30 +174,26 @@ class MyBenchmark(Benchmark):
 
 It marks whether a query's gold spans appear verbatim in a retrieved document -- a retrieval
 proxy, never answer correctness, which is what its `METRIC_LABEL` says in every unit it scores.
-`memrank.WordMatch` is the same arithmetic as a measure, per task rather than per unit, and it
-carries the same caveat on every value.
-`memrank.metrics`'s `score_query` and `spec_from_query` are the per-query pieces it is built
-from, for a scorer that needs the verdict rather than the unit mean.
+`memrank.WordMatch` is the same arithmetic as a measure, per task rather than per unit, carrying
+the same caveat on every value. `memrank.metrics`'s `score_query` and `spec_from_query` are the
+per-query pieces, for a scorer that needs the verdict rather than the unit mean.
 
-If your benchmark's answers are graded differently from "one answer, one verdict, one boolean",
-override `judge_shape()` and return a `JudgeShape` (`memrank/judging/shape.py`). A shape declares
-two things: what grading one query **costs**, split into the cache-shared control half and the
-per-engine context half, and what grading one **yields** -- a `JudgedQuery` whose `score` is a float
-in [0, 1].
-
-Most benchmarks need none of this. The default `BinaryJudgeShape` is right for any benchmark whose
-questions have a single gold answer. BEAM is the exception: it scores against a rubric of atomic
-nuggets, one judge call each, averaged within the question.
+The default `BinaryJudgeShape` is right for any benchmark whose questions have a single gold
+answer, and most benchmarks need nothing else. BEAM is the exception: it scores against a rubric
+of atomic nuggets, one judge call each, averaged within the question. Where your answers are
+graded differently, override `judge_shape()` and return a `JudgeShape`
+(`memrank/judging/shape.py`), which declares what grading one query **costs** -- split into the
+cache-shared control half and the per-engine context half -- and what it **yields**, a
+`JudgedQuery` whose `score` is a float in [0, 1].
 
 Do **not** reach for a `judge` callable in the constructor -- an earlier version of this document
 told you to, and nothing ever implemented it.
 
 #### Declare what your score is
 
-The runner does not infer these, and getting one wrong is how a number comes to mean something
-other than it appears to. They apply to an instance exactly as they do to a registered benchmark.
-Each is a class attribute with a default that suits a benchmark whose gold answers are verbatim
-spans:
+The runner infers none of these, and getting one wrong is how a value comes to mean something
+other than it appears to. Each is a class attribute, defaulted for a benchmark whose gold answers
+are verbatim spans, and each applies to an instance exactly as to a registered benchmark:
 
 | | Default | Set it when |
 |---|---|---|
@@ -229,10 +215,9 @@ proxy is meaningless ships no `WordMatch` measure rather than a number that mean
 
 ### Bring one half: `ComposedEvaluation`
 
-`ComposedEvaluation` belongs to this half of the page, not the one above it: it composes a
-`Benchmark`, its units and a `Scorer`, and it is the named route's answer to the question the
-Python route answers with `measures=`. The two pieces do not have to come from the same person,
-so bringing one does not mean writing the other:
+`ComposedEvaluation` composes a `Benchmark`, its units and a `Scorer`. It is the named route's
+answer to the question the Python route answers with `measures=`, and the two pieces do not have
+to come from the same person:
 
 ```python
 from memrank import BenchmarkUnit, ComposedEvaluation, Document, Scorer
@@ -288,24 +273,22 @@ giving it a name, which is [registration](#register-the-benchmark) below.
 
 ### Where the data comes from
 
-`load()` may read whatever you like -- a file beside your script, a database, an API. For a dataset
-you want cached rather than carried, drop it into the cache root that
-``memrank.benchmarks.cache_root()`` returns, or fetch it from HuggingFace lazily on first call, and
-honor a `<NAME>_DATA_PATH` env var so a reader can point at a local copy.
+`load()` may read whatever you like -- a file beside your script, a database, an API. For a
+dataset you want cached rather than carried, drop it into the cache root
+``memrank.benchmarks.cache_root()`` returns, or fetch it from HuggingFace lazily on first call,
+and honor a `<NAME>_DATA_PATH` env var so a reader can point at a local copy.
 
 ### Register the benchmark
 
-Add the class to `memrank/benchmarks/__init__.py`'s `REGISTRY`. It then has a ref: `memrank evals ls`
-lists it, `memrank submit <target> <name>` runs it, and the cloud can resolve it.
-
-Registration decides where the code lives and what may address it. It changes nothing about how the
-evaluation is loaded or scored.
+Add the class to `memrank/benchmarks/__init__.py`'s `REGISTRY`. It then has a ref: `memrank evals
+ls` lists it, `memrank submit <target> <name>` runs it, and the cloud can resolve it.
+Registration decides where the code lives and what may address it, and changes nothing about how
+the evaluation is loaded or scored.
 
 ### Declare `EvalInfo` for the catalog
 
-A registered benchmark needs `info`, because `memrank evals show <name>` renders it and a registered
-benchmark without one fails the first time the catalog is asked. It is required only on this route:
-an instance runs without it.
+A registered benchmark needs `info`: `memrank evals show <name>` renders it, and a registered
+benchmark without one fails the first time the catalog is asked. An instance runs without it.
 
 ```python
 from memrank import Benchmark
@@ -322,21 +305,22 @@ class MyBenchmark(Benchmark):
 
 ### Write tests beside the others
 
-Tests for an in-tree benchmark go in `tests/benchmarks/`, beside the families already there. A file
-belongs there iff its subject is a `Benchmark` implementation: loading, scoring, or a methodology
-claim. Split by concern rather than by file size -- `test_<name>_loading.py`,
-`test_<name>_scoring.py`, `test_<name>_methodology.py` is the shape the existing benchmarks use, and
-the methodology file is the one a reviewer reads first.
+Tests for an in-tree benchmark go in `tests/benchmarks/`, beside the families already there. A
+file belongs there iff its subject is a `Benchmark` implementation: loading, scoring, or a
+methodology claim. Split by concern rather than by file size -- `test_<name>_loading.py`,
+`test_<name>_scoring.py`, `test_<name>_methodology.py` is the shape the existing benchmarks use,
+and the methodology file is the one a reviewer reads first.
 
-A test that runs your evaluation end to end through the runner is about the run rather than about
-the evaluation, and goes in `tests/orchestration/`. [`tests/README.md`](../tests/README.md) states the
-rule for every directory.
+A test that runs your evaluation end to end through the runner is about the run rather than the
+evaluation, and goes in `tests/orchestration/`. [`tests/README.md`](../tests/README.md) states
+the rule for every directory.
 
 ### Document the methodology
 
-Per the vendor-neutral charter ([SPEC.md section 7.3](SPEC.md)), a methodology change goes through
-public proposal and comment before it merges, and does not merge without matching documentation.
+Per the vendor-neutral charter ([SPEC.md section 7.3](SPEC.md)), a methodology change goes
+through public proposal and comment before it merges, and does not merge without matching
+documentation.
 
-A shared evaluation needs a section in [`methodology.md`](methodology.md): what it scores, how it is
-built, what its labels mean, and -- the part readers rely on -- what its numbers do *not* license
-anyone to say. Add the axis there too if it introduces one.
+A shared evaluation needs a section in [`methodology.md`](methodology.md): what it scores, how it
+is built, what its labels mean, and -- the part readers rely on -- what its values do *not*
+license anyone to say. Add the axis there too when it introduces one.

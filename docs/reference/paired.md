@@ -1,11 +1,7 @@
 # paired
 
-## An instance, first
-
-You have run two systems over the same questions -- `WordOverlap`, which ranks documents by
-shared words, and `NoContext`, the control that retrieves nothing at all -- and you want to
-know whether the difference between them is real or could be the five questions you happened to
-pick. A **paired** reading is that comparison:
+A **paired** reading puts two [results](result.md) of the same [evaluation](evaluation.md) side
+by side and says how often chance alone produces a gap that size. It never says "better".
 
 ```python
 import memrank
@@ -13,57 +9,37 @@ from memrank.evaluations import Demo
 from memrank.systems import NoContext, WordOverlap
 
 evaluation = Demo()
-mine = evaluation.run(system=WordOverlap())
-control = evaluation.run(system=NoContext())
+reading = memrank.paired(evaluation.run(system=WordOverlap()),
+                         evaluation.run(system=NoContext()))
 
-reading = memrank.paired(mine, control)
 print(reading.system_a, "vs", reading.system_b, "on", reading.evaluation)
 print(reading)
 ```
 
-```console
-WordOverlap vs NoContext on demo
-demo at memrank-demo@v1+def0
-  A = WordOverlap    B = NoContext
-
-word-match (binary, 5 paired task(s))
-  mean A 0.800   mean B 0.200   gap -0.600   3 discordant
-  both 1  neither 1  only A 3  only B 0  McNemar exact p = 0.25
-  flipped: q_job  1.0 -> 0.0
-  flipped: q_animal  1.0 -> 0.0
-  flipped: q_visit  1.0 -> 0.0
-  caution: too few discordant tasks to characterise the gap
-
-A gap is a gap. Nothing above says which system is better; that depends on what
-you are buying, and these numbers do not know what that is.
-```
-
 ## What it is
 
-A paired reading is a lens above the seven words, not an eighth one: it reads two
-[results](result.md) and returns something that is not a result.
+A paired reading is a lens above the seven words, not an eighth one: it reads two results and
+returns something that is not a result.
 
-It **refuses** unless both results are of the same [evaluation](evaluation.md) at the same
-version -- comparing numbers from different questions is the mistake it exists to prevent --
-and then pairs by task id, per [measure](measure.md). What it reports:
+It **refuses** unless both results are of the same evaluation at the same version -- comparing
+values from different questions is the mistake it exists to prevent -- and then pairs by task
+id, per [measure](measure.md). What it reports:
 
 - the mean of each side, and the gap between them;
 - the tasks whose value **flipped**, named;
 - how often chance alone produces a split that size: McNemar's exact test for a binary measure,
   a cluster-resampled paired bootstrap for a continuous one;
-- a **caution** where too few tasks differ to characterise the gap at all -- it says so instead
-  of characterising it.
+- a **caution** where too few tasks differ to characterise the gap at all.
 
-It never says "better", and the closing caveat is printed by the reading itself rather than
-added by whoever formatted it, so it travels with the numbers.
+The closing caveat -- that a gap is a gap, and which system is better depends on what you are
+buying -- is printed by the reading itself rather than added by whoever formatted it, so it
+travels with the values.
 
 ## Who supplies what
 
-| You supply | Memrank supplies |
-|---|---|
-| two results of the same evaluation at the same version | the refusal when they are not |
-| nothing else | the pairing by task, the statistics, the flipped tasks, the caution |
-| what the comparison is *for* -- it does not know | a gap, and no verdict about it |
+You supply two results of the same evaluation at the same version, and what the comparison is
+*for*, which the reading does not know. Memrank supplies the refusal when the versions differ,
+the pairing by task, the statistics, the flipped tasks and the caution.
 
 ## The Python names
 
@@ -81,12 +57,6 @@ print("measures compared:", sorted(m.measure for m in reading.measures))
 print("only in A:", reading.only_in_a, "| only in B:", reading.only_in_b)
 ```
 
-```console
-demo memrank-demo@v1+def0
-measures compared: ['word-match']
-only in A: () | only in B: ()
-```
-
 - `memrank.paired(a, b)` -- the reading. `resamples=` and `seed=` control the bootstrap and
   make it deterministic.
 - `memrank.Paired` -- what comes back: `evaluation`, `version`, `system_a`, `system_b`,
@@ -96,9 +66,9 @@ only in A: () | only in B: ()
 
 ## Going deeper
 
+- [result](result.md) -- the two things it reads.
+- [Methodology](../methodology.md) -- the control arms, the context-budget control, and why an
+  uncontrolled comparison is not one.
 - [`examples/05-against-a-baseline/`](../../examples/05-against-a-baseline/) and
   [`examples/06-new-version-vs-old/`](../../examples/06-new-version-vs-old/) -- two comparisons
   worth making.
-- [Methodology](../methodology.md) -- the control arms, the context-budget control, and why an
-  uncontrolled comparison is not one.
-- [result](result.md) -- the two things it reads.

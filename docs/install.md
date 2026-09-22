@@ -32,22 +32,22 @@ Save this as `first_run.py`:
 
 ```python
 from memrank.evaluations import Demo
-from memrank.systems import WordOverlap
+from memrank.systems import TFIDF
 
 evaluation = Demo()
-result = evaluation.run(system=WordOverlap())
+result = evaluation.run(system=TFIDF())
 
 print(result)
 ```
 
 Run it with `uv run python first_run.py`, or with `python first_run.py` in the virtualenv you
-installed into. [`WordOverlap`](systems/word-overlap.md) is a baseline that ships with the
-package and [`Demo`](evaluations/demo.md) is five questions about a short conversation, so this
-needs nothing beyond what you just installed.
+installed into. [`TFIDF`](systems/tfidf.md) is keyword search weighted by how rare each word is,
+and [`Demo`](evaluations/demo.md) is five questions about a short conversation, so this needs
+nothing beyond what you just installed.
 
 ## 4. What done looks like
 
-The run prints a `system:` line naming `WordOverlap`, an `evaluation:` line naming `demo` with 5
+The run prints a `system:` line naming `TFIDF`, an `evaluation:` line naming `demo` with 5
 tasks, one line per value, and a `traces:` line reading `5 recorded, 0 with errors`. That is the
 whole of the check. An agent reports those two heading lines and the traces line back, and
 nothing else.

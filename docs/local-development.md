@@ -33,10 +33,9 @@ uv sync --extra dev --extra mcp           # the MCP server (`memrank-mcp`)
 
 ## Check the checkout works
 
-memrank's interface is the Python package, and this is the check to run after any change to the
-run loop. `WordOverlap` is a trivial in-process memory system that ships with the package and
-`Demo` is a small synthetic evaluation that ships with it too, so between them they need no
-engine, no network and no API key:
+This is the check to run after any change to the run loop.
+[`WordOverlap`](systems/word-overlap.md) and [`Demo`](evaluations/demo.md) ship with the package
+and between them need no engine, no network and no key:
 
 ```python
 from memrank.evaluations import Demo
@@ -47,30 +46,17 @@ print(result)
 ```
 
 Put that in a file and run it with `uv run python <file>`, which runs it inside the synced
-environment and so always against the working tree. It prints the whole result -- the system and
-evaluation it ran, one line per value with the measure that produced it and who decided it, and
-the trace count:
-
-```console
-system:     WordOverlap (memory), version in-process
-evaluation: demo at memrank-demo@v1+def0, 5 task(s), cleared per-group
-
-  demo-score             0.800  decided by rule    [demo_alex]
-  ...
-  failure-rate           0.000  decided by memrank [whole run]
-
-traces:     5 recorded, 0 with errors -- one per task per attempt, always
-```
-
-The four `latency.*` values are memrank's own clock and differ on every machine and every run;
-the rest of the output does not. [The README](../README.md) shows the full print and what to read
-out of `result.values` and `result.traces`.
+environment and so always against the working tree. It prints the system and evaluation it ran,
+one line per value with the measure that produced it and who decided it, and the trace count --
+`5 recorded, 0 with errors`. The four `latency.*` values are memrank's own clock and differ on
+every machine and every run; nothing else in the output does.
+[result](reference/result.md) is what to read out of `result.values` and `result.traces`.
 
 ## Not core: the command line
 
-memrank's interface is the Python package. The command line is an older surface that is kept
-working but not developed, and you never need it to get a number --
-[the command line](misc/command-line.md) is its page. What is particular to a checkout is here.
+memrank's interface is the Python package. The command line is an older surface, kept working
+but not developed, and nothing above needs it. [The command line](misc/command-line.md) is its
+page; what is particular to a checkout is here.
 
 ### Run it from the checkout
 
@@ -141,9 +127,8 @@ uv run ruff check .
 uv run mypy memrank
 ```
 
-Tests that need a live memory engine skip when none is running; that is expected, and the static
-contract suite still has to pass. During iteration, run the focused suite for what you
-touched rather than the whole thing:
+Tests that need a live memory engine skip when none is running; the static contract suite still
+has to pass. During iteration, run the focused suite for what you touched:
 
 | You changed | Run |
 |---|---|
@@ -154,11 +139,11 @@ touched rather than the whole thing:
 | documentation | `uv run pytest tests/repo/test_doc_links.py tests/repo/test_docs_teach_the_current_cli.py` |
 | a core contract in `memrank/core.py` | everything |
 
-The two documentation gates are worth knowing about before they fail on you.
-`tests/repo/test_doc_links.py` asserts that every relative markdown link resolves.
-`tests/repo/test_docs_teach_the_current_cli.py` walks every command in every doc and script and fails
-if one teaches a flag or verb the CLI has retired -- so a doc cannot go on telling a reader to type
-something that exits 2.
+Two documentation gates are worth knowing about before they fail on you.
+`tests/repo/test_doc_links.py` asserts every relative markdown link resolves.
+`tests/repo/test_docs_teach_the_current_cli.py` walks every command in every doc and script and
+fails when one teaches a flag or verb the CLI has retired, so a document cannot go on telling a
+reader to type something that exits 2.
 
 ## Where things live
 
@@ -202,16 +187,14 @@ than asking you to trust that someone did.
   [`examples/native-adapter/`](../examples/more/native-adapter/README.md) is a working one.
 
 A change that affects how anything is scored needs a matching change to
-[methodology.md](methodology.md). That is not a review preference: a
-scoring change nobody can see in the documentation is the failure mode this instrument exists to
-rule out.
+[methodology.md](methodology.md). A scoring change nobody can see in the documentation is the
+failure mode this instrument exists to rule out.
 
 ## Why this repository carries the program that produces it
 
-`tools/` is the projector. `publish.toml` classifies every path in the source repository as public
-or internal, and `python -m tools.project --out <dir> --rev <sha>` writes the public tree from a
-committed revision. Both ship deliberately, in the manner of Google's Copybara: the boundary is
-data a reader can inspect rather than a claim they have to take on faith, and
-`tests/repo/test_public_boundary.py` and `tests/repo/test_projection.py` re-check it here, in the published
-tree, against the same rules. A repository that cannot verify its own boundary is one nobody
-checks after the split.
+`tools/` is the projector. `publish.toml` classifies every path in the source repository as
+public or internal, and `python -m tools.project --out <dir> --rev <sha>` writes the public tree
+from a committed revision. Both ship deliberately, in the manner of Google's Copybara: the
+boundary is data a reader can inspect rather than a claim they have to take on faith, and
+`tests/repo/test_public_boundary.py` and `tests/repo/test_projection.py` re-check it here, in
+the published tree, against the same rules.

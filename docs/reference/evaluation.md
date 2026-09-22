@@ -1,63 +1,49 @@
 # evaluation
 
-## An instance, first
-
-An **evaluation** is a set of questions and the rules for asking them. Concretely:
-
-- `demo`, which ships with the package: five questions about a short conversation between two
-  people -- what Alex does for a living, what Alex's favourite animal is, when Dana is
-  visiting. Three short documents, five questions, no download, no key;
-- `locomo`, `longmemeval` and `beam`, three public benchmarks memrank can download and run;
-- `tickets`, which you write yourself in about fifteen lines: your own documents, your own
-  questions, and whatever counts as a correct answer to them.
+An **evaluation** is a set of questions and the rules for asking them, and it is the object you
+call `run(system=...)` on.
 
 ```python
 from memrank.evaluations import Demo
+from memrank.systems import WordOverlap
 
 evaluation = Demo()
 print(evaluation.name, evaluation.version, len(evaluation.tasks), "tasks")
-print([task.id for task in evaluation.tasks])
+
+result = evaluation.run(system=WordOverlap())
 ```
 
-```console
-demo memrank-demo@v1+def0 5 tasks
-['q_job', 'q_animal', 'q_visit', 'q_diet', 'q_allergy_neg']
-```
+[`Demo`](../evaluations/demo.md) is five questions about a short conversation, and needs no
+download and no key. [`LoCoMo`, `LongMemEval` and `BEAM`](../evaluations/README.md) are public
+benchmarks memrank can download. `tickets` below is one you write yourself.
 
 ## What it is
 
 An evaluation is a named, versioned bundle of three things:
 
 1. its **[tasks](task.md)** -- one per thing to put to the system;
-2. the **[measures](measure.md)** it ships with -- the rules that turn what happened into named
-   values. No scoring lives in the evaluation itself; it only bundles measures;
+2. the **[measures](measure.md)** it ships with. No scoring lives in the evaluation itself;
 3. its **clearing rule** -- when the system's state is wiped. Tasks that share state carry the
    same `group`: memrank gives a group's documents once and clears between groups, never inside
    one. `Clearing.PER_GROUP` is that; `Clearing.PER_TASK` and `Clearing.AT_END` are the other
    two.
 
-The version is part of the identity. Two results are only comparable when they are of the same
+The version is part of the identity. Two results are comparable only when they are of the same
 evaluation at the same version, and [paired](paired.md) refuses when they are not.
-
-Memrank's own evaluations and yours are the same kind of object. `memrank.evaluation("demo")`
-returns exactly what you would write by hand.
 
 ## Who supplies what
 
-| You supply | Memrank supplies |
-|---|---|
-| your own tasks, if you have them | five evaluations that ship, `Demo` needing nothing at all |
-| your own measures, if you have them | the measures each shipped evaluation bundles |
-| the clearing rule for an evaluation you write | enforcement of that rule during the run |
-
-Bringing your own questions does not mean writing your own measure, and bringing your own
-measure does not mean writing questions. They are separate things on purpose.
+Memrank ships five evaluations, each bundling its own measures, and enforces the clearing rule
+during the run. You supply your own tasks, your own measures, or both -- they are separate
+choices, and `memrank.evaluation("demo")` returns exactly the kind of object you would write by
+hand.
 
 ## The Python names
 
 ```python
 import memrank
 from memrank import Clearing, Document, Evaluation, Expected, Task
+from memrank.systems import WordOverlap
 
 notes = (Document(id="t1", user_id="acme",
                   content="Acme moved to the enterprise plan in March."),)
@@ -70,15 +56,12 @@ tickets = Evaluation(
     measures=(memrank.WordMatch(),),
     clearing=Clearing.PER_GROUP)
 
-print(tickets.name, tickets.clearing.value, len(tickets.tasks))
-```
-
-```console
-tickets per-group 1
+result = tickets.run(system=WordOverlap())
 ```
 
 - `memrank.Evaluation` -- the class. Fields: `name`, `version`, `tasks`, `measures`,
   `clearing`, `metadata`.
+- `evaluation.run(system=...)` -- the [run](run.md), returning a [result](result.md).
 - `memrank.Clearing` -- `PER_TASK`, `PER_GROUP`, `AT_END`.
 - `memrank.evaluations` -- the module holding what ships: `Demo`, `RelationGraph`, `LoCoMo`,
   `LongMemEval`, `BEAM`.
@@ -87,6 +70,7 @@ tickets per-group 1
 
 ## Going deeper
 
-- [Adding an evaluation](../evaluations.md) -- writing one, and bringing only half of one.
+- [Adding an evaluation](../evaluations.md) -- writing one, and writing only half of one.
+- [Evaluations that ship](../evaluations/README.md) -- one page each.
+- [Methodology](../methodology.md) -- what the shipped evaluations measure.
 - [`examples/03-your-own-evaluation/`](../../examples/03-your-own-evaluation/) -- a working one.
-- [methodology](../methodology.md) -- what the shipped evaluations actually measure.
