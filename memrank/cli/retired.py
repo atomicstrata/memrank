@@ -13,9 +13,9 @@
 # permissions and limitations under the License.
 """Every command name and flag the CLI used to answer to, and what replaced each.
 
-The surface is migrating to the interface model (docs-internal/interface-model.md), and the cutover is
-deliberately hard: an old name does not keep working, and it does not fail silently either --
-it says what to type instead. A script that breaks breaks loudly, once, with the fix in the
+The surface is migrating to the interface model, and the cutover is deliberately hard: an old
+name does not keep working, and it does not fail silently either -- it says what to type
+instead. A script that breaks breaks loudly, once, with the fix in the
 message.
 
 Tables rather than a stub beside each rename, so the rule is enumerated and testable: nothing
@@ -43,7 +43,7 @@ RETIRED: dict[str, str] = {
     "status": "runs show",
     # Credentials are the wallet's plane and a target's requirements are the catalog's; this
     # command answered for both, and `doctor` -- the environment plane it was meant to fold into
-    # -- was dropped from the model rather than built (docs-internal/interface-model.md section 6).
+    # -- was dropped from the model rather than built.
     "preflight": "targets show",
 }
 

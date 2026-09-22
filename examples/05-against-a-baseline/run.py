@@ -35,11 +35,11 @@ print()
 # measures are the same thing in all three.
 evaluation = memrank.evaluation("demo")
 mine = memrank.system("word-overlap")
-result_mine = memrank.run(mine, evaluation)
+result_mine = evaluation.run(system=mine)
 
 for control_name in ("no-context", "full-context"):
     control = memrank.system(control_name)
-    result_control = memrank.run(control, evaluation)
+    result_control = evaluation.run(system=control)
     # A paired reading refuses unless both results are of the same evaluation
     # at the same version, then pairs task by task. It never says "better".
     reading = memrank.paired(result_mine, result_control)

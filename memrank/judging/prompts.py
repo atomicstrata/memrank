@@ -36,7 +36,7 @@ from __future__ import annotations
 # (0 judgeable queries), so a receipt or a cache entry from before this version describes a
 # different set of questions than one after it.
 # 2026-08-12.1: added NUGGET_SYSTEM, a per-criterion grader on a {0, 0.5, 1} scale, for BEAM's
-# rubric protocol (docs-internal/benchmarks/benchmark-beam.md section 3). New prompt bytes AND a new judged scope:
+# rubric protocol. New prompt bytes AND a new judged scope:
 # BEAM previously graded one holistic verdict against a reference answer, and now grades each
 # rubric nugget. A BEAM receipt or cache entry from before this version describes a different
 # METRIC, not just a different question set.
@@ -102,8 +102,7 @@ CORRECTNESS_NEGATIVE_SYSTEM = (
 
 
 #: LongMemEval's six official judge prompts, from `src/evaluation/evaluate_qa.py`
-#: (`get_anscheck_prompt`), reproduced as paper Figure 10 and in
-#: docs-internal/benchmarks/benchmark-longmemeval.md section 3.
+#: (`get_anscheck_prompt`), reproduced as paper Figure 10.
 #:
 #: These are the only prompts in memrank with a PUBLISHED HUMAN-AGREEMENT FIGURE -- 97-98% against
 #: human experts (paper Table 6), weakest on preference and abstention at 0.90 each. Neither
@@ -173,8 +172,8 @@ _NUGGET_JSON = ('Respond with ONLY strict JSON: '
 
 #: Grades ONE rubric nugget, on BEAM's three-point scale.
 #:
-#: Three things here are load-bearing and each corresponds to a clause of BEAM's own judge prompt
-#: (docs-internal/benchmarks/benchmark-beam.md section 3):
+#: Three things here are load-bearing and each corresponds to a clause of BEAM's own judge
+#: prompt:
 #:
 #: - **The 0.5 band.** BEAM's paper and prompt both define it; their shipped code discards it with
 #:   `int()`. We honour it, per decision-beam-targets-the-spec-not-the-harness.

@@ -9,12 +9,12 @@ pick. A **paired** reading is that comparison:
 
 ```python
 import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import NoContext, WordOverlap
 
-evaluation = demo()
-mine = memrank.run(WordOverlap(), evaluation)
-control = memrank.run(NoContext(), evaluation)
+evaluation = Demo()
+mine = evaluation.run(system=WordOverlap())
+control = evaluation.run(system=NoContext())
 
 reading = memrank.paired(mine, control)
 print(reading.system_a, "vs", reading.system_b, "on", reading.evaluation)
@@ -69,12 +69,12 @@ added by whoever formatted it, so it travels with the numbers.
 
 ```python
 import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import NoContext, WordOverlap
 
-evaluation = demo()
-reading = memrank.paired(memrank.run(WordOverlap(), evaluation),
-                         memrank.run(NoContext(), evaluation))
+evaluation = Demo()
+reading = memrank.paired(evaluation.run(system=WordOverlap()),
+                         evaluation.run(system=NoContext()))
 
 print(reading.evaluation, reading.version)
 print("measures compared:", sorted(m.measure for m in reading.measures))

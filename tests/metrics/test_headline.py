@@ -94,8 +94,7 @@ def test_every_public_surface_reads_the_score_from_this_module(tmp_path, monkeyp
 
     The two internal surfaces -- the hosted API's run scoring and the leaderboard's aggregate --
     are enumerated the same way in `tests/internal/test_headline_surfaces.py`. Split because the
-    rule is public and those two consumers are not; see
-    docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 1.
+    rule is public and those two consumers are not.
     """
     from memrank import runner
     from memrank.metrics import headline

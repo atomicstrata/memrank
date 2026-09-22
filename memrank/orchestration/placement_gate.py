@@ -38,7 +38,7 @@ def _require_placement_ready(where: str, *, target=None) -> None:
     Asked of the placement class rather than restated here: the same ``check()`` rows are what
     ``provision`` enforces on, so the refusal a user reads and the failure that would have
     happened are one code path. There is deliberately no `doctor` command wrapping this -- the
-    check belongs to the run that needs it (docs-internal/interface-model.md section 6).
+    check belongs to the run that needs it.
     """
     from memrank.placement.base import require
     if where != "local":

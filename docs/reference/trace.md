@@ -9,11 +9,10 @@ that a number can be traced to the thing it is a number about.
 Here is the trace of `q_job` -- "What is Alex's profession?" -- run against `WordOverlap`:
 
 ```python
-import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 trace = result.traces_of("q_job")[0]
 
 print("task:    ", trace.task.id, "|", trace.task.prompt)

@@ -5,9 +5,9 @@ last_reviewed: 2026-09-21
 
 # Documentation
 
-Memrank is a Python package: you hand a **system** and an **evaluation** to `memrank.run()` and
-get back a **result** whose values each name the **measure** that produced them and who decided
-them. Everything below is in reading order.
+Memrank is a Python package: you put an **evaluation** to a **system** -- `evaluation.run(system=...)`
+-- and get back a **result** whose values each name the **measure** that produced them and who
+decided them. Everything below is in reading order.
 
 ## The entry path
 
@@ -19,6 +19,8 @@ reach a number.
 | [README](../README.md) | what memrank is, and a first result in a few lines of Python |
 | [Reference](reference/README.md) | one page per word -- system, evaluation, task, trace, measure, run, result -- each opening with a concrete instance |
 | [Installing memrank](install.md) | add the package to a project, import it, and print a result; upgrading |
+| [The systems that ship](systems/README.md) | one page per shipped system: what it is, how it works, why it matters, what it needs |
+| [The evaluations that ship](evaluations/README.md) | one page per shipped evaluation, to the same standard, including whether its quality number needs a judge |
 | [Adding a system](systems.md) | bring the thing under test: the kinds, the verbs each requires, and running yours without naming it |
 | [The system contract](system-contract.md) | the wire contract for a system memrank drives as a process rather than imports, in any language |
 | [Adding an evaluation](evaluations.md) | bring your own tasks and the rule for when the system's state is cleared |

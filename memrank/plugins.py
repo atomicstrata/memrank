@@ -32,8 +32,8 @@ WHAT IT DOES NOT CONFER. A module reachable on ``sys.path`` has no version and n
 origin, so registering through it earns no reproducibility claim of its own: the run's evidence
 class still derives from how its *artifact* was bound, which for a source-bound target is
 ``development_observation``. Provenance here is asserted by the registering module, and memrank
-cannot verify it -- see the direction brief on addressability
-(``docs-internal/directions/2026-08-28-customizability-and-reproducibility.md``).
+cannot verify it: customizability and reproducibility are independent axes, and this seam buys
+the first without paying for the second.
 """
 
 from __future__ import annotations

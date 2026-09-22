@@ -29,7 +29,7 @@ from memrank.contract import Recall
 
 
 def test_word_overlap_runs_demo_end_to_end_with_no_errors():
-    result = memrank.run(REGISTRY["word-overlap"](), memrank.evaluation("demo"))
+    result = memrank.evaluation("demo").run(system=REGISTRY["word-overlap"]())
 
     assert result.refusal is None
     assert [t.error for t in result.traces] == [None] * 5, (
@@ -39,7 +39,7 @@ def test_word_overlap_runs_demo_end_to_end_with_no_errors():
 
 
 def test_every_task_gets_a_value_that_is_not_none():
-    result = memrank.run(REGISTRY["word-overlap"](), memrank.evaluation("demo"))
+    result = memrank.evaluation("demo").run(system=REGISTRY["word-overlap"]())
 
     marks = result.values_of("word-match")
     assert len(marks) == 5
@@ -53,7 +53,7 @@ def test_a_group_whose_every_task_failed_is_not_given_a_number():
         def retrieve(self, query, k, user_id, query_timestamp=None):
             raise RuntimeError("engine unreachable")
 
-    result = memrank.run(Broken(), memrank.evaluation("demo"))
+    result = memrank.evaluation("demo").run(system=Broken())
 
     assert [t.error.step for t in result.traces] == ["retrieve"] * 5
     scored = result.values_of("demo-score")[0]

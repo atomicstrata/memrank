@@ -14,9 +14,9 @@ with the package:
   the evidence for it is in the document `sess_1`
 
 ```python
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 
-task = demo().tasks[0]
+task = Demo().tasks[0]
 print(task.id, "|", task.prompt)
 print("group:", task.group, "| context documents:", len(task.context))
 print("expected answers:", task.expected.answers)

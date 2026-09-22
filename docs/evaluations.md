@@ -31,7 +31,7 @@ tickets = Evaluation(
     measures=(memrank.WordMatch(),),
     clearing=Clearing.PER_GROUP)
 
-result = memrank.run(memrank.system("word-overlap"), tickets)
+result = tickets.run(system=memrank.system("word-overlap"))
 print(result.values_of("word-match")[0].value)
 ```
 
@@ -134,8 +134,8 @@ class TicketsBenchmark(Benchmark):
         return "tickets"
 
 
-result = memrank.run(memrank.system("word-overlap"),
-                     memrank.evaluation(TicketsBenchmark()))
+result = memrank.evaluation(TicketsBenchmark()).run(
+    system=memrank.system("word-overlap"))
 print(result.values_of("tickets-score")[0].value, result.evaluation.name)
 ```
 

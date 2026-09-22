@@ -398,7 +398,7 @@ def ensure_secrets(names: Sequence[str]) -> None:
         # Local, and it is the only use of `style` in this module. `memrank.term.style` imports
         # `typer` -- the command-line framework -- and `memrank.config` is on the library run
         # path, so a module-level import here put the whole terminal stack into the process of
-        # every caller who only ever called `memrank.run(...)`. This line is reached solely
+        # every caller who only ever ran an evaluation. This line is reached solely
         # when a human at a terminal has just been asked for a credential, which a library run
         # never is: it refuses above when there is no terminal to ask on.
         # `tests/repo/test_import_weight.py` holds a completed run to that budget.

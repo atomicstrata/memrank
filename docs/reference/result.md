@@ -7,11 +7,10 @@ read off them. Print one and it lays itself out -- which system, which evaluatio
 with the measure that produced it and who decided it, and how many traces were recorded:
 
 ```python
-import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 
 print(result.system.name, "|", result.system.kind, "|", result.evaluation.name)
 for value in result.values_of("word-match"):
@@ -66,12 +65,11 @@ reads it back in another process, days later, with the traces intact -- which is
 ## The Python names
 
 ```python
-import memrank
 from memrank import Result
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 result.save("/tmp/demo-run.json")
 reloaded = Result.load("/tmp/demo-run.json")
 

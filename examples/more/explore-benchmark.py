@@ -26,7 +26,7 @@ import memrank
 
 
 def main() -> None:
-    # One string, same grammar as the CLI's EVAL argument and memrank.run()'s `eval`.
+    # One string, same grammar as the CLI's EVAL argument and `memrank.evaluation(ref)`.
     bench = memrank.benchmark("demo")
     # Equivalent class form, when you'd rather name the knobs than the ref:
     #   from memrank.benchmarks import BEAMBenchmark

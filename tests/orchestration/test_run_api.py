@@ -112,8 +112,15 @@ def test_an_observer_hears_the_run(isolated):
 
 
 def test_the_lazy_exports_resolve_and_dir_lists_them():
-    assert memrank.run.__module__ == "memrank.instrument.run"
+    """`run` is deliberately absent: ATO-2247 moved the verb onto the evaluation.
+
+    It was never one of these lazy exports anyway -- it was a plain import that `dir()` picked
+    up beside them -- and it left the package surface outright rather than becoming an alias,
+    so neither the attribute nor the `dir()` entry survives.
+    """
+    assert memrank.Evaluation.run.__module__ == "memrank.instrument.evaluation"
     assert memrank.EvalResult.__module__ == "memrank.evaluation.result"
-    assert {"run", "EvalResult", "EvalObserver", "EvalPlan", "JudgeConfig"} <= set(dir(memrank))
+    assert {"EvalResult", "EvalObserver", "EvalPlan", "JudgeConfig"} <= set(dir(memrank))
+    assert "run" not in dir(memrank)
     with pytest.raises(AttributeError):
         _ = memrank.no_such_symbol

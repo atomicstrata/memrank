@@ -61,7 +61,7 @@ passages_recalled = PassagesRecalled()
 
 with tempfile.TemporaryDirectory() as directory:
     path = Path(directory) / "run.json"
-    result = memrank.run(system, evaluation)
+    result = evaluation.run(system=system)
     result.save(path)
     # A different process, days later, starts exactly here.
     stored = Result.load(path)

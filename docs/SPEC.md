@@ -80,7 +80,7 @@ meets them:
 
 The thing under test is a **system**: one object, of one of four kinds, that memrank drives
 directly (section 4). A memory engine is a system; so is a model, a retriever, an assistant, or
-something written this morning around a private store. `memrank.run(system, evaluation)` takes the
+something written this morning around a private store. `evaluation.run(system=...)` takes the
 instance, so a system does not have to be registered, named, or known to memrank to be measured.
 
 What a *published* row names is never the engine alone. A memory engine's result is dominated by
@@ -208,7 +208,7 @@ class Notebook(memrank.Memory):
         self.kept = []
 
 
-result = memrank.run(Notebook(), memrank.evaluation("demo"))
+result = memrank.evaluation("demo").run(system=Notebook())
 print(result.values_of("failure-rate")[0].value, len(result.traces))
 ```
 
@@ -276,7 +276,7 @@ one_question = Evaluation(
     clearing=Clearing.PER_GROUP,
 )
 
-result = memrank.run(WordOverlap(), one_question)
+result = one_question.run(system=WordOverlap())
 for value in result.values_of("word-match"):
     print(value.measure, value.value, value.decider.value)
 ```
@@ -341,7 +341,7 @@ published:
 
 ## 6. Reproducibility
 
-Every result says what produced it. `memrank.run` returns a `Result`
+Every result says what produced it. `evaluation.run(system=...)` returns a `Result`
 (`memrank/instrument/result.py`) carrying the system -- name, kind, version and address -- the
 evaluation and its version, the clearing rule and whether clearing was observed, the start and
 finish times, one trace per task per attempt including on failure, and every value with its

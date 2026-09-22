@@ -16,8 +16,7 @@
 The two assertions about the OPERATOR entrypoint -- that `memrank --help` leaks none of
 `memrank.ops.OPS_COMMANDS`, and that every one of them still has a home on `memrank-ops` -- moved
 to `tests/internal/test_runner_help_ops.py`. Both are about a public guarantee, but neither can be
-stated without the internal command table, and `memrank.ops` is not in a public tree. See
-docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 3.
+stated without the internal command table, and `memrank.ops` is not in a public tree.
 """
 
 from __future__ import annotations

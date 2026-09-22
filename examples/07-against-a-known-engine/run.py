@@ -24,7 +24,7 @@ differs.
 
 import memrank
 from memrank import Document, Recall
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
 
@@ -62,11 +62,11 @@ class TinyMemory(memrank.Memory):
 
 
 # One evaluation behind both runs, so the tasks and the measures are equal.
-evaluation = demo()
+evaluation = Demo()
 mine = TinyMemory()
 known_engine = WordOverlap()
-result_mine = memrank.run(mine, evaluation)
-result_known_engine = memrank.run(known_engine, evaluation)
+result_mine = evaluation.run(system=mine)
+result_known_engine = evaluation.run(system=known_engine)
 reading = memrank.paired(result_mine, result_known_engine)
 
 print(reading)

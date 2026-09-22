@@ -12,9 +12,9 @@ An **evaluation** is a set of questions and the rules for asking them. Concretel
   questions, and whatever counts as a correct answer to them.
 
 ```python
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 
-evaluation = demo()
+evaluation = Demo()
 print(evaluation.name, evaluation.version, len(evaluation.tasks), "tasks")
 print([task.id for task in evaluation.tasks])
 ```
@@ -46,7 +46,7 @@ returns exactly what you would write by hand.
 
 | You supply | Memrank supplies |
 |---|---|
-| your own tasks, if you have them | five evaluations that ship, `demo` needing nothing at all |
+| your own tasks, if you have them | five evaluations that ship, `Demo` needing nothing at all |
 | your own measures, if you have them | the measures each shipped evaluation bundles |
 | the clearing rule for an evaluation you write | enforcement of that rule during the run |
 
@@ -80,8 +80,8 @@ tickets per-group 1
 - `memrank.Evaluation` -- the class. Fields: `name`, `version`, `tasks`, `measures`,
   `clearing`, `metadata`.
 - `memrank.Clearing` -- `PER_TASK`, `PER_GROUP`, `AT_END`.
-- `memrank.evaluations` -- the module holding what ships: `demo`, `relation_graph`, `locomo`,
-  `longmemeval`, `beam`.
+- `memrank.evaluations` -- the module holding what ships: `Demo`, `RelationGraph`, `LoCoMo`,
+  `LongMemEval`, `BEAM`.
 - `memrank.evaluation("<name>")` -- the same things by string.
 - `evaluation.groups()` and `evaluation.group_of(task_id)` -- which tasks share state.
 

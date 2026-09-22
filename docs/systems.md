@@ -48,7 +48,7 @@ Two refusals are about the fit between the system and the evaluation rather than
 - an evaluation whose tasks carry **context** needs a kind that can be told things, which today
   is memory alone;
 - a measure that reads `answered` needs a kind that answers -- model or assistant -- or an
-  `answerer=` passed to `memrank.run`, because a memory only recalls.
+  `answerer=` passed to the run, because a memory only recalls.
 
 ```python
 import memrank
@@ -61,7 +61,7 @@ class Echo(memrank.Model):
         return prompt
 
 
-result = memrank.run(Echo(), memrank.evaluation("demo"))
+result = memrank.evaluation("demo").run(system=Echo())
 print(result.refused)
 print(result.refusal)
 ```
@@ -80,8 +80,8 @@ existing class needs no edit.
 
 ## 1. Run your own system: pass the instance
 
-`memrank.run(system, evaluation)` takes the instance, so a system that exists only in your
-codebase runs the same loop as the ones memrank ships:
+`evaluation.run(system=...)` takes the instance, so a system that exists only in your codebase
+runs the same loop as the ones memrank ships:
 
 ```python
 import memrank
@@ -110,7 +110,7 @@ class MyMemory(memrank.Memory):
         self.held = []
 
 
-result = memrank.run(MyMemory(), memrank.evaluation("demo"))
+result = memrank.evaluation("demo").run(system=MyMemory())
 print(result.values_of("demo-score")[0].value, result.system.name, result.system.kind)
 ```
 
@@ -133,8 +133,9 @@ ingest and retrieve at its own call boundary, so latency is neither your job nor
 your system could flatter.
 
 Nothing here touches the registry, the command line, a configuration setting or a file inside
-`memrank/` -- and the second argument is an evaluation the same way: `memrank.evaluation("demo")`,
-or an `Evaluation` of your own (see [adding an evaluation](evaluations.md)).
+`memrank/` -- and the evaluation the verb is called on is reached the same way:
+`memrank.evaluation("demo")`, `memrank.evaluations.Demo()`, or an `Evaluation` of your own (see
+[adding an evaluation](evaluations.md)).
 
 The runnable version of exactly this, offline and in about a second, is
 [`examples/02-your-own-system/`](../examples/02-your-own-system/README.md):
@@ -185,7 +186,7 @@ print(system.token_metrics()["tokens_per_query_mean"])
 150.0
 ```
 
-**Hold the collector as `self.tokens`, under that name**, even though `memrank.run` never looks
+**Hold the collector as `self.tokens`, under that name**, even though the run never looks
 for it. A tracked run at `workers > 1` builds one system per worker and pools the *collectors*,
 because a statistic of rendered statistics is not a statistic of the population -- and it finds
 them by that attribute (`memrank/evaluation/measurement.py`). A class that overrides
@@ -199,7 +200,7 @@ bucket, which says nobody counted rather than claiming the system spent zero.
 **Internal timing** is the second, narrower declaration: `declared_latency()` -- or the
 kind-neutral `declared_timings()` -- for time only your system can see inside the hop memrank
 measured around it, a translator's `engine_ms`. Return SAMPLES per bucket, in milliseconds,
-never percentiles: `memrank.run` puts them on the [trace](reference/trace.md) as
+never percentiles: the run puts them on the [trace](reference/trace.md) as
 `engine_timings`, and a tracked run pools them across the systems a `workers > 1` run builds
 and renders `<bucket>_p50_ms` / `<bucket>_p95_ms` itself, so a run at any width reports the same
 statistic of the same population. The conventional buckets are `ingest_engine` and

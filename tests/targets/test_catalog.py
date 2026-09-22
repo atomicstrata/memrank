@@ -70,10 +70,10 @@ def test_inheritance_cycle_is_detected(tmp_path, monkeypatch):
 
 EXPECTED = {"word-overlap",
             "atomicmemory", "hindsight", "supermemory",
-            # Vendor-configuration targets -- vendor depth, never on the leaderboard
-            # (docs-internal/decisions/decision-matched-and-faithful-run-modes.md). Since 2026-08-19 this is
-            # what a BARE vendor ref means, for every vendor engine: `mem0` is mem0 as mem0 ships
-            # it, `hindsight` is hindsight at the depth its own AMB harness publishes. memrank's
+            # Vendor-configuration targets -- vendor depth, never on the leaderboard. Since
+            # 2026-08-19 this is what a BARE vendor ref means, for every vendor engine: `mem0`
+            # is mem0 as mem0 ships it, `hindsight` is hindsight at the depth its own AMB
+            # harness publishes. memrank's
             # comparison arm carries the suffix -- `hindsight:matched` below.
             #
             # `mem0:voyage` and `mem0:bge-tei` used to sit here. They moved to the research lane on

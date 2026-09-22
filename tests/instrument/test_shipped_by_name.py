@@ -66,7 +66,7 @@ def test_the_front_page_reaches_the_same_function():
 
 def test_a_shipped_system_runs_the_shipped_evaluation_end_to_end():
     """The first line of the README, as a test: two names, one number each."""
-    result = memrank.run(system("word-overlap"), evaluation("demo"))
+    result = evaluation("demo").run(system=system("word-overlap"))
 
     assert result.refusal is None
     assert len(result.traces) == 5

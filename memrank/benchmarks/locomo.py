@@ -58,8 +58,7 @@ _DATA_SHA256 = "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4
 
 # Integer->name mapping in the DATA's order (authority: snap-research task_eval/evaluation.py
 # dispatch), NOT the paper's prose order (single/multi/temporal/open) -- the two differ, and
-# applying the prose order to the integers mislabels three of four categories
-# (docs-internal/benchmarks/benchmark-locomo.md section 2).
+# applying the prose order to the integers mislabels three of four categories.
 _CATEGORY_NAMES = {
     1: "multi-hop",
     2: "temporal",
@@ -88,8 +87,7 @@ class LoCoMoBenchmark(Benchmark):
     # 2026-08-13 (v1): the category integer->name mapping was corrected (3 of 4 labels were the
     # paper's prose order, not the data's) and all four categories became judge-valid -- the
     # judged denominator moved 603->1,540 and every earlier per-category label is void. Scores
-    # across this boundary are not comparable
-    # (docs-internal/decisions/decision-locomo-scores-the-de-facto-denominator.md).
+    # across this boundary are not comparable.
     # 2026-08-14 (v2): sessions load in chronological order (the old lexicographic sort ingested
     # session_9 after session_19 and anchored query_timestamp mid-conversation), and
     # Document.content is the dated speaker-attributed rendering instead of a JSON turn blob --

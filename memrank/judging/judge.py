@@ -39,8 +39,7 @@ Completer = Callable[[str, str, str], str]
 # in memrank/judging/shape.py -- so a loader's category vocabulary and its judge gate are one
 # object, and an unknown category raises instead of silently shrinking the denominator. The
 # allowlist was keyed on bare strings across three benchmarks' vocabularies at once, which is
-# how LoCoMo judged 39.2% of itself under mislabeled categories without any signal (audit F2,
-# docs-internal/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md).
+# how LoCoMo judged 39.2% of itself under mislabeled categories without any signal.
 
 
 def gold_answer(query: dict[str, Any]) -> str:

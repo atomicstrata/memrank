@@ -35,15 +35,14 @@ uv sync --extra dev --extra mcp           # the MCP server (`memrank-mcp`)
 
 memrank's interface is the Python package, and this is the check to run after any change to the
 run loop. `WordOverlap` is a trivial in-process memory system that ships with the package and
-`demo` is a small synthetic evaluation that ships with it too, so between them they need no
+`Demo` is a small synthetic evaluation that ships with it too, so between them they need no
 engine, no network and no API key:
 
 ```python
-import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 print(result)
 ```
 
@@ -195,8 +194,8 @@ than asking you to trust that someone did.
 
 ## Adding something
 
-- **A system of your own** -- [adding a system](systems.md): pass the instance to
-  `memrank.run`, and register it only when it needs a name.
+- **A system of your own** -- [adding a system](systems.md): pass the instance as
+  `evaluation.run(system=...)`, and register it only when it needs a name.
 - **An evaluation of your own** -- [adding an evaluation](evaluations.md), the same way.
 - **A system, without writing Python at all** -- write a translator that speaks the
   [system contract](system-contract.md) over HTTP, in any language.

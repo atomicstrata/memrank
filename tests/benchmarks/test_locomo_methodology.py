@@ -13,11 +13,11 @@
 # permissions and limitations under the License.
 """LoCoMo methodology pins -- the Tier-A assertions from protocol-fidelity section 5.1.
 
-The category integer->name mapping is the single most miscopied fact about LoCoMo
-(docs-internal/benchmarks/benchmark-locomo.md section 2): the paper's prose order and the data's integer order
-differ, and memrank shipped the wrong one for weeks -- which the judge gate silently turned into
-a 39.2% denominator. These tests pin the mapping to the data's authority
-(snap-research task_eval/evaluation.py), pin judgeability at 100% of categories 1-4, and pin
+The category integer->name mapping is the single most miscopied fact about LoCoMo: the
+paper's prose order and the data's integer order differ, and memrank shipped the wrong one for
+weeks -- which the judge gate silently turned into a 39.2% denominator. These tests pin the
+mapping to the data's authority (snap-research task_eval/evaluation.py), pin judgeability at
+100% of categories 1-4, and pin
 the dataset digest check so upstream drift can never be silent again.
 """
 import json
