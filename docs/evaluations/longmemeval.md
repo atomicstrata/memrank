@@ -17,8 +17,8 @@ irrelevant, a few holding the answer. Memrank gives one question's haystack to t
 the question only after all of them have gone in -- which is the task the authors define. Each
 question is its own group, so its haystack is cleared before the next.
 
-The dates travel inside the text of each session, because memrank cannot reorder what an engine
-returns: an engine hands back its own documents, not memrank's, so ordering by timestamp would
+The dates travel inside the text of each session, because memrank cannot reorder what a system
+returns: a system hands back its own documents, not memrank's, so ordering by timestamp would
 only be possible for the controls and would make context order depend on which system was under
 test. That divergence from the authors' own harness is declared rather than half-fixed.
 

@@ -1,7 +1,7 @@
 # The systems that ship
 
 A [system](../reference/system.md) is the thing under test. Memrank ships eleven of them, so you
-can take a number before you have wired anything up, and so every engine row has controls beside
+can take a number before you have wired anything up, and so every system's row has controls beside
 it. One page each.
 
 | System | Key | What it is | What it needs |
@@ -10,7 +10,7 @@ it. One page each.
 | [BM25](bm25.md) | `bm25` | Okapi BM25, the lexical retriever the field ranks against, in plain Python | nothing |
 | [WordOverlap](word-overlap.md) | `word-overlap` | keyword retrieval in about thirty lines: the floor a real memory engine has to beat | nothing |
 | [NoContext](no-context.md) | `no-context` | a control that retrieves nothing, so the reader has to answer from what it already knows | nothing |
-| [FixedContext](fixed-context.md) | `fixed-context` | a control that hands over the corpus unranked, cut off at the same token budget the engine beside it was held to | nothing |
+| [FixedContext](fixed-context.md) | `fixed-context` | a control that hands over the corpus unranked, cut off at the same token budget the system beside it was held to | nothing |
 | [FullContext](full-context.md) | `full-context` | a control that hands over the whole corpus with no cap: the ceiling retrieval is aiming at | nothing |
 | [AtomicMemory](atomicmemory.md) | `atomicmemory` | AtomicStrata's own memory engine, driven over its HTTP API | a running engine |
 | [Hindsight](hindsight.md) | `hindsight` | Vectorize.io's open-source agent memory, driven over its HTTP API | a running engine |

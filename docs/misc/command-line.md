@@ -17,7 +17,7 @@ in the cloud, and moving them would break stored records.
 | Word here | What the Python interface calls it |
 |---|---|
 | **target** | a **system** that the catalog knows by name -- a named composition of a system plus the embedder and LLM it is configured with, so a row can never mean two different things |
-| **eval** | an **evaluation** that the catalog knows by name (`demo`, `locomo`, `beam`, `longmemeval`) |
+| **eval** | an **evaluation** that the catalog knows by name (`squad`, `demo`, `locomo`, `beam`, `longmemeval`) |
 | **adapter** | the class a target's entry resolves to: the code that talks to that system |
 | **benchmark** | the class an eval's entry resolves to: the loader and scorer behind the name |
 
@@ -32,8 +32,8 @@ memrank --version      # the version, and where this install came from
 ```
 
 `memrank --version` prints where the install came from -- for a git install, the commit -- which is
-the thing to quote when something looks wrong. [Installing memrank](../install.md) has PATH
-troubleshooting, upgrading, and the source and editable installs.
+the thing to quote when something looks wrong. `uv tool upgrade memrank` upgrades it.
+[Local development](../local-development.md) has the source and editable installs.
 
 ## The loop
 
@@ -46,8 +46,8 @@ run 20260826-213813__demo__7becda  (word-overlap × demo)
 track: memrank watch 20260826-213813__demo__7becda
 
 $ memrank runs ls
-ID                             TARGET        EVAL  PLACE  STATE  AGE  DONE  SCORE
-20260826-213813__demo__7becda  word-overlap  demo  local  done     8s  100%  0.8000
+ID                             TARGET        EVAL  PLACE  STATE  SYNCED   AGE  DONE  SCORE
+20260826-213813__demo__7becda  word-overlap  demo  local  done   pending   8s  100%  0.8000
 ```
 
 `submit` always returns immediately with the run id(s); `watch <id>` blocks on them (its exit code
@@ -87,7 +87,7 @@ on a fresh install.
 | `--on cloud` | submitted to the hosted memrank platform -- needs a signed-in session (below) |
 
 ```bash
-export HINDSIGHT_API_URL=http://localhost:7000
+export HINDSIGHT_API_URL=http://localhost:8888
 memrank submit hindsight locomo:smoke --on none
 ```
 
@@ -101,7 +101,7 @@ Engine URL defaults, each overridable by its environment variable:
 |---|---|---|
 | AtomicMemory | `ATOMICMEMORY_API_URL` | `http://localhost:3070` |
 | Mem0 (HTTP) | `MEM0_HTTP_URL` | `http://localhost:8888` |
-| Hindsight | `HINDSIGHT_API_URL` | `http://localhost:7000` |
+| Hindsight | `HINDSIGHT_API_URL` | `http://localhost:8888` |
 | Supermemory | `SUPERMEMORY_BASE_URL` | `http://localhost:6767` |
 
 Judged runs send evaluation content to Anthropic and need `ANTHROPIC_API_KEY`. They are on by

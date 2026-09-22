@@ -19,12 +19,12 @@ and applies the measures that turn those records into named values. (A memory is
 of system it evaluates; `System` below names the others.)
 
     import memrank
-    from memrank.evaluations import Demo
+    from memrank.evaluations import SQuAD
 
     class MyMemory(memrank.Memory):
         ...                                        # the four verbs its kind requires
 
-    result = Demo().run(system=MyMemory())
+    result = SQuAD().run(system=MyMemory())
     result.values                                  # named values, each with its decider
     result.traces                                  # one per task per attempt, always
 
@@ -33,11 +33,11 @@ Seven things, and nothing else has to be learned:
 - **system** -- the thing under test. Subclass the kind it is: ``Memory`` (tell it things, ask
   it for what is relevant, clear on request), ``Model``, ``Retriever`` or ``Assistant``. The
   required verbs are abstract; the optional declarations return ``None`` until you say.
-  ``memrank.systems.WordOverlap()`` is one memrank ships, and
-  ``memrank.system("word-overlap")`` is the same class by its catalog name.
+  ``memrank.systems.TFIDF()`` is one memrank ships, and
+  ``memrank.system("tfidf")`` is the same class by its catalog name.
 - **evaluation** -- a named, versioned bundle: its tasks, the measures it ships with, and the
-  rule for when state is cleared. ``memrank.evaluations.Demo()`` builds one from an in-tree
-  benchmark, ``memrank.evaluation("demo")`` does the same by name, and
+  rule for when state is cleared. ``memrank.evaluations.SQuAD()`` builds one from an in-tree
+  benchmark, ``memrank.evaluation("squad")`` does the same by name, and
   ``memrank.Evaluation(...)`` is the same object, written by hand.
 - **task** -- one thing to put to the system: the context, the prompt, what is expected.
 - **trace** -- everything observed while one task ran. Exactly one per task per attempt,

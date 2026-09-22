@@ -1,7 +1,7 @@
 ---
 title: "Memrank -- Public Specification"
 status: active
-last_reviewed: 2026-08-26
+last_reviewed: 2026-09-22
 audience: external
 public_repo: https://github.com/atomicstrata/memrank
 license: Apache 2.0
@@ -10,9 +10,9 @@ maintainer: AtomicStrata (vendor-neutral charter)
 
 # Memrank -- Public Specification
 
-**One line:** an open, vendor-neutral instrument for evaluating AI-agent memory engines
-head-to-head on standard datasets, across quality, latency, cost and token efficiency, with
-everything needed to re-run each number attached to it.
+**One line:** Memrank is a tool for reproducible, auditable evaluation of memory systems. It puts
+a system you supply to standard evaluations, measures quality, latency, cost and token efficiency,
+and attaches to each number everything needed to re-run it.
 
 This document is the canonical statement of what memrank measures, what it refuses to claim, the
 contracts a contribution must satisfy, and the governance the maintainer commits to. It is the
@@ -58,8 +58,8 @@ one of your own, is [`docs/measures.md`](measures.md).
 
 `WordMatch` asks whether the expected spans appear verbatim in something the system recalled: a
 retrieval proxy, never answer correctness, and it says so on every value it produces. `Latency`
-reports p50 and p95 per step over timings memrank took at its own call boundary, never a figure an
-engine reported about itself (section 4), each with the sample count it was taken over.
+reports p50 and p95 per step over timings memrank took at its own call boundary, never a figure a
+system reported about itself (section 4), each with the sample count it was taken over.
 `BenchmarkScore` applies a named in-tree evaluation's own scoring, including the per-category
 breakdown where that evaluation has one (section 5.1).
 
@@ -92,11 +92,13 @@ line's word, resolved from a manifest and told apart by `config_hash`. An engine
 configurations is two targets and two rows. The catalog of targets, and the rest of the command
 line's vocabulary, is [`docs/misc/command-line.md`](misc/command-line.md).
 
-Systems ship for `atomicmemory`, `mem0`, `hindsight` and `supermemory`, plus the control arms
-`no-context`, `fixed-context`, `full-context` and `word-overlap`; `memrank.catalog()` prints them
-and `memrank.systems` holds them as classes. Not every engine image is obtainable, and the ones
-that are not are named as such: see [engine images](misc/engine-images.md). Evaluations ship for
-`locomo`, `beam`, `longmemeval`, `relation_graph` and the synthetic `demo`.
+Systems ship for the services `atomicmemory`, `mem0`, `hindsight` and `supermemory`, for any
+translator of the system contract through `native`, and in-process for `tfidf`, `bm25` and the
+`word-overlap` memory floor, beside the control arms `no-context`, `fixed-context` and
+`full-context`; `memrank.catalog()` prints them and `memrank.systems` holds them as classes. Not
+every engine image is obtainable, and the ones that are not are named as such: see
+[engine images](misc/engine-images.md). Evaluations ship for `squad`, the synthetic `demo`,
+`relation_graph`, `locomo`, `longmemeval` and `beam`.
 
 ### 2.3 Control arms are part of the measurement
 
@@ -124,10 +126,13 @@ corpus whose answers cluster late disadvantages it, and `no-context` is only mea
 
 This section is normative. A consumer of memrank output that ignores it will misreport.
 
-**`composite` is not answer correctness.** It is whatever the benchmark declares. LoCoMo,
-LongMemEval and `demo` compute a deterministic substring-recall proxy; `relation_graph` computes a
-structural graph score; BEAM's gold answers are prose, so substring recall is structurally near
-zero for it and is not a quality signal at all.
+**`composite` is not answer correctness.** It is whatever the benchmark declares in
+`quality_metric`. `squad` computes full-passage retrieval recall (`passage_recall`), not
+answer-span or end-to-end answer correctness; `demo` computes a deterministic substring-recall
+proxy; `relation_graph` computes a structural graph score. LoCoMo, LongMemEval and BEAM declare
+judged metrics and compute no proxy at all: their gold answers are derived or written as prose
+rubrics, so substring recall would be near zero for reasons that have nothing to do with the
+system, and without a judge they report latency and failures only.
 
 **Structurally invalid metrics are withheld, not caveated.** Each benchmark declares
 `substring_recall_supported` and `composite_rankable`. Where the composite is not rankable without
@@ -145,13 +150,13 @@ declare `context_policy = "uncapped"`, and two do -- BEAM and LongMemEval -- bec
 those is not those benchmarks. What is enforced is that the policy applies to every arm alike and
 travels in the receipt, so a capped and an uncapped run cannot be mistaken for each other later.
 
-**Absent is not zero.** An engine reporting no token usage records `null`. `0.0` is the claim that
-it spent nothing, and conflating the two fabricates an efficiency win for every engine that stays
+**Absent is not zero.** A system reporting no token usage records `null`. `0.0` is the claim that
+it spent nothing, and conflating the two fabricates an efficiency win for every system that stays
 quiet.
 
 **A slice is not a measurement.** `beam:100k-smoke`, `locomo:mini` and their kin take the *first*
 N units, which is not a fair sample: measured on a full judged BEAM 100k tier, conversation 1
-scores 0.318 against 0.158 for the tier -- a smoke number flatters every engine by roughly 2x.
+scores 0.318 against 0.158 for the tier -- a smoke number flatters every system by roughly 2x.
 Slices exist to debug ingest, retrieval, judging and dispatch cheaply. A measurement claim comes
 from a full tier.
 
@@ -175,7 +180,7 @@ contract, including the metadata and engine-description surfaces, is
 | `memrank.Retriever` | given a query, orders its own corpus | `rank` |
 | `memrank.Assistant` | given messages, answers however it likes | `respond` |
 
-`Memory` is the kind a memory engine implements, and these four verbs are the whole of it:
+`Memory` is the kind a memory system implements, and these four verbs are the whole of it:
 
 <!-- runnable: no -- an interface sketch: the ABC, its imports and its `...` bodies are the contract this section states, not a script -->
 ```python
@@ -244,8 +249,8 @@ declaration is recorded as the system's word rather than as memrank's finding:
 
 A system **may** be written in any language and live outside this repository. A **translator**
 speaks the same contract over HTTP; memrank launches it, drives it, and never imports it.
-[`examples/native-adapter/`](../examples/more/native-adapter/README.md) is a working one in about 150 lines
-of standard-library Python.
+[`examples/more/native-adapter/`](../examples/more/native-adapter/README.md) is a working one in about
+200 lines of standard-library Python.
 
 > **The operator layer.** `MemoryAdapter` and `MemoryEngine` are the same class object as
 > `memrank.Memory` under its previous names, so `isinstance` checks and every registered adapter
@@ -385,7 +390,7 @@ conflict of interest and the charter exists to make it checkable rather than to 
 
 ### 7.1 Open contribution
 
-Anyone may submit an adapter or a benchmark by pull request. There is no approval gate beyond
+Anyone may submit a system or an evaluation by pull request. There is no approval gate beyond
 review for correctness and conformance to section 4 and section 5. An engine can also be measured with no pull
 request at all, through an out-of-tree translator.
 
@@ -425,9 +430,11 @@ independent stewardship after that if adoption justifies it. Neither is claimed 
 
 - **Repository:** https://github.com/atomicstrata/memrank
 - **License:** Apache 2.0 -- chosen for the patent grant and enterprise compatibility.
-- **Install:** `uv tool install memrank`, from PyPI. Contributors install from source instead:
-  `uv tool install git+https://github.com/atomicstrata/memrank` installs the same tool from the
-  public repository.
+- **Install:** `uv add memrank` (or `pip install memrank`) into your own project, from PyPI:
+  memrank is a library, and [installing memrank](install.md) is the whole procedure. The
+  `memrank` command line is not core and is installed as described in
+  [the command line](misc/command-line.md); contributors work from a clone, per
+  [local development](local-development.md).
 - **Results:** run output is written under `results/` on the machine that ran it. There is no
   standing public leaderboard, and this specification does not authorise one; publication is
   selective and evidence-led.

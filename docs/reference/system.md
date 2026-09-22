@@ -4,14 +4,29 @@ A **system** is the thing under test: a memory backend you run as a service, a c
 around your own store, or one of the systems that ship with the package.
 
 ```python
-from memrank.systems import WordOverlap
+from memrank.systems import TFIDF
 
-system = WordOverlap()
+system = TFIDF()
 print(system.name, system.version)
 ```
 
-[`WordOverlap`](../systems/word-overlap.md) ranks documents by how many words they share with
-the query. It needs no engine, no network and no key.
+[`TFIDF`](../systems/tfidf.md) ranks documents by the words they share with the query, weighted
+by how rare each word is. It needs no engine, no network and no key.
+
+## System and engine
+
+A **system** is the object memrank drives and measures. An **engine** is the external service or
+library a system talks to: the vendor's running product, not the system itself.
+
+- `TFIDF` has no engine. It is pure Python running in your own process, so the system is all
+  there is.
+- AtomicMemory is an engine: a service AtomicStrata runs, with its own HTTP API. The system is
+  [`memrank.systems.AtomicMemory`](../systems/atomicmemory.md), the class that drives that
+  service -- sends it documents, asks it for what is relevant, and clears it.
+
+So a result names a system, and an engine appears only as what a system reports about the
+service behind it -- its engine version, what a provider billed it. A system you write may wrap
+an engine or be the whole of the thing, and memrank measures it the same way either way.
 
 ## The four kinds
 
@@ -21,8 +36,8 @@ A system's **kind** is the class you subclass, so a kind cannot be declared wron
 |---|---|---|
 | `memrank.Memory` | told things, asked later for what is relevant | `prepare`, `ingest`, `retrieve`, `cleanup` |
 | `memrank.Model` | given a prompt, returns text | `complete` |
-| `memrank.Retriever` | given a query and candidates, orders them | `rank` |
-| `memrank.Assistant` | given a prompt, answers it however it likes | `respond` |
+| `memrank.Retriever` | given a query, returns the top `k` of a corpus it already holds; nothing is told to it | `rank` |
+| `memrank.Assistant` | given a list of `role`/`content` messages, replies however it likes | `respond` |
 
 Those verbs are the whole of what a kind requires. Memrank times every ingest and retrieve at
 its own call boundary, so latency is neither your job nor something your system could flatter.
@@ -43,18 +58,19 @@ token instrumentation.
 
 ```python
 import memrank
-from memrank.systems import NoContext, WordOverlap
+from memrank.systems import TFIDF, NoContext
 
-print(WordOverlap().name, NoContext().name)
-print(memrank.system("word-overlap").name)          # the same thing, by string
-print(isinstance(WordOverlap(), memrank.Memory))    # its kind, which the class decides
+print(TFIDF().name, NoContext().name)
+print(memrank.system("tfidf").name)          # the same thing, by string
+print(isinstance(TFIDF(), memrank.Memory))   # its kind, which the class decides
 ```
 
 - `memrank.System` -- the base every kind derives from; what `result.system` describes.
 - `memrank.Memory`, `memrank.Model`, `memrank.Retriever`, `memrank.Assistant` -- the four kinds
   you subclass.
-- `memrank.systems` -- the module holding what ships: `WordOverlap`, `NoContext`,
-  `FixedContext`, `FullContext`, `AtomicMemory`, `Hindsight`, `Supermemory`, `Mem0`, `Native`.
+- `memrank.systems` -- the module holding what ships: `TFIDF`, `BM25`, `WordOverlap`,
+  `NoContext`, `FixedContext`, `FullContext`, `AtomicMemory`, `Hindsight`, `Supermemory`,
+  `Mem0`, `Native`.
 - `memrank.system("<name>")` -- the same things by string, which is the form a config file has.
 - `memrank.Document` and `memrank.Recall` -- what `ingest` is given and what `retrieve` returns.
 

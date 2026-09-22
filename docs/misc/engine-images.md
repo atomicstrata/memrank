@@ -19,11 +19,11 @@ It is stated per target because the answer differs per target, and two of the fo
 |---|---|---|---|
 | `hindsight`, `hindsight:matched` | `ghcr.io/vectorize-io/hindsight:0.6.2` | **Yes** -- the vendor's own published image, anonymous pull | the same bytes we measured |
 | `atomicmemory` | `ghcr.io/atomicstrata/atomicmemory-core:latest` | **Yes** -- public package, anonymous pull | the same bytes we measured |
-| `supermemory` | built from a recipe; no registry serves it | **You build it** -- [`examples/supermemory-image/`](../../examples/more/supermemory-image/README.md) | the same recipe, your own build |
+| `supermemory` | built from a recipe; no registry serves it | **You build it** -- [`examples/more/supermemory-image/`](../../examples/more/supermemory-image/README.md) | the same recipe, your own build |
 | `mem0` | a patched fork, built privately | **No** | mem0's own server, run by you |
 
-The control arms -- `no-context`, `fixed-context`, `full-context` -- and the `word-overlap`
-baseline carry no image and no credential. They run in-process on a fresh machine with nothing
+The control arms -- `no-context`, `fixed-context`, `full-context` -- and the in-process memory
+floors `tfidf`, `bm25` and `word-overlap` carry no image and no credential. They run in-process on a fresh machine with nothing
 installed, which is why every comparison here can be reproduced at least in part by anyone.
 
 Both anonymous pulls in the table were re-checked on 2026-09-02.
@@ -91,7 +91,7 @@ only self-hostable artifact that speaks the adapter's API is the prebuilt `super
 binary, and that binary is **closed-source**. We may not hand it on, so the container we built is
 not distributed.
 
-What ships instead is the build: [`examples/supermemory-image/`](../../examples/more/supermemory-image/README.md)
+What ships instead is the build: [`examples/more/supermemory-image/`](../../examples/more/supermemory-image/README.md)
 is the Dockerfile our own image was built from. It fetches the binary at *your* build time from the
 vendor's own public installer, so nothing is redistributed and what lands on your machine comes
 from supermemory.

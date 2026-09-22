@@ -83,6 +83,7 @@ mine = Evaluation(name=demo.name, version=demo.version, tasks=demo.tasks,
 print(mine.run(system=WordOverlap()))
 ```
 
+<!-- output: exact -->
 ```console
 system:     WordOverlap (memory), version None
 evaluation: demo at memrank-demo@v1+def0, 5 task(s), cleared per-group
@@ -175,7 +176,7 @@ with nobody having judged it. Which model, at what cost and under which egress r
 [`docs/methodology.md`](methodology.md)'s.
 
 **`Latency`** reports p50 and p95 per step, over the timings memrank took at its own call
-boundary -- never a figure an engine reported about itself. Each value carries the sample count
+boundary -- never a figure a system reported about itself. Each value carries the sample count
 it was taken over, because a percentile over three samples is a different object from one over
 three hundred. It is reported, never ranked and never asserted on.
 

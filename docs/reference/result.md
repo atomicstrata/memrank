@@ -15,6 +15,7 @@ for value in result.values_of("word-match"):
 print(len(result.traces), "traces,", sum(1 for t in result.traces if t.error), "with errors")
 ```
 
+<!-- output: exact -->
 ```console
 WordOverlap | memory | demo
 q_job          1.0  decided by rule

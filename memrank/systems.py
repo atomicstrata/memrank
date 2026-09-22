@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The systems memrank ships, as classes -- `from memrank.systems import WordOverlap`.
+"""The systems memrank ships, as classes -- `from memrank.systems import TFIDF`.
 
-`memrank.system("word-overlap")` needs the string first, and a string is not navigable: nothing
+`memrank.system("tfidf")` needs the string first, and a string is not navigable: nothing
 in an editor follows it, and nothing tells a reader what else is out there. Here the same
 systems are Python names, so "go to definition" lands on the class, hover shows its docstring,
 and autocomplete lists the catalog.
 
-Each name below is the class's own name: `memrank/adapters/` defines `WordOverlap`, and this
+Each name below is the class's own name: `memrank/adapters/` defines `TFIDF`, and this
 module re-exports it. The suffixed spellings those classes used to carry -- `WordOverlapAdapter`
 and its eight siblings -- remain importable from `memrank.adapters` as deprecated aliases of the
 same class objects, so nothing is duplicated, every registered adapter keeps working, and the

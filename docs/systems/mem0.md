@@ -45,5 +45,5 @@ Either a running mem0 server -- its address from `base_url=` or `MEM0_HTTP_URL`,
 - [mem0ai/mem0](https://github.com/mem0ai/mem0) -- the engine, Apache-2.0 licensed.
 - [mem0ai/memory-benchmarks](https://github.com/mem0ai/memory-benchmarks) -- the vendor's own
   harness, where its published settings are stated.
-- [Methodology](../methodology.md) -- why a word-match measure is not a quality metric for an
-  engine that paraphrases.
+- [Methodology](../methodology.md) -- why a word-match measure is not a quality metric for a
+  system that paraphrases.

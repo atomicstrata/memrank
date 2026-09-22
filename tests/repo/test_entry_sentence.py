@@ -26,7 +26,8 @@ both directions -- present, and the retired one absent -- because a surface that
 sentence and keeps calling memrank a benchmark suite has half-landed and reads as landed.
 
 `pyproject.toml` is the fourth surface, and it is what PyPI renders, so it carries the sentence
-and the word too.
+and the word too. `docs/SPEC.md`'s "One line" is the fifth: the specification calls itself the
+document to cite in a dispute about method, so the line a citer quotes says the same thing.
 
 The sentence pinned here is the maintainer's own, recorded in direction decision 0011 and landed
 by ATO-2249: *"Memrank is a tool for reproducible, auditable evaluation of memory systems."* It
@@ -86,8 +87,21 @@ def _package_docstring() -> str:
     return _normalised(memrank.__doc__)
 
 
+def _spec_one_line() -> str:
+    """`docs/SPEC.md`'s "One line:" paragraph -- the sentence a reader citing the spec quotes.
+
+    SPEC calls itself the document to cite in a disagreement about method, and it went on
+    calling memrank "an instrument for evaluating AI-agent memory engines" after the three
+    surfaces above had moved to decision 0011's sentence, because it was not one of them.
+    """
+    text = (ROOT / "docs" / "SPEC.md").read_text(encoding="utf-8")
+    paragraph = text.split("**One line:**", 1)[1].split("\n\n", 1)[0]
+    return _normalised(paragraph)
+
+
 SURFACES = {
     "README.md": _readme_entry,
+    "docs/SPEC.md": _spec_one_line,
     "memrank/__init__.py": _package_docstring,
     "memrank --help": lambda: _normalised(_APP_HELP),
 }

@@ -36,7 +36,9 @@ print(result)
 weighted by how rare each word is, and it ships with the package.
 [`SQuAD`](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations/squad.md) supplies
 32 bundled passages and 64 questions. This measures full-passage retrieval recall, not
-answer-span or end-to-end answer correctness. Neither needs an engine, a key or the network.
+answer-span or end-to-end answer correctness. Neither needs an
+[engine](https://github.com/atomicstrata/memrank/blob/main/docs/reference/system.md#system-and-engine),
+a key or the network.
 [Installing memrank](https://github.com/atomicstrata/memrank/blob/main/docs/install.md) covers uv,
 Python versions and upgrading.
 
@@ -186,7 +188,8 @@ where it lives.
 Memrank is maintained by [AtomicStrata](https://atomicstrata.ai) under a vendor-neutral charter:
 anyone may submit a system, results are published as measured, and methodology changes go through
 public proposal and comment. The commitments are in
-[SPEC.md section 5](https://github.com/atomicstrata/memrank/blob/main/docs/SPEC.md). AtomicStrata
+[SPEC.md section 7](https://github.com/atomicstrata/memrank/blob/main/docs/SPEC.md#7-governance----the-vendor-neutral-charter).
+AtomicStrata
 also ships a memory engine, AtomicMemory, which this tool evaluates and which has placed below a
 no-memory control arm in our own runs -- which is why the floor and the ceiling above are in the
 package rather than in a report of ours.

@@ -14,6 +14,10 @@ cd memrank
 uv sync --extra dev
 ```
 
+The repository is public, so cloning needs no credential. To use this checkout from a project of
+your own instead of the released package, add it from that project:
+`uv add --editable ../memrank`.
+
 `uv sync --locked --extra dev` installs the exact versions in `uv.lock` and fails rather than
 resolving anything fresh. Use it when you want this repository's resolution rather than today's:
 reproducing a published result, or bisecting a failure that may be a dependency's.
@@ -27,7 +31,6 @@ Optional extras, each added to the same environment:
 
 ```bash
 uv sync --extra dev --extra mem0          # the Mem0 SDK, for the SDK-backed `Mem0` system
-uv sync --extra dev --extra benchmarks    # dataset loaders
 uv sync --extra dev --extra mcp           # the MCP server (`memrank-mcp`)
 ```
 
@@ -94,7 +97,7 @@ default:
 ```bash
 export ATOMICMEMORY_API_URL=http://localhost:3070
 export MEM0_HTTP_URL=http://localhost:8888
-export HINDSIGHT_API_URL=http://localhost:7000
+export HINDSIGHT_API_URL=http://localhost:8888
 export SUPERMEMORY_BASE_URL=http://localhost:6767
 
 uv run memrank submit atomicmemory locomo:smoke --on none
@@ -112,8 +115,8 @@ uv run memrank submit atomicmemory beam:100k-smoke --judge
 ```
 
 Datasets download on first use and cache under `MEMRANK_CACHE_DIR`. Each loader also honours a
-local path override -- `LOCOMO_DATA_PATH`, `BEAM_DATA_PATH`, `LONGMEMEVAL_DATA_PATH`,
-`DEMO_DATA_PATH` -- so you can point one at a copy you already have.
+local path override -- `SQUAD_DATA_PATH`, `LOCOMO_DATA_PATH`, `BEAM_DATA_PATH`,
+`LONGMEMEVAL_DATA_PATH`, `DEMO_DATA_PATH` -- so you can point one at a copy you already have.
 
 Run output lands under `results/`, which is gitignored.
 
@@ -136,14 +139,28 @@ has to pass. During iteration, run the focused suite for what you touched:
 | latency or token collection | `uv run pytest tests/instrumentation/` |
 | the CLI or the runner | `uv run pytest tests/cli/test_runner_help.py`, plus the command by hand |
 | judging | `uv run pytest tests/judging/` |
-| documentation | `uv run pytest tests/repo/test_doc_links.py tests/repo/test_docs_teach_the_current_cli.py` |
+| documentation | `uv run pytest tests/repo/` |
 | a core contract in `memrank/core.py` | everything |
 
-Two documentation gates are worth knowing about before they fail on you.
-`tests/repo/test_doc_links.py` asserts every relative markdown link resolves.
-`tests/repo/test_docs_teach_the_current_cli.py` walks every command in every doc and script and
-fails when one teaches a flag or verb the CLI has retired, so a document cannot go on telling a
-reader to type something that exits 2.
+The documentation guards in `tests/repo/` check two things, and are worth knowing about before
+they fail on you.
+
+- **Form.** Every relative link and anchor resolves (`test_doc_links.py`,
+  `test_doc_anchors_resolve.py`, `test_readme_links_are_absolute.py`); every Python block runs
+  (`test_runnable_blocks.py`); no document teaches a retired command, flag
+  (`test_docs_teach_the_current_cli.py`) or Python name (`test_python_vocabulary.py`); and the
+  entry surfaces carry the one-line definition (`test_entry_sentence.py`).
+- **Claims.** A `console` fence marked `<!-- output: exact -->` is what its block prints
+  (`test_console_fences_match_output.py`); a count or list of what ships is the registry's
+  (`test_prose_matches_the_catalog.py`); the quick-start pair is
+  `memrank.instrument.catalog.QUICK_START` wherever it is named
+  (`test_the_quick_start_is_named_once.py`); a `memrank <verb>` named in prose exists
+  (`test_prose_commands_exist.py`); and a documented service address is the code's default
+  (`test_documented_defaults_match_the_code.py`).
+
+The claim guards read fixed shapes of sentence, so they do not replace reading. When a change
+demotes a name, changes what ships or changes a method, search the published tree for the old
+fact and read every hit -- not only the pages the change is about.
 
 ## Where things live
 
@@ -184,7 +201,7 @@ than asking you to trust that someone did.
 - **An evaluation of your own** -- [adding an evaluation](evaluations.md), the same way.
 - **A system, without writing Python at all** -- write a translator that speaks the
   [system contract](system-contract.md) over HTTP, in any language.
-  [`examples/native-adapter/`](../examples/more/native-adapter/README.md) is a working one.
+  [`examples/more/native-adapter/`](../examples/more/native-adapter/README.md) is a working one.
 
 A change that affects how anything is scored needs a matching change to
 [methodology.md](methodology.md). A scoring change nobody can see in the documentation is the

@@ -177,7 +177,8 @@ says nobody counted rather than claiming the system spent zero.
 **Internal timing** is the second, narrower declaration: `declared_latency()` -- or the
 kind-neutral `declared_timings()` -- for time only your system can see inside the hop memrank
 measured around it, a translator's `engine_ms`. Return SAMPLES per bucket, in milliseconds, never
-percentiles: the run puts them on the [trace](reference/trace.md) as `engine_timings`, and a
+percentiles: the run puts them on the [trace](reference/trace.md) at
+`trace.declared.engine_timings`, and a
 tracked run pools them across the systems a `workers > 1` run builds and renders
 `<bucket>_p50_ms` / `<bucket>_p95_ms` itself, so a run at any width reports the same statistic of
 the same population. The conventional buckets are `ingest_engine` and `retrieve_engine`. A bucket
@@ -260,8 +261,8 @@ REGISTRY["myengine"] = MyAdapter
 
 ### 4. Make it a target (stack engines)
 
-A registered class alone only supports `--adapter myengine` against a backend you stood up
-yourself. For `memrank submit myengine ... --on local|cloud` to launch the engine, every
+A registered class alone is reachable from Python -- `memrank.system("myengine")` -- against a
+backend you stood up yourself. For `memrank submit myengine ... --on local|cloud` to launch the engine, every
 chokepoint below needs an entry -- each fails loudly, or is covered by an enumeration test, when
 missing. `hindsight` is the worked example to mirror: its image is the vendor's own
 (`ghcr.io/vectorize-io/hindsight`, anonymous pull), so every file below is one you can read and
@@ -350,8 +351,8 @@ target-creation command: author and review the central YAML directly.
 
 This form requires an adapter that already knows the engine's wire protocol -- it is how a *fork*
 of a known engine is evaluated. For an engine memrank has never seen, use `adapter: native` and
-point `launch.command` at a translator instead; see [system-contract.md](system-contract.md)
-section 9.
+point `launch.command` at a translator instead; see
+[system-contract.md section 9](system-contract.md#9-declaring-a-target).
 
 ### 5. Run the conformance suite
 

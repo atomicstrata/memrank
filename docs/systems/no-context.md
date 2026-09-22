@@ -17,7 +17,7 @@ answers closed-book.
 ## Why it matters
 
 It bounds the question from below. If a model answers as well with no memory at all, the
-[result](../reference/result.md) for an engine on that [evaluation](../reference/evaluation.md)
+[result](../reference/result.md) for a system on that [evaluation](../reference/evaluation.md)
 says nothing about memory -- the questions were answerable without it.
 
 One honest limit: it is only meaningful on a judged [measure](../reference/measure.md). Measured
@@ -30,7 +30,7 @@ Nothing. No service, no network, no key, no download.
 
 ## References
 
-- [Methodology](../methodology.md) -- the three controls, why each belongs beside an engine, and
+- [Methodology](../methodology.md) -- the three controls, why each belongs beside a system, and
   the published names for this condition.
 - [Roberts et al., EMNLP 2020](https://aclanthology.org/2020.emnlp-main.437/) -- the same
   condition under the field's older name, *closed-book*.
