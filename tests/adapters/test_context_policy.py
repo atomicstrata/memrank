@@ -99,11 +99,11 @@ def test_unranked_arms_report_no_rank_cut_metrics():
     rank -- and scoring anyway produced 0.0 for the two arms that retrieved EVERYTHING. The
     official harness excludes its long-context modes from retrieval scoring by construction.
     """
-    from memrank.adapters.controls import FixedContextAdapter, FullContextAdapter
+    from memrank.adapters.controls import FixedContext, FullContext
     from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
 
-    assert FixedContextAdapter.ranks_results is False
-    assert FullContextAdapter.ranks_results is False
+    assert FixedContext.ranks_results is False
+    assert FullContext.ranks_results is False
 
     rolled = LongMemEvalBenchmark().rollup(
         [{"retrieval": {"recall_all@5": 0.0, "recall_all@10": 0.0,
@@ -115,10 +115,10 @@ def test_unranked_arms_report_no_rank_cut_metrics():
 
 
 def test_a_ranking_arm_still_reports_them():
-    from memrank.adapters.word_overlap import WordOverlapAdapter
+    from memrank.adapters.word_overlap import WordOverlap
     from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
 
-    assert WordOverlapAdapter.ranks_results is True
+    assert WordOverlap.ranks_results is True
 
     rolled = LongMemEvalBenchmark().rollup(
         [{"retrieval": {"recall_all@5": 1.0, "recall_all@10": 1.0,

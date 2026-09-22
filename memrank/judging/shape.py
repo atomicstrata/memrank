@@ -24,7 +24,7 @@ where there was one, and a mean where there was a boolean. There was nowhere to 
 judge path is benchmark-agnostic by construction, so the only way to express it was to branch on
 benchmark name inside the runner -- which is the thing this seam exists to prevent.
 
-`docs/adding-benchmarks.md` told benchmark authors to accept an injectable `judge` callable, and
+`docs/evaluations.md` told benchmark authors to accept an injectable `judge` callable, and
 `memrank/benchmarks/beam.py` promised the same. Neither existed. This is that promise, made real
 and made narrower: a benchmark declares its shape, and the runner asks the shape both what a query
 COSTS and what grading one YIELDS. The cost half matters as much as the grading half -- a preflight

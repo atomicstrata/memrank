@@ -18,10 +18,11 @@ in an editor follows it, and nothing tells a reader what else is out there. Here
 systems are Python names, so "go to definition" lands on the class, hover shows its docstring,
 and autocomplete lists the catalog.
 
-Each name below is the SAME class object as the adapter it names --
-``memrank.systems.WordOverlap is memrank.adapters.WordOverlapAdapter`` -- so nothing is
-duplicated, every registered adapter keeps working, and the command line keeps the older
-spellings it prints.
+Each name below is the class's own name: `memrank/adapters/` defines `WordOverlap`, and this
+module re-exports it. The suffixed spellings those classes used to carry -- `WordOverlapAdapter`
+and its eight siblings -- remain importable from `memrank.adapters` as deprecated aliases of the
+same class objects, so nothing is duplicated, every registered adapter keeps working, and the
+command line keeps the older spellings it prints.
 
 ============  =======  ===============================================================
 name          kind     what it needs
@@ -34,7 +35,7 @@ AtomicMemory  memory   a running engine, at `base_url=` or ATOMICMEMORY_API_URL
 Hindsight     memory   a running engine, at `base_url=` or HINDSIGHT_API_URL
 Supermemory   memory   a running engine, at `base_url=` or SUPERMEMORY_BASE_URL
 Mem0          memory   the mem0 SDK, or a running engine at MEM0_HTTP_URL
-Native        memory   a running translator of memrank's adapter contract, NATIVE_API_URL
+Native        memory   a running translator of memrank's system contract, NATIVE_API_URL
 ============  =======  ===============================================================
 
 A control is not a memory system. It exists so a number has something to mean: a system that
@@ -44,15 +45,13 @@ trying to reach. `memrank.catalog()` prints this table at runtime.
 
 from __future__ import annotations
 
-from memrank.adapters.atomicmemory import AtomicMemoryAdapter as AtomicMemory
-from memrank.adapters.controls import FixedContextAdapter as FixedContext
-from memrank.adapters.controls import FullContextAdapter as FullContext
-from memrank.adapters.controls import NoContextAdapter as NoContext
-from memrank.adapters.hindsight import HindsightAdapter as Hindsight
-from memrank.adapters.mem0 import Mem0Adapter as Mem0
-from memrank.adapters.native import NativeAdapter as Native
-from memrank.adapters.supermemory import SupermemoryAdapter as Supermemory
-from memrank.adapters.word_overlap import WordOverlapAdapter as WordOverlap
+from memrank.adapters.atomicmemory import AtomicMemory
+from memrank.adapters.controls import FixedContext, FullContext, NoContext
+from memrank.adapters.hindsight import Hindsight
+from memrank.adapters.mem0 import Mem0
+from memrank.adapters.native import Native
+from memrank.adapters.supermemory import Supermemory
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.instrument.catalog import ShippedSystem
 
 #: The same table the module docstring carries, in the form `memrank.catalog()` prints. One
@@ -74,7 +73,7 @@ SHIPPED: tuple[ShippedSystem, ...] = (
     ShippedSystem("Mem0", "mem0", "memory",
                   "the mem0 SDK, or a running engine at MEM0_HTTP_URL"),
     ShippedSystem("Native", "native", "memory",
-                  "a running translator of memrank's adapter contract, at NATIVE_API_URL"),
+                  "a running translator of memrank's system contract, at NATIVE_API_URL"),
 )
 
 __all__ = [

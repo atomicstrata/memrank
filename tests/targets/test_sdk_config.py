@@ -275,9 +275,9 @@ class _SearchV2:
 
 
 def _kwargs_against(memory):
-    from memrank.adapters.mem0 import Mem0Adapter
+    from memrank.adapters.mem0 import Mem0
 
-    adapter = Mem0Adapter(mode="sdk")
+    adapter = Mem0(mode="sdk")
     adapter._memory = memory
     return adapter._search_kwargs(5, "run-abc")
 
@@ -308,7 +308,7 @@ def test_the_engine_version_is_known_before_prepare(monkeypatch):
 
     monkeypatch.setattr(mem0_mod, "_mem0_module",
                         lambda: type("m", (), {"__version__": "0.1.114"}))
-    adapter = mem0_mod.Mem0Adapter(mode="sdk")
+    adapter = mem0_mod.Mem0(mode="sdk")
 
     assert adapter.engine_version == "0.1.114"
 
@@ -320,6 +320,6 @@ def test_http_mode_still_reports_the_container_tag(monkeypatch):
 
     monkeypatch.setattr(mem0_mod, "_mem0_module",
                         lambda: type("m", (), {"__version__": "0.1.114"}))
-    adapter = mem0_mod.Mem0Adapter(mode="http")
+    adapter = mem0_mod.Mem0(mode="http")
 
     assert adapter.engine_version != "0.1.114"

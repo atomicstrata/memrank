@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Client for memrank's own translator contract (``docs/adapter-contract.md``).
+"""Client for memrank's own translator contract (``docs/system-contract.md``).
 
 Every other adapter in this package wraps ONE engine's API. This one wraps no engine at all: it
 speaks a contract memrank publishes, and whoever is on the other end forwards to their own system
@@ -41,7 +41,7 @@ from typing import Any
 import httpx
 
 from memrank.adapters import errors as adapter_errors
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.docs import doc_url
 from memrank.errors import MemrankError
 from memrank.instrumentation import LatencyCollector, TokenCollector
@@ -58,11 +58,11 @@ CONTRACT_VERSION = "v1"
 _SECTIONS = ("adapter", "engine", "components", "capabilities")
 _ROLES = ("llm", "embedder")
 _CAPABILITIES = ("graph_snapshot", "context_budget")
-_CONTRACT_DOC = doc_url("adapter-contract.md")
+_CONTRACT_DOC = doc_url("system-contract.md")
 
 
 class ContractError(MemrankError):
-    """A translator violated the adapter contract."""
+    """A translator violated the system contract."""
 
 
 def _error_message(response: httpx.Response) -> str:
@@ -163,8 +163,8 @@ def _require_capabilities(capabilities: dict[str, Any]) -> None:
             f"arms.")
 
 
-class NativeAdapter(MemoryAdapter):
-    """Drives any translator implementing the memrank adapter contract.
+class Native(Memory):
+    """Drives any translator implementing the memrank system contract.
 
     The base URL comes from the ``base_url`` argument or ``NATIVE_API_URL``, which the placement
     sets to the address it launched the translator on.
@@ -378,3 +378,10 @@ class NativeAdapter(MemoryAdapter):
 
     def token_metrics(self) -> dict[str, float | None]:
         return self.tokens.as_metrics()
+
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+NativeAdapter = Native

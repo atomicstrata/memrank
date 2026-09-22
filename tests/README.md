@@ -14,11 +14,13 @@ A rule is executable when two people reading it put a new file in the same direc
 
 | Directory | A file belongs here iff |
 |---|---|
-| `adapters/` | its subject is an adapter's behavior against the `MemoryAdapter` contract, with no live backend |
+| `adapters/` | its subject is a shipped system's behavior against the `Memory` contract (`memrank/instrument/kinds.py`), with no live backend |
 | `application/` | it drives `memrank.application.*` (submission, planning, catalogs) |
-| `benchmarks/` | its subject is a `Benchmark` implementation: loading, scoring, or a methodology claim |
+| `benchmarks/` | its subject is a `Benchmark` implementation -- the operator layer a named evaluation resolves to -- loading, scoring, or a methodology claim |
 | `cli/` | it invokes a `memrank` command through Typer/`CliRunner` and asserts on the command surface |
+| `composition/` | its subject is `memrank.composition`: how several evaluations compose into one |
 | `core/` | its subject is a top-level module of the package: `core`, `config`, `settings`, `plugins`, `rate_limit`, `atomic_json`, or the shared fakes those contracts are exercised with |
+| `instrument/` | its subject is one of the seven as `memrank/instrument/` defines them: system, evaluation, task, trace, measure, run, result. A test about a **measure** or a **trace** belongs here, not in `metrics/` or `provenance/` |
 | `instrumentation/` | its subject is `LatencyCollector` / `TokenCollector` |
 | `judging/` | its subject is `memrank.judging.*`: the client, the prompts, the shape, the budget |
 | `live/` | see [the carve-out](#the-one-carve-out-live) below |
@@ -34,6 +36,13 @@ A rule is executable when two people reading it put a new file in the same direc
 | `tracking/` | its subject is the MLflow export/import path |
 | `internal/` | `publish.toml` classifies it internal, so it does not ship in the public projection |
 
+`instrument/` and `instrumentation/` are one letter apart and are about different things.
+`instrument/` is the seven words the Python interface is written in -- `memrank/instrument/`,
+where `Memory` is defined and where a measure, a trace and a result have their types.
+`instrumentation/` is the two collectors that gather latency and token samples during a run.
+A test that asks what a measure decides goes in the first; a test that asks how a sample is
+collected goes in the second.
+
 The tree, in full:
 
 ```text
@@ -41,9 +50,9 @@ tests/
   __init__.py  conftest.py  fakes.py  withheld.py
   fixtures/                          static data, never collected
 
-  adapters/  application/  benchmarks/  cli/  core/  instrumentation/  judging/
-  metrics/  orchestration/  placement/  provenance/  repo/  runs/  secrets/
-  targets/  term/  tracking/
+  adapters/  application/  benchmarks/  cli/  composition/  core/  instrument/
+  instrumentation/  judging/  metrics/  orchestration/  placement/  provenance/
+  repo/  runs/  secrets/  targets/  term/  tracking/
 
   live/                              the carve-out
     conformance/
@@ -57,9 +66,9 @@ by construction, and the other two are imported absolutely (`from tests.fakes im
 `from tests import withheld`) from a dozen directories, so neither belongs under any one of them.
 
 `withheld.py` is the one way a test says "this tree does not carry that builtin target". `mem0` and
-`supermemory` name engine images no outsider can pull (`docs/engine-images.md`), so the published
-package ships neither manifest, and a test written against one skips there with the reason stated
--- the same shape `live/` uses for an absent backend, and never a weakened assertion.
+`supermemory` name engine images no outsider can pull (`docs/misc/engine-images.md`), so the
+published package ships neither manifest, and a test written against one skips there with the
+reason stated -- the same shape `live/` uses for an absent backend, and never a weakened assertion.
 
 ## The one carve-out: `live/`
 

@@ -20,7 +20,7 @@ misleading partial table. No silent fallback.
 
 from __future__ import annotations
 
-from memrank.core import MemoryAdapter
+from memrank.core import Memory
 from memrank.errors import MemrankError
 
 _PROBE_ISOLATION = "__memrank_preflight__"
@@ -35,7 +35,7 @@ class PreflightError(MemrankError):
 _NO_ADDRESS = "<in-process>"
 
 
-def _remedies(adapter: MemoryAdapter) -> str:
+def _remedies(adapter: Memory) -> str:
     """What to do about an engine that is not answering, in this installation's own terms.
 
     Two remedies, named at the moment of failure: point memrank at the engine that IS running, or
@@ -54,7 +54,7 @@ def _remedies(adapter: MemoryAdapter) -> str:
             f"with `--on local`.")
 
 
-def preflight(adapter: MemoryAdapter) -> None:
+def preflight(adapter: Memory) -> None:
     """Probe ``adapter`` with a trivial retrieve; raise PreflightError on failure."""
     url = getattr(adapter, "base_url", _NO_ADDRESS)
     try:

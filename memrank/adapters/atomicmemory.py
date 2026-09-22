@@ -29,14 +29,14 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:3070"
 _DEFAULT_TIMEOUT_S = 60.0
 
 
-class AtomicMemoryAdapter(MemoryAdapter):
+class AtomicMemory(Memory):
     """HTTP adapter for an AtomicMemory backend.
 
     The base URL defaults to ``http://localhost:3070`` and can be overridden
@@ -276,7 +276,7 @@ class AtomicMemoryAdapter(MemoryAdapter):
         mutation_type = entry.get("mutation_type") or entry.get("mutationType")
         previous_version_id = entry.get("previous_version_id") or entry.get("previousVersionId")
         relations = []
-        relation = AtomicMemoryAdapter._mutation_relation(mutation_type)
+        relation = AtomicMemory._mutation_relation(mutation_type)
         if previous_version_id and relation:
             relations.append({
                 "parent_provider_memory_id": str(previous_version_id),
@@ -350,3 +350,10 @@ class AtomicMemoryAdapter(MemoryAdapter):
 
     def _effective_embedder(self) -> dict:
         return embedder_from_env(type(self).env_prefix)
+
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+AtomicMemoryAdapter = AtomicMemory

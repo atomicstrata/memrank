@@ -34,7 +34,7 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:6767"
@@ -49,7 +49,7 @@ _DEFAULT_TIMEOUT_S = 60.0
 _MAX_MEMORY_CHARS = 8000
 
 
-class SupermemoryAdapter(MemoryAdapter):
+class Supermemory(Memory):
     """HTTP adapter for local self-hosted Supermemory."""
 
     name = "supermemory"
@@ -306,3 +306,9 @@ class SupermemoryAdapter(MemoryAdapter):
                 })
         return out
 
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+SupermemoryAdapter = Supermemory

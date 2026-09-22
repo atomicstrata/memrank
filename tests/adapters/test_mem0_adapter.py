@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from memrank.adapters.mem0 import Mem0Adapter
+from memrank.adapters.mem0 import Mem0
 
 
 class _FakeResponse:
@@ -42,7 +42,7 @@ def test_http_search_sends_top_k_and_no_similarity_floor():
 
         omit -> 1 result    0 -> 0    0.0001 -> 0    0.5 -> 0    1 -> 0
     """
-    a = Mem0Adapter(mode="http")
+    a = Mem0(mode="http")
     a._client = _StubClient()  # type: ignore[assignment]
     a.prepare("u1")
     docs = a.retrieve("profession?", 9, "u1").documents
@@ -58,7 +58,7 @@ def test_sdk_search_scopes_user_top_k_and_permissive_threshold():
     """SDK mode must use the real mem0 search API: filters={user_id}, top_k,
     threshold (keyword-only). The old call passed user_id/limit, which the SDK
     silently swallows via **kwargs -> no user scoping, default top_k/threshold."""
-    a = Mem0Adapter(mode="sdk")
+    a = Mem0(mode="sdk")
     calls: dict[str, Any] = {}
 
     class _FakeMem:  # mirrors mem0.Memory.search's real keyword-only signature
@@ -78,5 +78,5 @@ def test_sdk_search_scopes_user_top_k_and_permissive_threshold():
 def test_transport_reflects_mode_not_hardcoded():
     """Reports must be honest about the integration surface: SDK mode is in-process
     (no HTTP overhead), so it must not mislabel itself as 'http' in the table."""
-    assert Mem0Adapter(mode="http").transport == "http"
-    assert Mem0Adapter(mode="sdk").transport == "sdk"
+    assert Mem0(mode="http").transport == "http"
+    assert Mem0(mode="sdk").transport == "sdk"

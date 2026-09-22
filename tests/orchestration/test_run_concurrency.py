@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.runner import run_cell
 from tests.fakes import MultiUnitFakeBenchmark
 
 
 def _run(workers: int) -> dict:
     return run_cell(
-        WordOverlapAdapter(), MultiUnitFakeBenchmark(n_units=3),
+        WordOverlap(), MultiUnitFakeBenchmark(n_units=3),
         k=10, repeats=1, run_id_prefix="run-c", model="gpt-4o-mini",
-        token_budget=5000, workers=workers, make_adapter=WordOverlapAdapter,
+        token_budget=5000, workers=workers, make_adapter=WordOverlap,
     ).to_dict()
 
 
@@ -46,5 +46,5 @@ def test_concurrent_units_stay_isolated():
 def test_workers_requires_factory():
     import pytest
     with pytest.raises(ValueError, match="make_adapter"):
-        run_cell(WordOverlapAdapter(), MultiUnitFakeBenchmark(2), k=10, repeats=1,
+        run_cell(WordOverlap(), MultiUnitFakeBenchmark(2), k=10, repeats=1,
                  run_id_prefix="r", model="gpt-4o-mini", token_budget=5000, workers=2).to_dict()

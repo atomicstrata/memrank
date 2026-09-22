@@ -46,12 +46,12 @@ INVALID_KEY_MARKER = "unused-by-supermemory"
 
 @pytest.fixture
 def adapter():
-    from memrank.adapters.supermemory import SupermemoryAdapter
+    from memrank.adapters.supermemory import Supermemory
 
     url = _backend_url("supermemory")
     if not _backend_reachable(url):
         pytest.skip(f"Supermemory not reachable at {url!r}")
-    built = SupermemoryAdapter()
+    built = Supermemory()
     built.prepare("llm-unused-probe")
     return built
 

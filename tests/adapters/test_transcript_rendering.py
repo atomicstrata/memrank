@@ -10,8 +10,8 @@ the only channel every engine shares.
 from __future__ import annotations
 
 from memrank.adapters import transcript
-from memrank.adapters.atomicmemory import AtomicMemoryAdapter
-from memrank.adapters.mem0 import Mem0Adapter
+from memrank.adapters.atomicmemory import AtomicMemory
+from memrank.adapters.mem0 import Mem0
 from memrank.core import Document
 
 _DATED = Document(
@@ -67,7 +67,7 @@ def test_roles_attribute_a_transcript_that_has_no_speakers():
 def test_atomicmemory_ingests_the_dated_transcript():
     """Any wire-compatible engine subclassing this adapter inherits the path, so the one
     assertion covers them too -- including subclasses outside this repository."""
-    text = AtomicMemoryAdapter._document_to_conversation_text(_DATED)
+    text = AtomicMemory._document_to_conversation_text(_DATED)
     assert "8 May, 2023" in text
     assert text == transcript.render(_DATED)
 
@@ -75,7 +75,7 @@ def test_atomicmemory_ingests_the_dated_transcript():
 def test_mem0_gets_the_date_on_its_first_turn_without_a_fabricated_speaker():
     """mem0 takes messages, not text, so the header rides on turn one -- the turn count
     stays honest and no invented speaker appears in the transcript."""
-    messages = Mem0Adapter._document_to_messages(_DATED)
+    messages = Mem0._document_to_messages(_DATED)
     assert len(messages) == 2                       # not 3: no synthetic header turn
     assert "8 May, 2023" in messages[0]["content"]
     assert messages[0]["content"].endswith("Caroline: I went to a support group.")

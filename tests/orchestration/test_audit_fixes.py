@@ -66,7 +66,7 @@ def test_judging_real_data_needs_no_second_flag():
 def test_mem0_default_mode_is_http_even_when_sdk_importable(monkeypatch):
     from memrank.adapters import mem0
     monkeypatch.setattr(mem0, "_try_import_mem0", lambda: object())  # pretend installed
-    assert mem0.Mem0Adapter().mode == "http"
+    assert mem0.Mem0().mode == "http"
 
 
 
@@ -192,9 +192,9 @@ def test_composite_display_withholds_when_unsupported():
 
 # P2: class-level transport is an honest sentinel; instance is concrete.
 def test_mem0_class_transport_is_neutral_sentinel():
-    from memrank.adapters.mem0 import Mem0Adapter
-    assert Mem0Adapter.transport == "mode-dependent"
-    assert Mem0Adapter(mode="http").transport == "http"
+    from memrank.adapters.mem0 import Mem0
+    assert Mem0.transport == "mode-dependent"
+    assert Mem0(mode="http").transport == "http"
 
 
 # === Review round 3 (codex) ================================================= #

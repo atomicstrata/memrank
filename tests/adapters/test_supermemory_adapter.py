@@ -4,7 +4,7 @@ from typing import Any
 
 import httpx
 
-from memrank.adapters.supermemory import SupermemoryAdapter
+from memrank.adapters.supermemory import Supermemory
 from memrank.core import Document
 
 _RAISE = object()
@@ -48,8 +48,8 @@ class _StubClient:
 
 def _adapter_with_stub(
     bodies: dict[tuple[str, str], Any] | None = None,
-) -> tuple[SupermemoryAdapter, _StubClient]:
-    adapter = SupermemoryAdapter(base_url="http://stub")
+) -> tuple[Supermemory, _StubClient]:
+    adapter = Supermemory(base_url="http://stub")
     stub = _StubClient(bodies or {})
     adapter._client = stub  # type: ignore[assignment]
     return adapter, stub
@@ -76,7 +76,7 @@ def test_normalize_memory_maps_relations_history_and_flags():
         "metadata": {"fixture_id": "relation/ambiguous-update/001"},
     }
 
-    normalized = SupermemoryAdapter._normalize_memory(raw)
+    normalized = Supermemory._normalize_memory(raw)
 
     assert normalized["provider_memory_id"] == "m-new"
     assert normalized["text"] == "Avery prefers green dashboards for planning reviews."

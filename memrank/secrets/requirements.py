@@ -110,7 +110,7 @@ def get_requirements(engine: str) -> EngineRequirements:
             f"no engine registered as {engine!r}; known: {', '.join(sorted(REQUIREMENTS))}. "
             f"If it is provided by a plugin, name that plugin's module in the `adapters.plugins` "
             f"setting (`memrank config set adapters.plugins <module>`) and make sure the module is "
-            f"importable -- see {doc_url('adding-adapters.md')}.")
+            f"importable -- see {doc_url('systems.md')}.")
     return REQUIREMENTS[engine]
 
 

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""A reference translator for the memrank adapter contract (docs/adapter-contract.md).
+"""A reference translator for the memrank system contract (docs/system-contract.md).
 
 This is a TEMPLATE, not a memory system. It stores documents in a dict and ranks them by word
 overlap, so it can run anywhere with no dependencies and no engine -- which is what lets the

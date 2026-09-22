@@ -35,7 +35,7 @@ import httpx
 from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:8888"
@@ -56,7 +56,7 @@ def _safe_bank_id(raw: str) -> str:
     return cleaned[:64] or "default"
 
 
-class HindsightAdapter(MemoryAdapter):
+class Hindsight(Memory):
     """HTTP adapter for a self-hosted Hindsight backend."""
 
     name = "hindsight"
@@ -225,7 +225,7 @@ class HindsightAdapter(MemoryAdapter):
     def ingest(self, documents: list[Document]) -> None:
         if self._bank_id is None:
             raise adapter_errors.ConfigurationNotTaken(
-                "HindsightAdapter.ingest called before prepare() -- no bank exists to ingest into")
+                "Hindsight.ingest called before prepare() -- no bank exists to ingest into")
         client = self._http()
         items = [self._doc_to_item(doc) for doc in documents]
         if not items:
@@ -276,7 +276,7 @@ class HindsightAdapter(MemoryAdapter):
         query_timestamp: datetime | str | None = None,
     ) -> Recall:
         if self._bank_id is None:
-            raise RuntimeError("HindsightAdapter.retrieve called before prepare()")
+            raise RuntimeError("Hindsight.retrieve called before prepare()")
         client = self._http()
         # ``include`` sub-fields are per-type option objects ({"max_tokens": N}), not booleans;
         # omitting a key (entities / source_facts) excludes that type.
@@ -311,7 +311,7 @@ class HindsightAdapter(MemoryAdapter):
         # runner._context_text, so the budget is enforced either way. The slice only decided how
         # much of that budget hindsight was allowed to fill (audit F4/F5).
         #
-        # ``k`` stays in the signature because the MemoryAdapter contract defines it and other
+        # ``k`` stays in the signature because the Memory contract defines it and other
         # engines need it; for this one it is not a meaningful request.
         results = body.get("results") or []
         docs = [self._result_to_doc(result, idx, user_id) for idx, result in enumerate(results)]
@@ -345,3 +345,10 @@ class HindsightAdapter(MemoryAdapter):
 
     def _effective_embedder(self) -> dict:
         return embedder_from_env("HINDSIGHT_")
+
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+HindsightAdapter = Hindsight

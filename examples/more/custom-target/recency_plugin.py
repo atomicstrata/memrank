@@ -17,9 +17,9 @@ Importing this module registers `recency` as an adapter. Point memrank at it and
 descriptor naming `adapter: recency` resolves like any built-in -- `memrank targets ls`,
 `memrank submit recency demo`, a receipt, a row in a sweep:
 
-    export PYTHONPATH=$PWD/examples/custom-target
+    export PYTHONPATH=$PWD/examples/more/custom-target
     memrank config set adapters.plugins recency_plugin
-    memrank config set targets.path $PWD/examples/custom-target/targets
+    memrank config set targets.path $PWD/examples/more/custom-target/targets
 
 See README.md for what that buys over handing `memrank.run` an instance directly.
 
@@ -32,13 +32,13 @@ declares an intent to be relevant; the score is what it is.
 
 from datetime import datetime
 
-from memrank import Document, MemoryAdapter, Recall
+from memrank import Document, Memory, Recall
 from memrank.instrumentation import TokenCollector
 from memrank.plugins import AdapterRegistration, register_adapter
 from memrank.secrets.requirements import EngineRequirements
 
 
-class RecencyAdapter(MemoryAdapter):
+class Recency(Memory):
     """Return the most recently ingested documents, newest first.
 
     The whole engine contract is the six methods below. `transport = "in-process"` is what
@@ -97,7 +97,7 @@ class RecencyAdapter(MemoryAdapter):
 
 
 register_adapter(AdapterRegistration.in_process(
-    RecencyAdapter,
+    Recency,
     # What launching this engine costs in credentials. Nothing: no provider is called, so there
     # is no key to preflight. Saying so is the point -- an engine with no declared requirements
     # cannot be preflighted at all, and the run would fail at launch instead of at submission.

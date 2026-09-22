@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from memrank.adapters import get_adapter
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 
 
 def test_baseline_effective_config_shape():
-    cfg = WordOverlapAdapter().effective_config()
+    cfg = WordOverlap().effective_config()
     assert cfg["engine"]["name"] == "word-overlap"
     assert cfg["engine"]["transport"] == "in-process"
     # In-process baseline has no external LLM/embedder.

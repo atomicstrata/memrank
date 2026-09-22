@@ -43,7 +43,7 @@ from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
 from memrank.config import ConfigError
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_HTTP_URL = "http://localhost:8888"
@@ -68,7 +68,7 @@ def _mem0_module():
     return mem0
 
 
-class Mem0Adapter(MemoryAdapter):
+class Mem0(Memory):
     """Adapter for Mem0 OSS -- SDK in-process or local HTTP server."""
 
     name = "mem0"
@@ -87,7 +87,7 @@ class Mem0Adapter(MemoryAdapter):
     ) -> None:
         self.mode = mode or self._select_mode()
         if self.mode not in ("sdk", "http"):
-            raise ValueError(f"Mem0Adapter mode must be 'sdk' or 'http', got {self.mode!r}")
+            raise ValueError(f"Mem0 mode must be 'sdk' or 'http', got {self.mode!r}")
         # Report the real integration surface: SDK mode is in-process (no HTTP
         # overhead), so latency is not comparable to http-transport engines.
         self.transport = "sdk" if self.mode == "sdk" else "http"
@@ -421,7 +421,7 @@ class Mem0Adapter(MemoryAdapter):
         on the first turn's content rather than as an extra message, so the transcript
         keeps its real turn count and no fabricated speaker appears.
         """
-        return Mem0Adapter._messages_from(doc, doc.messages)
+        return Mem0._messages_from(doc, doc.messages)
 
     @staticmethod
     def _messages_from(doc: Document, turns: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
@@ -601,3 +601,10 @@ class Mem0Adapter(MemoryAdapter):
 
     def _effective_embedder(self) -> dict:
         return embedder_from_env("MEM0_")
+
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+Mem0Adapter = Mem0

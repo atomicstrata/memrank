@@ -1,41 +1,60 @@
 # Methodology
 
-Memrank measures four axes for every (adapter, benchmark) cell:
+Memrank reports four axes for every system it measures -- quality, latency, tokens and cost.
+Each is produced by a named [measure](measures.md), and a measure declares *before* it runs what
+it reads from a [trace](reference/trace.md) and who decided the number it produces.
 
-1. **Quality** -- composite score per the benchmark's published methodology
-2. **Latency** -- p50/p95/p99 in milliseconds for `ingest()` and `retrieve()`
-3. **Tokens** -- mean and p95 tokens per query / per ingest call
-4. **Cost** -- derived from token usage and per-model pricing tables
+| Axis | What produces it | Scope | Reads | Decider |
+|---|---|---|---|---|
+| Quality | `<evaluation>-score` | run, one value per group | `recalled`, `declared` | rule -- the evaluation's own `score()` |
+| Quality | `word-match` | task | `recalled` | rule -- span recall |
+| Quality | `judge` | task | `answered` | a model |
+| Latency | `latency` | run | `timings_ms` | memrank's own clock |
+| Completeness | `failure-rate` | run | `error` | memrank's own bookkeeping |
+| Tokens | a declaration, not a measure | -- | `declared` | the system, recorded as its word |
+| Cost | an estimate, not a measure | -- | context tokens and a pinned price table | memrank, from a versioned table |
 
-This document describes how each axis is captured.
+The last two rows say what they are rather than implying a measure that does not exist. Token
+usage is what a system says a provider billed it; cost is derived arithmetic over a price table.
+Neither is memrank deciding, and neither is presented as though it were.
+
+The contract behind those columns -- what a measure declares, what a `Value` carries, why absent
+is never zero -- is [`docs/measures.md`](measures.md), and what each word means is
+[`docs/reference/`](reference/README.md). This page says what the numbers licence you to claim.
 
 ## Quality
 
-Each benchmark implements its own `score()`. The v0.1 scorers are
-**retrieval-recall@k** proxies: a question is "correct" if any retrieved
-document carries the gold evidence id (or substring-matches it). This is
-deliberately conservative -- it surfaces retrieval correctness without
-needing an LLM judge, which keeps the v0.1 launch reproducible without
-API keys.
+Three shipped measures produce a quality number, and they are not interchangeable.
 
-Full LLM-judge scoring (rubric-item scoring for BEAM, judge-LLM accuracy
-for LoCoMo / LongMemEval) is wired through a swappable `judge` callable
-slated for v0.2.
+**`<evaluation>-score`** applies a named in-tree evaluation's own `score()` over the traces that
+evaluation produced. Its scope is the run because the evaluation's unit **is** the group: one
+value per group, and nothing that combines them, so no run-level number is invented on an
+evaluation's behalf.
 
-**Metric applicability (`substring_recall_supported`).** Some benchmarks
-(e.g. BEAM) have prose gold answers, so the substring proxy is structurally
-invalid -- every benchmark declares `substring_recall_supported`. The
-**published, rankable surfaces withhold the score automatically** when it's
-False: the comparison table shows `n/a*`, `memrank submit`'s terminal + summary
-show `n/a (judge required)` (summary `composite` is `null`), and `report`
-withholds the composite and the per-ability/per-category tables.
+**`word-match`** asks whether the expected spans appear verbatim in something the system
+recalled -- the arithmetic of `memrank.SpanRecall`, applied per task. It is **retrieval
+correctness and never answer correctness**, and it says so in the `why` of every value it
+produces, so the caveat travels with the number.
 
-The **detailed/diagnostic JSON tiers** (per-cell `{adapter}__{benchmark}.json`
-and each compare row) intentionally keep the raw `composite` for inspection --
-but always paired with `substring_recall_supported: false` (and the compare
-artifact's `metadata.quality_metric: "withheld (judge required)"`). **Contract
-for consumers: `composite` is a valid quality score only when
-`substring_recall_supported` is true; otherwise rank from a judged run.**
+**`judge`** has a model adjudicate the answer against what was expected; its value is a bool and
+its `why` is the model's rationale. A model is the only decider that can say an answer was right.
+It is never bundled into a shipped evaluation, because that would put a key and a bill on the
+path of a first run, and running it without a key raises rather than deciding anything: there is
+no mode in which this measure decides something with nobody having judged it.
+
+**Metric applicability (`substring_recall_supported`).** Some evaluations (BEAM, and the judged
+tiers of LoCoMo and LongMemEval) have prose gold answers, so the substring proxy is structurally
+invalid -- every one declares `substring_recall_supported`. The **rankable surfaces withhold the
+score automatically** when it is False: `memrank submit`'s terminal output and summary show
+`n/a (judge required)` (summary `composite` is `null`), and the comparison and report renderings
+withhold the composite and the per-ability/per-category tables.
+
+The **detailed/diagnostic JSON tiers** (per-cell `{adapter}__{benchmark}.json` and each compare
+row) intentionally keep the raw `composite` for inspection -- but always paired with
+`substring_recall_supported: false` (and the compare artifact's
+`metadata.quality_metric: "withheld (judge required)"`). **Contract for consumers: `composite` is
+a valid quality score only when `substring_recall_supported` is true; otherwise rank from a
+judged run.**
 
 **A published row requires a complete record, not a score.** The leaderboard admits
 any run whose provenance and quality declarations are complete, and then reports
@@ -49,7 +68,7 @@ cost and token measurements, which are real measurements regardless.
 records what happened to each. A unit whose ingest, retrieval or scoring raises is recorded as
 failed and the run continues; it contributes no per-unit score and no per-query rows, so it is
 excluded from the composite's mean and from judging rather than counted as a zero. **A composite
-is therefore a mean over the units that RAN, not over the units the benchmark defines.** What
+is therefore a mean over the units that RAN, not over the units the evaluation defines.** What
 says which is in the same artifact, beside the composite:
 
 - `unit_outcomes` -- one record per unit attempted: `unit_id` and `outcome` (`ok` or `failed`),
@@ -58,11 +77,12 @@ says which is in the same artifact, beside the composite:
   by `memrank runs show`, and narrated during the run as a warning per lost unit.
 
 A cell in which every unit failed reports `composite: null` rather than `0.0`, on the same rule
-as everywhere else: a score an engine did not earn is not zero. `memrank submit --fail-fast`
-restores the older behaviour of ending the cell at the first unit that raises. Two conditions end
-a run whatever that flag says: an exhausted provider rate limit (an account-wide condition, so
-every remaining unit would spend the same deadline for the same nothing) and an operator
-interrupt.
+as everywhere else: a score an engine did not earn is not zero. The `failure-rate` measure is the
+same fact stated as a value, and [`docs/measures.md`](measures.md) has the whole of the rule.
+`memrank submit --fail-fast` restores the older behaviour of ending the cell at the first unit
+that raises. Two conditions end a run whatever that flag says: an exhausted provider rate limit
+(an account-wide condition, so every remaining unit would spend the same deadline for the same
+nothing) and an operator interrupt.
 
 **One engine under two configurations is two rows on one board.** Row identity is the
 adapter, the transport, *and* the engine's configuration -- the extractor LLM, embedder,
@@ -90,14 +110,18 @@ the BEAM protocol-fidelity plan.)
 
 ## Latency
 
-The runner wraps every adapter `ingest()` and `retrieve()` call with the
-`LatencyCollector.track` context manager. Wall-clock time (perf_counter)
-is recorded into per-bucket samples; `as_metrics()` computes p50/p95/p99
-via linear interpolation on the sorted distribution.
+`latency` is run-scope, reads `timings_ms`, and its decider is memrank: wall-clock time
+(`perf_counter`) taken at memrank's own call boundary around each step, never a number an engine
+reported about itself. It reports p50 and p95 per step by nearest rank, and every value carries
+the sample count it was taken over, because a percentile over three samples is a different object
+from one over three hundred. [The command line](misc/command-line.md)'s older run loop takes the
+same measurement through `LatencyCollector.track` and reports p50/p95/p99 per `ingest()` and
+`retrieve()` by linear interpolation on the sorted distribution. Latency is reported, never
+asserted on, and ranked only within a transport class -- see **Transport matters** below.
 
-Adapters MAY record additional internal-only timings (e.g., AtomicMemory's
-extraction phase) by calling `LatencyCollector.record` directly. These
-appear in the per-cell JSON but are not part of the headline.
+Systems MAY record additional internal-only timings (e.g., AtomicMemory's extraction phase) by
+calling `LatencyCollector.record` directly. These appear in the per-cell JSON but are not part of
+the headline.
 
 **Transport matters.** An in-process SDK adapter incurs no network or
 serialization overhead; an HTTP adapter does. Latency is therefore only
@@ -106,36 +130,47 @@ directly comparable *within* a transport class. Every row records its
 not rank an SDK engine against an HTTP engine on raw latency without saying so.
 
 `translator` is the class for an engine reached through a vendor-written program implementing
-[the adapter contract](adapter-contract.md) -- the route by which memrank evaluates an engine it has
+[the system contract](system-contract.md) -- the route by which memrank evaluates an engine it has
 never seen. A translator is an extra process and an extra hop, so its measured latency includes
 overhead a directly-driven engine never pays. Naming it as its own class is what stops a translator
 row being ranked against a direct one; quality metrics are unaffected and compare across everything.
 
 Translators MAY report `engine_ms` per call -- their own claim about time spent inside the engine,
-excluding the translator. It reaches the run through `MemoryAdapter.declared_latency()`, as
-samples memrank pools and renders itself, and is recorded beside the wall-clock figure as
-`ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a reader can see how much of the
-measurement was harness rather than engine. It is a *reported* number, not a measured one: memrank
-cannot verify it, and it is never the headline. The six wall-clock keys are memrank's own
-measurement and an engine cannot declare them at all -- a bucket that would render one is
-refused.
+excluding the translator. It reaches the trace as `declared.engine_timings`, through
+`Memory.declared_latency()`, as samples memrank pools and renders itself, and is recorded
+beside the wall-clock figure as `ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a
+reader can see how much of the measurement was harness rather than engine. It is a *reported*
+number, not a measured one: memrank cannot verify it, its decider is the system rather than
+memrank, and it is never the headline. The six wall-clock keys are memrank's own measurement and
+an engine cannot declare them at all -- a bucket that would render one is refused.
 
 ## Tokens
 
-Adapters call `TokenCollector.record(label, total_tokens)` after each LLM
-call. Buckets `query` and `ingest` map to the four keys in `token_metrics()`.
+Usage is the one number memrank asks a system for, and it is a DECLARATION rather than a
+measurement: only an engine can be told what a provider billed it. Latency, by contrast, memrank
+times itself at its own call boundary and never asks for. A system that knows records into a
+`TokenCollector` per LLM call, under the buckets `query` and `ingest`, and returns the four keys
+of `token_metrics()`; they reach the trace as `declared.tokens`, whose decider is the system.
 
-Usage is the one measurement memrank asks an engine for, and it is a DECLARATION rather than a
-requirement: only an engine can be told what a provider billed it. Latency, by contrast, memrank
-times itself at its own call boundary and never asks for. An engine that declares nothing reports
-`null` per bucket.
+**Absent is not zero.** A system whose engine surfaces no usage data records nothing, and the
+bucket reports `null` -- not `0.0`. Zero is a claim that the engine consumed no tokens; null
+admits nobody counted. Of the engines measured so far only some report usage at all, so conflating
+the two would fabricate an efficiency win for every engine that simply stays quiet. An unmeasured
+cell renders as `n/a`; a genuine measured zero renders as zero. The rule is memrank's everywhere,
+and [`docs/measures.md`](measures.md) states it once for every value.
 
-**Absent is not zero.** An adapter whose engine surfaces no usage data records nothing, and the
-bucket reports `null` -- not `0.0`. The distinction is the whole point: zero is a claim that the
-engine consumed no tokens, while null admits nobody counted. Of the engines measured so far only
-some report usage at all, so conflating the two would fabricate an efficiency win for every engine
-that simply stays quiet. `compare._engine_tokens` renders an unmeasured cell as `n/a`; a genuine
-measured zero renders as zero.
+## Cost
+
+Cost is an **estimate**, not a measurement, and it is **prompt cost only**. `memrank/metrics/cost.py`
+counts the tokens a system injects into context per query under a pinned encoding (`o200k_base`)
+and prices them at the named model's input rate from a versioned table. The table carries its own
+`PRICING_TABLE_VERSION` and `PRICING_EFFECTIVE_DATE`, and both travel with the artifact, so a
+figure can be read back at the rates that produced it. A model the table does not hold raises
+rather than being priced at zero.
+
+What it excludes matters as much as what it counts: **ingest-time extraction and answer generation
+are not priced**. The figure is the cost of the context a system chose to inject, and every surface
+that renders it is labelled accordingly.
 
 ## Retrieval token budget -- the fairness control
 
@@ -249,13 +284,6 @@ It is **not a shipped arm**: `memrank list-adapters` does not offer it, no bench
 it, and it is not a registered adapter. It is a measurement arm, and what remains undone is
 promoting it to one -- which needs a decision about how a floor is reported beside a published
 score, not just an adapter.
-
-## Cost
-
-v0.1 does not bake in a cost table. The receipt records the LLM provider
-and model name; downstream tools can join token usage with per-model
-pricing to compute $/query. v0.2 will integrate LiteLLM's
-`x-litellm-response-cost` header for direct cost capture.
 
 ## Reproducibility receipt
 

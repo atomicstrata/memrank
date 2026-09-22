@@ -157,10 +157,10 @@ class _RefusingClient:
 def test_the_reason_survives_the_whole_adapter_path(monkeypatch):
     """End to end through a real adapter, not just the helper: this is the exact call that failed
     on unit 4's third document and reported only a status code."""
-    from memrank.adapters.atomicmemory import AtomicMemoryAdapter
+    from memrank.adapters.atomicmemory import AtomicMemory
     from memrank.core import Document
 
-    adapter = AtomicMemoryAdapter(base_url="http://localhost:17350")
+    adapter = AtomicMemory(base_url="http://localhost:17350")
     monkeypatch.setattr(adapter, "_http", lambda: _RefusingClient())
     adapter.prepare("unit-4")
 

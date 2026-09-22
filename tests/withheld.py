@@ -14,8 +14,9 @@
 """Builtin targets a tree may not carry, and the one way a test says so.
 
 `mem0` and `supermemory` name engine images no outsider can pull -- one is a private fork, the
-other wraps a closed vendor binary we may not redistribute (`docs/engine-images.md`). The published
-package therefore ships neither manifest, and a test written against one has nothing to resolve.
+other wraps a closed vendor binary we may not redistribute (`docs/misc/engine-images.md`). The
+published package therefore ships neither manifest, and a test written against one has nothing to
+resolve.
 
 Such a test SKIPS, with the reason stated, exactly the way `tests/live/` skips when a backend is
 not running: the condition is a probe of what is actually present, the assertions are untouched,
@@ -43,7 +44,7 @@ from memrank.targets import catalog
 #: What a reader sees, and it names the file that explains the whole of it.
 REASON = ("target {ref!r} is not in this tree's catalog: its engine image is not publicly "
           "obtainable, so the manifest is withheld and the backend is self-provisioned "
-          "(docs/engine-images.md)")
+          "(docs/misc/engine-images.md)")
 
 
 def present(ref: str) -> bool:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import typer
 
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.runner import _filter_units, run_cell
 from tests.fakes import MultiUnitFakeBenchmark
 
@@ -40,7 +40,7 @@ def test_filter_index_out_of_range_fails_loud():
 
 def test_run_cell_over_one_filtered_unit():
     units = _filter_units(_units(), ["u1"])
-    result = run_cell(WordOverlapAdapter(), MultiUnitFakeBenchmark(3), k=10, repeats=1,
+    result = run_cell(WordOverlap(), MultiUnitFakeBenchmark(3), k=10, repeats=1,
                       run_id_prefix="r", model="gpt-4o-mini", token_budget=5000, units=units).to_dict()
     assert result["n_units"] == 1
     assert result["per_unit"][0]["unit_id"] == "u1"
