@@ -79,10 +79,10 @@ class Evaluation(BaseModel):
         and a stated reason, or one trace per task per attempt plus the values this
         evaluation's measures produced over them.
 
-            from memrank.evaluations import Demo
-            from memrank.systems import WordOverlap
+            from memrank.evaluations import SQuAD
+            from memrank.systems import TFIDF
 
-            result = Demo().run(system=WordOverlap())
+            result = SQuAD().run(system=TFIDF())
 
         ``answerer`` writes the answer for a system that only recalls; ``k`` is how many
         documents to ask a memory or a retriever for; ``attempts`` repeats every task. Each

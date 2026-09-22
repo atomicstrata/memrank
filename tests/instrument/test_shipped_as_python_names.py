@@ -33,7 +33,7 @@ import pytest
 from memrank import evaluations, systems
 from memrank.adapters import REGISTRY as SYSTEM_REGISTRY
 from memrank.benchmarks import REGISTRY as EVALUATION_REGISTRY
-from memrank.instrument.catalog import catalog, evaluation, system
+from memrank.instrument.catalog import QUICK_START, catalog, evaluation, system
 from memrank.instrument.evaluation import Evaluation
 
 #: The evaluations whose `load()` may reach the network. Named here, never constructed.
@@ -142,3 +142,24 @@ def test_the_refusals_point_at_the_python_names():
     assert "memrank.systems" in str(system_refused.value)
     assert "memrank.evaluations" in str(evaluation_refused.value)
 
+
+
+def test_the_quick_start_names_a_shipped_system_and_a_shipped_evaluation():
+    """The pair is declared once, and a declared name nothing ships would fail the catalog."""
+    assert QUICK_START.system in {e.python_name for e in systems.SHIPPED}
+    assert QUICK_START.evaluation in {e.python_name for e in evaluations.SHIPPED}
+
+
+def test_the_catalog_opens_with_the_declared_quick_start(capsys):
+    """The import hints `catalog()` prints are the declaration's, not a string of their own.
+
+    They printed `WordOverlap` and `Demo` for a release after 0.4.4 made the pair TFIDF and SQuAD,
+    because the hint was a literal beside the table rather than read from anything.
+    """
+    first_system, first_evaluation = catalog().quick_start()
+    printed = capsys.readouterr().out
+
+    assert f"from memrank.systems import {QUICK_START.system}`" in printed
+    assert f"from memrank.evaluations import {QUICK_START.evaluation}`" in printed
+    assert f'memrank.system("{first_system.name}")' in printed
+    assert f'memrank.evaluation("{first_evaluation.name}")' in printed

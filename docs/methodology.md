@@ -46,9 +46,29 @@ may carry a raw composite for inspection, paired with its applicability declarat
 **Contract for consumers: use `composite_rankable` to decide whether a raw composite is valid
 for ranking, and `quality_metric` to say what it measures.**
 
-**A published row requires a complete record, not a score.** The leaderboard admits any run
-whose provenance and quality declarations are complete, and reports whatever quality it has: the
-judged score, a self-contained composite, or `withheld`. It does not require a `composite`,
+### SQuAD, the quick-start evaluation
+
+`squad-score` is full-passage retrieval recall over a fixed subset of SQuAD v1.1's development
+set: 32 passages told to the system in one pool, then 64 questions, two per passage in source
+order. A question is a hit when its entire source passage comes back inside a returned document
+(whitespace collapsed, case kept), from at most 10 documents per question by default. Its
+`quality_metric` is `passage_recall`, and every value says what it measures.
+
+What it does not license anyone to say:
+
+- **That an answer was right.** The scorer never reads an answer. This is not SQuAD's native
+  exact-match or answer-token F1.
+- **That returning more is better.** Recall does not penalise irrelevant passages, so two
+  systems compare only at the same retrieval limit.
+- **Anything against a published retrieval number.** Among 32 passages the right one is nearly
+  always found; open-domain question answering retrieves over millions. The quick start's high
+  score describes that pool, not the retriever. `slice="full"` (2,067 passages) is a harder pool
+  and still not an open-domain corpus.
+
+**A published row requires a complete record, not a score.** There is no standing public
+leaderboard ([SPEC.md section 8](SPEC.md#8-hosting-and-licensing)); where a result is published,
+a run qualifies when its provenance and quality declarations are complete, and it reports
+whatever quality it has: the judged score, a self-contained composite, or `withheld`. It does not require a `composite`,
 which the three external benchmarks stopped defining -- requiring one silently dropped every
 judged run of them between 2026-08-13 and 2026-08-25. A run with no quality value still
 publishes its latency, cost and token measurements.
@@ -66,7 +86,7 @@ says which is in the same artifact, beside the composite:
   by `memrank runs show`, and narrated during the run as a warning per lost unit.
 
 A cell in which every unit failed reports `composite: null` rather than `0.0`, on the same rule
-as everywhere else: a score an engine did not earn is not zero. The `failure-rate` measure is the
+as everywhere else: a score a system did not earn is not zero. The `failure-rate` measure is the
 same fact stated as a value, and [`docs/measures.md`](measures.md) has the whole of the rule.
 `memrank submit --fail-fast` restores the older behaviour of ending the cell at the first unit
 that raises. Two conditions end a run whatever that flag says: an exhausted provider rate limit
@@ -87,18 +107,18 @@ under the adapter's name, and are told apart by `config_hash` in their provenanc
 cheaply. It selects the *first* N units of the dataset, and the first units are not a fair
 sample: measured on the first full judged BEAM 100k tier (run
 `20260813-184519__beam__100k__c37986`), conversation 1 scores 0.318, the first five average
-0.217 and the full 20-conversation tier 0.158, so a smoke figure flatters every engine by ~2x.
+0.217 and the full 20-conversation tier 0.158, so a smoke figure flatters every system by ~2x.
 **A slice figure is never quoted as a score; measurement claims come from full tiers.** Two
 structural guards make that more than a convention: the leaderboard's `board_key` segregates
 rows by tier and slice, so slice figures cannot blend into tier comparisons; and the bias is
-positional and therefore identical across engines, so same-slice *rankings* stay directionally
+positional and therefore identical across systems, so same-slice *rankings* stay directionally
 useful for debugging even though their absolute values are not. (Decision recorded closing M6 of
 the BEAM protocol-fidelity plan.)
 
 ## Latency
 
 `latency` is wall-clock time (`perf_counter`) taken at memrank's own call boundary around each
-step, never a figure an engine reported about itself. It reports p50 and p95 per step by nearest
+step, never a figure a system reported about itself. It reports p50 and p95 per step by nearest
 rank, and every value carries the sample count it was taken over, because a percentile over
 three samples is a different object from one over three hundred. [The command
 line](misc/command-line.md)'s older run loop takes the same measurement through
@@ -110,8 +130,8 @@ Systems MAY record additional internal-only timings (e.g., AtomicMemory's extrac
 calling `LatencyCollector.record` directly. These appear in the per-cell JSON but are not part of
 the headline.
 
-**Transport matters.** An in-process SDK adapter incurs no network or
-serialization overhead; an HTTP adapter does. Latency is therefore only
+**Transport matters.** A system that drives an in-process SDK incurs no network or
+serialization overhead; one that drives an HTTP API does. Latency is therefore only
 directly comparable *within* a transport class. Every row records its
 `transport` (`http` / `sdk` / `in-process` / `translator`); read latency alongside it and do
 not rank an SDK engine against an HTTP engine on raw latency without saying so.
@@ -128,20 +148,20 @@ engine, excluding the translator. It reaches the trace as `declared.engine_timin
 figure as `ingest_engine_p50_ms` / `retrieve_engine_p50_ms` (and p95), so a reader can see how
 much of the measurement was harness rather than engine. It is *reported*, not measured: memrank
 cannot verify it, its decider is the system, and it is never the headline. The six wall-clock
-keys are memrank's own measurement and an engine cannot declare them at all -- a bucket that
+keys are memrank's own measurement and a system cannot declare them at all -- a bucket that
 would render one is refused.
 
 ## Tokens
 
 Usage is the one number memrank asks a system for, and it is a DECLARATION rather than a
-measurement: only an engine can be told what a provider billed it. Latency, by contrast, memrank
+measurement: only the system under test can be told what a provider billed it. Latency, by contrast, memrank
 times itself at its own call boundary and never asks for. A system that knows records into a
 `TokenCollector` per LLM call, under the buckets `query` and `ingest`, and returns the four keys
 of `token_metrics()`; they reach the trace as `declared.tokens`, whose decider is the system.
 
 **Absent is not zero.** A system whose engine surfaces no usage data records nothing, and the
-bucket reports `null`. Only some of the engines measured so far report usage at all, so
-conflating the two would fabricate an efficiency win for every engine that stays quiet. An
+bucket reports `null`. Only some of the systems measured so far report usage at all, so
+conflating the two would fabricate an efficiency win for every system that stays quiet. An
 unmeasured cell renders as `n/a`; a measured zero renders as zero.
 
 ## Cost
@@ -162,7 +182,7 @@ that renders it is labelled accordingly.
 `--token-budget` (default 5000) caps **two** things: the `$/query` estimate, and the context text
 actually handed to the reader on a judged run. The second is the one that matters methodologically.
 
-Without a shared cap, "better recall" and "returned more text" are indistinguishable: an engine
+Without a shared cap, "better recall" and "returned more text" are indistinguishable: a system
 could win by injecting a larger prompt. Holding every target to the same budget means a row
 reflects *what a system chose to retrieve*, not *how much*. That is the field problem memrank
 exists to answer -- vendors self-publish at a different retrieval token budget per row, and no
@@ -186,7 +206,7 @@ budget-normalization against other benchmarks' rows
 
 ## Baseline arms
 
-Three controls belong beside every engine. A row without them does not test the hypothesis --
+Three controls belong beside every system under test. A row without them does not test the hypothesis --
 *external memory makes the decisive difference when the knowledge base exceeds the model's context
 window, and is worth its tokens against a naive baseline that just reads what it can.*
 
@@ -206,7 +226,7 @@ its matched variants moved to the research lane. A target's `context_budget`, no
 says which it is.
 
 `fixed-context` is the arm that belongs on every row, and it is the *token-matched* one by
-design: same context size as the engine under test, so the only variable is selection.
+design: same context size as the system under test, so the only variable is selection.
 `full-context` is deliberately rare -- a benchmark whose knowledge base fits inside a current
 context window cannot hold headline status, which is why LoCoMo (16k-26k tokens) is runnable but
 labelled non-discriminative.
@@ -219,6 +239,15 @@ The runner emits a notice when that happens.
 
 `word-overlap` is a separate thing: naive token-overlap retrieval, a dumb-*memory* floor rather than a
 no-retrieval or in-prompt control.
+
+`tfidf` and `bm25` are floors of the same kind, one and two steps up. `tfidf` weights each shared
+word by how rare it is and scores the cosine between query and document; `bm25` also saturates
+repeated words and normalises by document length, at `k1 = 1.5` and `b = 0.75`. The two share a
+tokeniser, so the gap between their rows is the weighting and nothing else. None of the three is
+a control: each is a `Memory` that retrieves by the query, so beating them says a system's
+retrieval is worth more than keyword matching -- not that memory is needed at all, which is what
+the three controls answer. All three run in your own process, so their latency is not comparable
+with a system reached over HTTP.
 
 ### What each arm is called in the literature
 
@@ -259,21 +288,24 @@ carries.
 controls for 'having text' vs. 'relevant text'". **Measured since 2026-09-10**, as a seeded
 arm over one retrieval grid on `locomo`: k documents drawn uniformly at random per query from
 the same unit's corpus, ignoring the query, scored by the same evidence-recall diagnostic as
-the engines beside it. The control is MemDelta's; ours is a reproduction of it.
+the systems beside it. The control is MemDelta's; ours is a reproduction of it.
 
 What it found there is worth stating because it is the reason the control exists: at that
 grid's shipped settings a majority of a retrieval score was reachable by drawing at random,
 and a retriever that ignores the query did not clear the floor at any setting. A level quoted without its random floor
 overstates what retrieval contributed.
 
-It is **not a shipped arm**: `memrank list-adapters` does not offer it, no benchmark run adds
+It is **not a shipped arm**: `memrank.catalog()` does not list it, no benchmark run adds
 it, and it is not a registered adapter. It is a measurement arm, and what remains undone is
 promoting it to one -- which needs a decision about how a floor is reported beside a published
 score, not just an adapter.
 
 ## Reproducibility receipt
 
-Every run writes a `Receipt` (see `memrank/provenance/receipt.py`) capturing:
+Every tracked run -- one the command line submits -- writes a `Receipt` (see
+`memrank/provenance/receipt.py`). `evaluation.run()` in Python returns a
+[result](reference/result.md), which carries none; it records the system, the evaluation, the
+traces and the values, and `result.save(path)` keeps them. A receipt captures:
 
 - Memrank version + git SHA
 - Adapter name + version + engine version
@@ -312,6 +344,6 @@ investigates within 7 days.
 
 ## Determinism
 
-Adapters MUST be deterministic given the same seed, or document their non-determinism explicitly.
-The runner re-seeds `random` per cell. Stochastic engines -- LLM extraction at a non-zero
+Systems MUST be deterministic given the same seed, or document their non-determinism explicitly.
+The runner re-seeds `random` per cell. Stochastic systems -- LLM extraction at a non-zero
 temperature -- should either pin temperature to 0 or run multiple seeds and report the spread.

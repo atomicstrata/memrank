@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""`memrank.evaluation("demo")` and `memrank.system("word-overlap")` -- the shipped names.
+"""`memrank.evaluation("squad")` and `memrank.system("tfidf")` -- the shipped names.
 
 Two constructors, one idea: the things memrank ships are reached by the catalog name they are
 printed under, so the first line a person copies stays inside the seven words. `system` hands
@@ -30,6 +30,9 @@ here judges, because judging needs an answer and an answer needs a writer and a 
 `catalog()` is the third door and the one that presupposes nothing: it prints what ships, under
 both the string names these two take and the Python names `memrank.systems` and
 `memrank.evaluations` carry, which is where an editor can follow them.
+
+`QUICK_START` is the one place the pair a first result is made of is declared. The table
+`catalog()` prints opens with it, and the published pages that name the pair are held to it.
 """
 
 from __future__ import annotations
@@ -138,9 +141,9 @@ def evaluation(ref: str | Benchmark, **overrides: Any) -> Evaluation:
 
 
 def system(name: str, **options: Any) -> System:
-    """The shipped system that catalog name names -- `memrank.system("word-overlap")`.
+    """The shipped system that catalog name names -- `memrank.system("tfidf")`.
 
-    The names are the ones `memrank list-adapters` prints, and `options` goes straight to the
+    The names are the ones `memrank.catalog()` prints, and `options` goes straight to the
     constructor, which is how a client for a running service is given its `base_url=` and its
     `api_key=`. An unknown name is refused with the known ones named, because the alternative
     is a reader guessing at a spelling memrank could simply have told them.
@@ -158,9 +161,9 @@ def system(name: str, **options: Any) -> System:
 class ShippedSystem:
     """One system memrank ships, as `memrank.catalog()` reports it."""
 
-    #: What to type in Python: `memrank.systems.WordOverlap`.
+    #: What to type in Python: `memrank.systems.TFIDF`.
     python_name: str
-    #: What to type as a string: `memrank.system("word-overlap")`, and what the CLI prints.
+    #: What to type as a string: `memrank.system("tfidf")`, and what the CLI prints.
     name: str
     #: `memory` for a system under test, `control` for a floor or a ceiling.
     kind: str
@@ -172,14 +175,40 @@ class ShippedSystem:
 class ShippedEvaluation:
     """One evaluation memrank ships, as `memrank.catalog()` reports it."""
 
-    #: What to type in Python: `memrank.evaluations.Demo`.
+    #: What to type in Python: `memrank.evaluations.SQuAD`.
     python_name: str
-    #: What to type as a string: `memrank.evaluation("demo")`.
+    #: What to type as a string: `memrank.evaluation("squad")`.
     name: str
     #: What comes out of a run of it without a judge.
     measures: str
     #: What has to be there before it runs -- a download, an environment variable, nothing.
     needs: str
+
+
+@dataclass(frozen=True)
+class QuickStart:
+    """The pair a first result is made of: one shipped system on one shipped evaluation."""
+
+    #: The Python name in `memrank.systems`.
+    system: str
+    #: The Python name in `memrank.evaluations`.
+    evaluation: str
+
+
+#: The quick start, declared once. `README.md` and `docs/install.md` run exactly this pair,
+#: `catalog()` prints it as the example, and `tests/repo/test_the_quick_start_is_named_once.py`
+#: holds every published page and every docstring that names the pair to it. A demotion -- the
+#: way `WordOverlap` and `Demo` stopped being the pair in 0.4.4 -- is this one edit, and the
+#: guard then names every sentence still giving the role to the old pair.
+QUICK_START = QuickStart(system="TFIDF", evaluation="SQuAD")
+
+
+def _named(entries: Sequence[Any], python_name: str) -> Any:
+    """The entry with that Python name. A declared name nothing ships is refused, not skipped."""
+    for entry in entries:
+        if entry.python_name == python_name:
+            return entry
+    raise LookupError(f"QUICK_START names {python_name!r}, which memrank does not ship")
 
 
 def _system_lines(shipped: Sequence[ShippedSystem]) -> list[str]:
@@ -208,18 +237,24 @@ class Catalog:
     systems: tuple[ShippedSystem, ...]
     evaluations: tuple[ShippedEvaluation, ...]
 
+    def quick_start(self) -> tuple[ShippedSystem, ShippedEvaluation]:
+        """The entries `QUICK_START` names -- the pair a first result is made of."""
+        return (_named(self.systems, QUICK_START.system),
+                _named(self.evaluations, QUICK_START.evaluation))
+
     def __str__(self) -> str:
+        first_system, first_evaluation = self.quick_start()
         return "\n".join([
             f"memrank ships {len(self.systems)} system(s) and "
             f"{len(self.evaluations)} evaluation(s).",
             "",
-            "systems -- `from memrank.systems import WordOverlap`, "
-            "or `memrank.system(\"word-overlap\")`",
+            f"systems -- `from memrank.systems import {first_system.python_name}`, "
+            f"or `memrank.system(\"{first_system.name}\")`",
             "",
             *_system_lines(self.systems),
             "",
-            "evaluations -- `from memrank.evaluations import Demo`, "
-            "or `memrank.evaluation(\"demo\")`",
+            f"evaluations -- `from memrank.evaluations import {first_evaluation.python_name}`, "
+            f"or `memrank.evaluation(\"{first_evaluation.name}\")`",
             "",
             *_evaluation_lines(self.evaluations),
         ])

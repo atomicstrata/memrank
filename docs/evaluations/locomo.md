@@ -31,8 +31,8 @@ reach the ceiling on it, and a strong score does not establish that memory was n
 
 **Quality here requires a judge.** The published protocol grades the generated answer against a
 reference, which no fixed rule can do: the reference answers are derived -- *"three times"*,
-*"2022"* -- rather than quotes, so looking for them in retrieved text measures how literally an
-engine stored things. Without a judge this evaluation reports latency, failures and question
+*"2022"* -- rather than quotes, so looking for them in retrieved text measures how literally a
+system stored things. Without a judge this evaluation reports latency, failures and question
 counts, and no quality number at all.
 
 ## What it needs

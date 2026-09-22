@@ -1,10 +1,11 @@
 # measure
 
-A **measure** is one named rule that reads [traces](trace.md) and produces named values. Four
-ship with the package:
+A **measure** is one named rule that reads [traces](trace.md) and produces named values. Five
+measures ship with the package:
 
 | Measure | What it answers | Decided by |
 |---|---|---|
+| `<evaluation>-score` | the evaluation's own score -- `squad-score` is the first value the quick start prints. Each shipped evaluation says on its own page what its score is and is not | a fixed rule |
 | `word-match` | did the expected words appear in something the system recalled? It is retrieval, not answer correctness, and says so on every value | a fixed rule |
 | `latency` | how long ingest and retrieve took, at memrank's own call boundary | memrank's clock |
 | `failure-rate` | how many traces carry an error | memrank's bookkeeping |
@@ -42,7 +43,7 @@ A measure that could not decide returns `None` with the reason, never `0.0`.
 
 ## Who supplies what
 
-Memrank supplies the four above, the traces to run a measure over, and the refusal when `reads`
+Memrank supplies the five measures above, the traces to run a measure over, and the refusal when `reads`
 names something nothing produces. You supply a measure of your own when the shipped ones do not
 answer your question: its `name`, `scope`, `reads`, `decider`, and a `measure()` method taking
 traces and values and returning values.
@@ -81,8 +82,10 @@ print(measured.values_of("recalled-count")[0].value)
 - `memrank.Decider` -- `MEMRANK`, `RULE`, `MODEL`, `SYSTEM`.
 - `memrank.Value` -- what a measure produces: `measure`, `decider`, `task_id`, `group`,
   `value`, `why`.
-- `memrank.WordMatch`, `memrank.Latency`, `memrank.FailureRate`, `memrank.Judge` -- the four
-  that ship. They are ordinary measures and nothing more.
+- `memrank.WordMatch`, `memrank.Latency`, `memrank.FailureRate`, `memrank.Judge` -- four of the
+  five that ship, the ones you construct yourself. They are ordinary measures and nothing more.
+- `memrank.BenchmarkScore` -- the fifth. A shipped evaluation builds it for you around its own
+  scoring, which is why it is importable but not among the names `memrank` lists first.
 - `memrank.measure(result, *measures)` -- applying measures to a result already stored.
 
 ## Going deeper

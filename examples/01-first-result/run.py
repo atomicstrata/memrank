@@ -15,17 +15,17 @@
 
     uv run python examples/01-first-result/run.py
 
-`WordOverlap` and `Demo` are a system and an evaluation memrank ships: no
-engine, no network, no key. Both are imported by name, so an editor follows
-them to their own definition. Printing the result is the whole read -- memrank
-lays it out, and nothing here formats it.
+`TFIDF` and `SQuAD` are the quick-start pair memrank ships: no engine, no
+network, no key. Both are imported by name, so an editor follows them to their
+own definition. Printing the result is the whole read -- memrank lays it out,
+and nothing here formats it.
 """
 
-from memrank.evaluations import Demo
-from memrank.systems import WordOverlap
+from memrank.evaluations import SQuAD
+from memrank.systems import TFIDF
 
-system = WordOverlap()
-evaluation = Demo()
+system = TFIDF()
+evaluation = SQuAD()
 result = evaluation.run(system=system)
 
 print(result)

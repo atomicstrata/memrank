@@ -21,7 +21,7 @@ The ten abilities include three that the other evaluations here do not test at a
 a later statement contradicts an earlier one, putting events in the order they happened, and
 following an instruction given long ago.
 
-Engines are handed nothing but who said what. No rendered dates, no machine timestamps -- which
+Systems are handed nothing but who said what. No rendered dates, no machine timestamps -- which
 is what every published harness for it does, including the authors' own baselines, and is what
 makes a memrank number on it a number about the same task.
 

@@ -20,12 +20,13 @@ no index. It is not BM25 and does not claim to be.
 
 ## Why it matters
 
-It is the dumb-memory floor. An engine that does not beat plain word counting is not earning
-what it costs, so a row with `word-overlap` beside it says whether the engine's retrieval is
+It is the dumb-memory floor. A system that does not beat plain word counting is not earning
+what it costs, so a row with `word-overlap` beside it says whether the system's retrieval is
 doing anything at all.
 
-It is also the system a first number is taken on, because it needs nothing. Its latency is not
-comparable with an engine reached over HTTP -- it runs inside your own process, and it declares
+It is also the baseline [TFIDF](tfidf.md) and [BM25](bm25.md) are read against: the same
+keyword idea with no weighting at all. Its latency is not comparable with an engine reached over
+HTTP -- it runs inside your own process, and it declares
 that, so [methodology](../methodology.md) can keep the two apart.
 
 ## What it needs

@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The evaluations memrank ships, as classes -- `from memrank.evaluations import Demo`.
+"""The evaluations memrank ships, as classes -- `from memrank.evaluations import SQuAD`.
 
-`memrank.evaluation("demo")` needs the string first, and a string is not navigable: nothing in
+`memrank.evaluation("squad")` needs the string first, and a string is not navigable: nothing in
 an editor follows it, nothing states what a tier or a slice may be, and nothing tells a reader
 what else is out there. Each class here is a subclass of `memrank.Evaluation` whose constructor
-takes the keywords its benchmark takes, typed, and loads it -- so `Demo()` beside
-`WordOverlap()` reads as two nouns of one shape, and "go to definition" on either lands on a
+takes the keywords its benchmark takes, typed, and loads it -- so `SQuAD()` beside
+`TFIDF()` reads as two nouns of one shape, and "go to definition" on either lands on a
 class whose docstring says what it is.
 
 The construction goes through `memrank.evaluation(...)` underneath, so there is one conversion
@@ -35,7 +35,7 @@ BEAM()            a one-time download, or BEAM_DATA_PATH; judging likewise
 ================  ==================================================================
 
 Each benchmark class is imported INSIDE its constructor. `import memrank` reaches this module,
-and a dataset loader's module graph is not something a caller who asked for `Demo()` should pay
+and a dataset loader's module graph is not something a caller who asked for `SQuAD()` should pay
 for. `memrank.catalog()` prints this table at runtime.
 """
 

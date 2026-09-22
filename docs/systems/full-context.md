@@ -16,9 +16,9 @@ except that no token budget cuts it. The reader is given the corpus.
 ## Why it matters
 
 It answers whether memory is needed here at all. Where the corpus fits in a model's context
-window, this arm is what a system with no retrieval problem to solve would score, so an engine
+window, this arm is what a system with no retrieval problem to solve would score, so a system
 that matches it has matched the ceiling and an [evaluation](../reference/evaluation.md) whose
-corpus is that small cannot tell engines apart.
+corpus is that small cannot tell systems apart.
 
 It is deliberately rare for that reason: it belongs on small corpora, as a ceiling, not on every
 row.

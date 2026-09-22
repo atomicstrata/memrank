@@ -183,7 +183,7 @@ answer, and most benchmarks need nothing else. BEAM is the exception: it scores 
 of atomic nuggets, one judge call each, averaged within the question. Where your answers are
 graded differently, override `judge_shape()` and return a `JudgeShape`
 (`memrank/judging/shape.py`), which declares what grading one query **costs** -- split into the
-cache-shared control half and the per-engine context half -- and what it **yields**, a
+cache-shared control half and the per-system context half -- and what it **yields**, a
 `JudgedQuery` whose `score` is a float in [0, 1].
 
 Do **not** reach for a `judge` callable in the constructor -- an earlier version of this document
@@ -264,7 +264,7 @@ grading prompts is compared against the prompt keys the questions carry, because
 under a prompt written for a different question type is how 12% of a benchmark was graded against
 the wrong object for months (`memrank/judging/shape.py`, `BinaryJudgeShape._prompt_for`).
 
-Declaring nothing is the default and is not a disagreement: all five registered benchmarks
+Declaring nothing is the default and is not a disagreement: all six registered benchmarks
 declare no criteria, which is what keeps somebody else's scorer acceptable over their questions.
 
 **What the instance route does not reach.** A benchmark passed as an object has no catalog ref, so
@@ -317,7 +317,7 @@ the rule for every directory.
 
 ### Document the methodology
 
-Per the vendor-neutral charter ([SPEC.md section 7.3](SPEC.md)), a methodology change goes
+Per the vendor-neutral charter ([SPEC.md section 7.3](SPEC.md#73-methodology-changes-are-public)), a methodology change goes
 through public proposal and comment before it merges, and does not merge without matching
 documentation.
 

@@ -33,7 +33,7 @@ them.
 
 It is the baseline a reader recognises. TF-IDF is over fifty years old and is what every
 retrieval result has been compared against since, so a row with `tfidf` beside it is a number
-whose meaning does not have to be explained: an engine that does not beat weighted keyword
+whose meaning does not have to be explained: a system that does not beat weighted keyword
 matching is not earning what it costs.
 
 It is also the system a first number is taken on, because it needs nothing. Its latency is not

@@ -15,8 +15,9 @@ SQuAD natively supplies a passage alongside questions about it. Memrank instead 
 [system](../reference/system.md) all 32 passages as documents in one isolated pool, then asks
 64 questions. The subset is the first 32 paragraphs in article/paragraph array order, with
 the first two questions from each paragraph's question array. There is no sampling.
-The JSON records this rule, source checksum and attribution in its provenance field;
-[receipt configuration](../reference/result.md) records the bounds and actual data checksum.
+The JSON records this rule, source checksum and attribution in its provenance field. A tracked
+run's receipt -- the command line writes one -- records the bounds and the actual data checksum;
+`evaluation.run()` in Python returns a [result](../reference/result.md), which carries no receipt.
 
 Source answer spans establish which passage answers each question. The scorer never inspects
 an answer: a hit requires the entire source passage inside a returned document, with whitespace
@@ -32,11 +33,21 @@ score. It tests whether the system can retrieve the passage known to answer a qu
 not test whether the system can produce the answer. Returning more passages can increase recall;
 this measure does not penalize irrelevant returned passages. Keep retrieval limits comparable.
 
+The pool is also small: 32 passages, where open-domain question answering retrieves over
+millions. Finding the right passage among 32 is nearly trivial, which is why the quick start's
+TFIDF recalls almost every one -- the score reflects the pool, not an excellent retriever, and is
+not comparable to published retrieval results on a full corpus.
+
+Sparse retrieval on this task is a standard setup rather than a toy one: TF-IDF and BM25 are the
+long-standing baseline for passage retrieval in open-domain question answering
+([Karpukhin et al., 2020](https://arxiv.org/abs/2004.04906) calls them "the de facto method").
+
 ## What it needs
 
 The default needs no download, API key or service. The package includes 32 passages and 64
 questions (62,472 bytes of JSON). `slice="smoke"` selects this same bundled mode;
-`slice="full"` remains a CLI/Python choice, outside the browser's allowed slices. [TFIDF](../systems/tfidf.md) runs it locally.
+`slice="full"` selects the complete development set, below. [TFIDF](../systems/tfidf.md) runs it
+locally.
 [Demo](demo.md) remains the dependency-free synthetic smoke evaluation.
 
 The complete development set is an explicit choice: 2,067 passages and 10,570 questions.

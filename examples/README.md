@@ -14,7 +14,7 @@ uv run python examples/01-first-result/run.py
 
 | Folder | | Needs |
 | --- | --- | --- |
-| [`01-first-result/`](01-first-result/README.md) | A system memrank ships, on the evaluation memrank ships. Values, with their measures and deciders. | nothing |
+| [`01-first-result/`](01-first-result/README.md) | The quick-start pair: a system memrank ships, on an evaluation memrank ships. Values, with their measures and deciders. | nothing |
 | [`02-your-own-system/`](02-your-own-system/README.md) | A memory of your own, in the four verbs its kind requires. | nothing |
 | [`03-your-own-evaluation/`](03-your-own-evaluation/README.md) | Your own tasks and context, measured by a measure memrank ships. | nothing |
 | [`04-your-own-measure/`](04-your-own-measure/README.md) | A measure you wrote, applied to a saved result loaded back. Nothing reruns. | nothing |

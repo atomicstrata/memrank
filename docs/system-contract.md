@@ -8,7 +8,7 @@ The contract is a process, not a package: memrank never imports your code, never
 version of it, and never needs to know what language it is in. So it can measure a system it has
 never seen, with no fork and no pull request.
 
-A reference implementation -- about a hundred lines, standard library only -- is in
+A reference implementation -- about two hundred lines, standard library only -- is in
 [`examples/more/native-adapter/`](../examples/more/native-adapter/). It wraps an in-memory
 dictionary, so it is a template to copy rather than a system worth measuring.
 

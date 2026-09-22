@@ -4,17 +4,17 @@ An **evaluation** is a set of questions and the rules for asking them, and it is
 call `run(system=...)` on.
 
 ```python
-from memrank.evaluations import Demo
-from memrank.systems import WordOverlap
+from memrank.evaluations import SQuAD
+from memrank.systems import TFIDF
 
-evaluation = Demo()
+evaluation = SQuAD()
 print(evaluation.name, evaluation.version, len(evaluation.tasks), "tasks")
 
-result = evaluation.run(system=WordOverlap())
+result = evaluation.run(system=TFIDF())
 ```
 
-[`Demo`](../evaluations/demo.md) is five questions about a short conversation, and needs no
-download and no key. [`LoCoMo`, `LongMemEval` and `BEAM`](../evaluations/README.md) are public
+[`SQuAD`](../evaluations/squad.md) is 64 questions about 32 passages bundled with the package,
+and needs no download and no key. [`LoCoMo`, `LongMemEval` and `BEAM`](../evaluations/README.md) are public
 benchmarks memrank can download. `tickets` below is one you write yourself.
 
 ## What it is
@@ -33,9 +33,9 @@ evaluation at the same version, and [paired](paired.md) refuses when they are no
 
 ## Who supplies what
 
-Memrank ships five evaluations, each bundling its own measures, and enforces the clearing rule
+Memrank ships six evaluations, each bundling its own measures, and enforces the clearing rule
 during the run. You supply your own tasks, your own measures, or both -- they are separate
-choices, and `memrank.evaluation("demo")` returns exactly the kind of object you would write by
+choices, and `memrank.evaluation("squad")` returns exactly the kind of object you would write by
 hand.
 
 ## The Python names
@@ -63,8 +63,8 @@ result = tickets.run(system=WordOverlap())
   `clearing`, `metadata`.
 - `evaluation.run(system=...)` -- the [run](run.md), returning a [result](result.md).
 - `memrank.Clearing` -- `PER_TASK`, `PER_GROUP`, `AT_END`.
-- `memrank.evaluations` -- the module holding what ships: `Demo`, `RelationGraph`, `LoCoMo`,
-  `LongMemEval`, `BEAM`.
+- `memrank.evaluations` -- the module holding what ships: `SQuAD`, `Demo`, `RelationGraph`,
+  `LoCoMo`, `LongMemEval`, `BEAM`.
 - `memrank.evaluation("<name>")` -- the same things by string.
 - `evaluation.groups()` and `evaluation.group_of(task_id)` -- which tasks share state.
 

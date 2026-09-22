@@ -9,7 +9,7 @@ cleared. Memrank ships six. One page each.
 |---|---|---|---|
 | [SQuAD](squad.md) | `squad` | full-passage retrieval recall, not answer-span or end-to-end answer correctness | nothing; the quick-start subset is bundled |
 | [Demo](demo.md) | `demo` | one small hand-written conversation and five questions about it -- the dependency-free smoke evaluation | nothing |
-| [RelationGraph](relation-graph.md) | `relation_graph` | four situations that are easy to store and hard to store *correctly*, scored on what the engine's memory graph did with them | nothing, and a graph-capable system |
+| [RelationGraph](relation-graph.md) | `relation_graph` | four situations that are easy to store and hard to store *correctly*, scored on what the system's memory graph did with them | nothing, and a graph-capable system |
 | [LoCoMo](locomo.md) | `locomo` | ten very long dated conversations, with about 1,500 scored questions about what was said in them | a one-time download; a judge for quality |
 | [LongMemEval](longmemeval.md) | `longmemeval` | five hundred questions, each one buried in its own separately built pile of chat sessions | a one-time download; a judge for quality |
 | [BEAM](beam.md) | `beam` | one continuous story per conversation, hundreds of thousands of tokens long, with questions aimed at ten distinct memory abilities | a one-time download; a judge for quality |
@@ -37,7 +37,7 @@ No page prints a result. What a value licenses you to say is
 Three of the six ship no quality number of their own. Their published protocol grades a
 *generated answer* against a reference, which takes a model to adjudicate, and the two retrieval
 proxies tried in their place were withdrawn for measuring the wrong thing -- one scored every
-engine zero, the other rewarded storing text verbatim. Without a judge those evaluations report
+system zero, the other rewarded storing text verbatim. Without a judge those evaluations report
 latency and failures and say so, rather than reporting a number that ranks.
 
 `squad` checks whether the full source passage was retrieved; it never grades an answer.
