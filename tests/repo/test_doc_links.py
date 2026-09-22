@@ -259,7 +259,7 @@ def test_the_scan_reaches_the_documents_that_matter(markdown):
     """
     scanned = set(markdown)
     for must_cover in ("README.md", "docs/README.md", "docs/methodology.md",
-                       "docs/adapter-contract.md"):
+                       "docs/system-contract.md"):
         assert must_cover in scanned, f"{must_cover} fell out of the corpus"
     public_links = sum(len(_relative_links(p)) for p in markdown if p.startswith("docs/"))
     assert public_links > 20, f"only {public_links} links found under docs/ -- extraction is broken"

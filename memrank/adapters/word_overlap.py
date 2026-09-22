@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 
@@ -35,7 +35,7 @@ def _tokens(text: str) -> set[str]:
     return {t for t in text.lower().split() if t}
 
 
-class WordOverlapAdapter(MemoryAdapter):
+class WordOverlap(Memory):
     """Token-overlap retrieval over an in-process per-isolation store."""
 
     name = "word-overlap"
@@ -83,3 +83,10 @@ class WordOverlapAdapter(MemoryAdapter):
 
     def token_metrics(self) -> dict[str, float | None]:
         return self.tokens.as_metrics()
+
+
+#: Deprecated alias of the class above -- the same class object, so an out-of-tree import and
+#: every ``isinstance`` against the older spelling keep holding. The suffix went because a reader
+#: copies the class name out of a first result, and ``Adapter`` is memrank's word for the wrapper
+#: rather than the reader's word for the system. Removing it is plan step 22 (ATO-2151).
+WordOverlapAdapter = WordOverlap

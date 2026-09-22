@@ -132,12 +132,12 @@ def _verifiable_or_exit(target: Manifest) -> None:
         style.error(
             f"{target.name!r} uses the {target.adapter!r} adapter, which memrank implements "
             f"itself -- there is no third-party contract to verify. `verify` checks a translator "
-            f"against {doc_url('adapter-contract.md')}.")
+            f"against {doc_url('system-contract.md')}.")
         raise typer.Exit(1)
     if target.binding is None:
         style.error(
             f"{target.name!r} declares no source binding, so there is no translator for memrank "
-            f"to launch. Add binding/launch/network (see {doc_url('adapter-contract.md')} "
+            f"to launch. Add binding/launch/network (see {doc_url('system-contract.md')} "
             f"section 9).")
         raise typer.Exit(1)
 
@@ -190,7 +190,7 @@ def verify(
     ref: str = typer.Argument(..., help="target ref, e.g. myengine:dev"),
     overrides: list[str] = typer.Argument(None, help="key=value overrides"),
 ) -> None:
-    """Check a translator against the memrank adapter contract.
+    """Check a translator against the memrank system contract.
 
     Launches the target, exercises the contract, and reports every finding at once. Strictly a
     conformance check on someone else's implementation of a published spec -- it does not diagnose
@@ -199,7 +199,7 @@ def verify(
     import tempfile
 
     from memrank.adapters.conformance import contract_checks
-    from memrank.adapters.native import NativeAdapter
+    from memrank.adapters.native import Native
     from memrank.placement.base import PlacementError
     from memrank.placement.workspace import WorkspacePlacement
 
@@ -210,7 +210,7 @@ def verify(
     try:
         with WorkspacePlacement(target=target, log_path=log_path) as placement:
             endpoint = placement.provision(target)
-            adapter = NativeAdapter(base_url=endpoint.base_url)
+            adapter = Native(base_url=endpoint.base_url)
             try:
                 rows = contract_checks(adapter)
             finally:
@@ -242,7 +242,7 @@ def _report_or_exit(rows: list, log_path: Path) -> None:
         style.error(f"{len(failed)} contract check(s) failed: {', '.join(failed)}. "
                     f"Translator output: {log_path}")
         raise typer.Exit(1)
-    style.say("translator conforms to the adapter contract")
+    style.say("translator conforms to the system contract")
 
 
 def _render_cloud(target: Manifest, aws_json: str | None) -> dict:

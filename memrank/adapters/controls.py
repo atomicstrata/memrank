@@ -28,11 +28,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from memrank.core import Document, MemoryAdapter, Recall
+from memrank.core import Document, Memory, Recall
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 
-class _InProcessControl(MemoryAdapter):
+class _InProcessControl(Memory):
     """Shared plumbing: per-isolation storage, no network, no engine."""
 
     version = "0.1.0"
@@ -67,7 +67,7 @@ class _InProcessControl(MemoryAdapter):
         return self.tokens.as_metrics()
 
 
-class NoContextAdapter(_InProcessControl):
+class NoContext(_InProcessControl):
     """(a) no-memory: retrieves nothing, so the reader answers closed-book.
 
     The floor the hypothesis is measured against. An engine that does not beat this is not earning
@@ -85,7 +85,7 @@ class NoContextAdapter(_InProcessControl):
         return Recall(documents=[], declared={"results": []})
 
 
-class FixedContextAdapter(_InProcessControl):
+class FixedContext(_InProcessControl):
     """(b) token-matched ICL: hands over the corpus unranked, capped by the shared token budget.
 
     "A naive baseline that just reads what it can" -- it performs no selection at all, so the
@@ -97,7 +97,7 @@ class FixedContextAdapter(_InProcessControl):
     """
 
     # Returns the corpus in INGEST order, not a ranked list, so rank-cut retrieval
-    # metrics do not apply -- see MemoryAdapter.ranks_results. Inherited by full-context.
+    # metrics do not apply -- see Memory.ranks_results. Inherited by full-context.
     ranks_results = False
 
     name = "fixed-context"
@@ -109,7 +109,7 @@ class FixedContextAdapter(_InProcessControl):
         return Recall(documents=docs, declared={"results": [d.id for d in docs]})
 
 
-class FullContextAdapter(FixedContextAdapter):
+class FullContext(FixedContext):
     """(c) full-context: the corpus, uncapped -- the ceiling where the KB fits.
 
     Deliberately rare. The PRD demotes any benchmark whose knowledge base fits inside a current
@@ -120,3 +120,13 @@ class FullContextAdapter(FixedContextAdapter):
 
     name = "full-context"
     context_budget = "uncapped"
+
+
+#: Deprecated aliases of the three classes above -- the same class objects, so an out-of-tree
+#: import and every ``isinstance`` against the older spellings keep holding. The suffix went
+#: because a reader copies the class name out of a first result, and ``Adapter`` is memrank's word
+#: for the wrapper rather than the reader's word for the system. Removing them is plan step 22
+#: (ATO-2151).
+NoContextAdapter = NoContext
+FixedContextAdapter = FixedContext
+FullContextAdapter = FullContext

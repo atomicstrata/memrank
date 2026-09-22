@@ -449,7 +449,7 @@ class LongMemEvalBenchmark(Benchmark):
         retrieval scorer keys on that prefix (run_retrieval.py:272), so the id is a noise-free
         oracle: ranking on it alone scores recall_all@10 = 1.000, above the paper's best
         retriever. Passing it to an engine -- as `Document.id`, which adapters forward as metadata
-        per docs/adapter-contract.md:71, or inside `context`, which two adapters map to
+        per docs/system-contract.md:71, or inside `context`, which two adapters map to
         semantically indexed fields -- hands over the answer location.
 
         The real ids stay harness-side in the returned map, which `load()` puts on the unit's

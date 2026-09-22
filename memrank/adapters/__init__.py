@@ -20,37 +20,37 @@ registered adapter satisfies the contract.
 
 from __future__ import annotations
 
-from memrank.adapters.atomicmemory import AtomicMemoryAdapter
+from memrank.adapters.atomicmemory import AtomicMemory
 from memrank.adapters.controls import (
-    FixedContextAdapter,
-    FullContextAdapter,
-    NoContextAdapter,
+    FixedContext,
+    FullContext,
+    NoContext,
 )
-from memrank.adapters.hindsight import HindsightAdapter
-from memrank.adapters.mem0 import Mem0Adapter
-from memrank.adapters.native import NativeAdapter
-from memrank.adapters.supermemory import SupermemoryAdapter
-from memrank.adapters.word_overlap import WordOverlapAdapter
-from memrank.core import MemoryAdapter
+from memrank.adapters.hindsight import Hindsight
+from memrank.adapters.mem0 import Mem0
+from memrank.adapters.native import Native
+from memrank.adapters.supermemory import Supermemory
+from memrank.adapters.word_overlap import WordOverlap
+from memrank.core import Memory
 
-REGISTRY: dict[str, type[MemoryAdapter]] = {
-    "atomicmemory": AtomicMemoryAdapter,
-    "word-overlap": WordOverlapAdapter,
-    "mem0": Mem0Adapter,
-    "hindsight": HindsightAdapter,
-    "supermemory": SupermemoryAdapter,
+REGISTRY: dict[str, type[Memory]] = {
+    "atomicmemory": AtomicMemory,
+    "word-overlap": WordOverlap,
+    "mem0": Mem0,
+    "hindsight": Hindsight,
+    "supermemory": Supermemory,
     # Not an engine: the client for memrank's own translator contract
-    # (docs/adapter-contract.md), which is how an engine memrank has never seen gets evaluated
+    # (docs/system-contract.md), which is how an engine memrank has never seen gets evaluated
     # without a fork. Every other entry here names one vendor; this one names none.
-    "native": NativeAdapter,
+    "native": Native,
     # The mandatory baseline arms (PRD_Memrank_v2.md:86) -- not memory systems.
-    "no-context": NoContextAdapter,
-    "fixed-context": FixedContextAdapter,
-    "full-context": FullContextAdapter,
+    "no-context": NoContext,
+    "fixed-context": FixedContext,
+    "full-context": FullContext,
 }
 
 
-def get_adapter(name: str, **kwargs) -> MemoryAdapter:
+def get_adapter(name: str, **kwargs) -> Memory:
     """Construct the adapter registered under ``name``.
 
     Raises ``ValueError`` with a helpful message when the name is unknown.
@@ -66,14 +66,42 @@ def list_adapters() -> list[str]:
     return sorted(REGISTRY.keys())
 
 
+#: The suffixed spellings these classes used to carry, re-exported from the import path callers
+#: already name. Each is the same class object as the name above it, so `REGISTRY` and every
+#: `isinstance` are indifferent to which spelling reached them. Removing these is plan step 22
+#: (ATO-2151).
+AtomicMemoryAdapter = AtomicMemory
+HindsightAdapter = Hindsight
+Mem0Adapter = Mem0
+NativeAdapter = Native
+SupermemoryAdapter = Supermemory
+WordOverlapAdapter = WordOverlap
+FixedContextAdapter = FixedContext
+FullContextAdapter = FullContext
+NoContextAdapter = NoContext
+
+
 __all__ = [
+    "REGISTRY",
+    "AtomicMemory",
+    "FixedContext",
+    "FullContext",
+    "Hindsight",
+    "Mem0",
+    "Native",
+    "NoContext",
+    "Supermemory",
+    "WordOverlap",
+    "get_adapter",
+    "list_adapters",
+    # Deprecated, and listed so `from memrank.adapters import *` keeps serving them.
     "AtomicMemoryAdapter",
-    "WordOverlapAdapter",
+    "FixedContextAdapter",
+    "FullContextAdapter",
     "HindsightAdapter",
     "Mem0Adapter",
     "NativeAdapter",
+    "NoContextAdapter",
     "SupermemoryAdapter",
-    "REGISTRY",
-    "get_adapter",
-    "list_adapters",
+    "WordOverlapAdapter",
 ]

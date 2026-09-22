@@ -1,4 +1,4 @@
-"""Live isolation smoke for SupermemoryAdapter cleanup (skips without a server).
+"""Live isolation smoke for Supermemory cleanup (skips without a server).
 
 Seeds a namespace (a /v4/memories seed + a /v3/documents doc), runs cleanup(), and
 asserts BOTH resource lists for the container are empty afterward. If the
@@ -17,9 +17,9 @@ def test_supermemory_cleanup_empties_namespace():
     url = _backend_url("supermemory")
     if not _backend_reachable(url):
         pytest.skip(f"Supermemory not reachable at {url!r}")
-    from memrank.adapters.supermemory import SupermemoryAdapter
+    from memrank.adapters.supermemory import Supermemory
     ns = "memrank-isolation-smoke"
-    adapter = SupermemoryAdapter()
+    adapter = Supermemory()
     try:
         adapter.prepare(ns)
         adapter.ingest([

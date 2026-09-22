@@ -11,8 +11,8 @@ loaders use.
 
 from __future__ import annotations
 
-from memrank.adapters.atomicmemory import AtomicMemoryAdapter
-from memrank.adapters.mem0 import Mem0Adapter
+from memrank.adapters.atomicmemory import AtomicMemory
+from memrank.adapters.mem0 import Mem0
 from memrank.benchmarks.locomo import LoCoMoBenchmark
 from memrank.core import Document
 
@@ -70,7 +70,7 @@ def test_a_caption_only_turn_still_carries_its_image():
 
 def test_mem0_receives_structured_turns_not_the_fallback():
     """The regression this file exists for: one JSON blob with role 'user'."""
-    forwarded = Mem0Adapter._document_to_messages(_locomo_doc())
+    forwarded = Mem0._document_to_messages(_locomo_doc())
     assert len(forwarded) == 2                      # not one blob
     assert forwarded[0]["role"] == "user" and forwarded[1]["role"] == "assistant"
     assert forwarded[0]["content"] == "Caroline: I went to a support group yesterday."
@@ -78,7 +78,7 @@ def test_mem0_receives_structured_turns_not_the_fallback():
 
 def test_atomicmemory_does_not_double_prefix_an_attributed_turn():
     """Content already says who spoke, so adding the role would give 'User: Caroline: ...'."""
-    text = AtomicMemoryAdapter._document_to_conversation_text(_locomo_doc())
+    text = AtomicMemory._document_to_conversation_text(_locomo_doc())
     assert text.splitlines()[0] == "Caroline: I went to a support group yesterday."
     assert "User: Caroline" not in text
 
@@ -89,5 +89,5 @@ def test_a_transcript_without_speakers_keeps_its_role_prefix():
     doc = Document(id="q1_s1", content="unused",
                    messages=[{"role": "user", "content": "Where did I park?"},
                              {"role": "assistant", "content": "Level 3."}])
-    text = AtomicMemoryAdapter._document_to_conversation_text(doc)
+    text = AtomicMemory._document_to_conversation_text(doc)
     assert text.splitlines() == ["User: Where did I park?", "Assistant: Level 3."]

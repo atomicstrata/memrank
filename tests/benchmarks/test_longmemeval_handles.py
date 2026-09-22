@@ -21,7 +21,7 @@ cardinality, so ranking on it alone scores recall_all@5 = 0.994 and recall_all@1
 above the paper's best published retriever (0.862).
 
 memrank forwarded those ids to every engine twice: as `Document.id`, which every adapter passes
-through as metadata (docs/adapter-contract.md:71 makes it contractual), and again inside
+through as metadata (docs/system-contract.md:71 makes it contractual), and again inside
 `Document.context`, which supermemory maps to `entity_context` and hindsight to `item["context"]`
 -- semantically indexed fields.
 

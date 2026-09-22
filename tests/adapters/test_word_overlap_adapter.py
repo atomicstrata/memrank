@@ -1,9 +1,9 @@
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.core import Document
 
 
 def test_word_overlap_retrieves_a_word_sharing_doc():
-    a = WordOverlapAdapter()
+    a = WordOverlap()
     a.prepare("u1")
     a.ingest([
         Document(id="d1", content="favorite animal is the blue whale", metadata={"doc_id": "d1"}),
@@ -16,7 +16,7 @@ def test_word_overlap_retrieves_a_word_sharing_doc():
 
 
 def test_baseline_isolates_runs():
-    a = WordOverlapAdapter()
+    a = WordOverlap()
     a.prepare("u1")
     a.ingest([Document(id="d1", content="alpha token", metadata={"doc_id": "d1"})])
     a.cleanup()
@@ -27,6 +27,6 @@ def test_baseline_isolates_runs():
 
 
 def test_baseline_emits_required_metric_keys():
-    a = WordOverlapAdapter()
+    a = WordOverlap()
     assert {"retrieve_p50_ms"}.issubset(a.latency_metrics())
     assert "tokens_per_query_mean" in a.token_metrics()

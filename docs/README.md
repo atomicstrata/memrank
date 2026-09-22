@@ -1,28 +1,48 @@
 ---
 status: active
-last_reviewed: 2026-08-31
+last_reviewed: 2026-09-21
 ---
 
 # Documentation
 
-Everything memrank documents about itself, in reading order. The repository-root
-[README](../README.md) is the shorter introduction; this page is the map.
+Memrank is a Python package: you hand a **system** and an **evaluation** to `memrank.run()` and
+get back a **result** whose values each name the **measure** that produced them and who decided
+them. Everything below is in reading order.
 
-## Start here
+## The entry path
+
+Read in this order. Every page here leads with Python, and none of them needs the command line to
+reach a number.
 
 | | |
 |---|---|
-| [Installing memrank](install.md) | install the CLI, run something, connect an agent |
-| [Methodology](methodology.md) | the four axes, the context-budget control, the control arms, evidence classes |
-| [Engine images](engine-images.md) | per target: whether you can obtain the engine, and what to run when you cannot |
+| [README](../README.md) | what memrank is, and a first result in a few lines of Python |
+| [Reference](reference/README.md) | one page per word -- system, evaluation, task, trace, measure, run, result -- each opening with a concrete instance |
+| [Installing memrank](install.md) | add the package to a project, import it, and print a result; upgrading |
+| [Adding a system](systems.md) | bring the thing under test: the kinds, the verbs each requires, and running yours without naming it |
+| [The system contract](system-contract.md) | the wire contract for a system memrank drives as a process rather than imports, in any language |
+| [Adding an evaluation](evaluations.md) | bring your own tasks and the rule for when the system's state is cleared |
+| [Measures](measures.md) | the measure contract: what a measure reads, who decides, and measuring stored traces afterwards |
+| [Runnable examples](../examples/README.md) | one folder per thing a person does, from a first result to two systems read as a pair |
+| [Methodology](methodology.md) | what each shipped measure actually measures, the context budget, the control arms, and what a value licenses you to say |
 | [SPEC.md](SPEC.md) | the specification: what memrank measures, what it refuses to claim, and the governance the maintainer commits to |
 
-## Contributing
+## Not core: the command line and the catalog
+
+This is not the entry path. Memrank's interface is the Python package; the pages below describe an
+older surface that is kept working but not developed, and they keep its own older vocabulary --
+*target*, *eval*, *adapter*, *benchmark* -- because those names are on the wire and in stored
+artifacts. Reach for it only when you want a run tracked, placed or named.
 
 | | |
 |---|---|
-| [Local development](local-development.md) | environment, the test suite, the checks a change has to pass |
-| [Adapter contract](adapter-contract.md) | what an engine must implement to be measurable, in full |
-| [Adding an adapter](adding-adapters.md) | run your own engine by passing the instance; registration when it needs a name |
-| [Adding a benchmark](adding-benchmarks.md) | run your own eval by passing the instance; loaders, scorers, registration |
-| [Runnable examples](../examples/README.md) | the library API, a custom engine, a custom benchmark, and wiring in a target memrank does not ship |
+| [The command line](misc/command-line.md) | the whole command surface: submitting a run, watching it, listing runs, targets, evals, secrets, config |
+| [Engine images](misc/engine-images.md) | per catalog target: whether you can obtain the container, and what to run when you cannot |
+| [Wiring in a custom target](../examples/more/custom-target/README.md) | registering a system in the catalog so the command line can drive it by name |
+
+## Working on memrank itself
+
+| | |
+|---|---|
+| [Local development](local-development.md) | environment, the smoke run, the suites, the checks a change has to pass |
+| [The test tree](../tests/README.md) | where a new test file goes, by subsystem |

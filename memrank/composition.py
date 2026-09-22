@@ -13,11 +13,11 @@
 # permissions and limitations under the License.
 """Composing an evaluation from questions and scoring supplied independently (ATO-2149).
 
-`Evaluation` -- `Benchmark`'s current name -- fuses the two: `load()` and `score()` sit on one
-class, so a person with their own questions still had to write a scorer, and a person with their
-own notion of correct still had to write a loader. :class:`ComposedEvaluation` is an
-`Evaluation` built from the two halves, so three runs are writable and none of them asks for
-the half that was not brought:
+`Benchmark` -- the catalog's loader-and-scorer, not the public `memrank.Evaluation` -- fuses the
+two: `load()` and `score()` sit on one class, so a person with their own questions still had to
+write a scorer, and a person with their own notion of correct still had to write a loader.
+:class:`ComposedEvaluation` is a `Benchmark` built from the two halves, so three runs are
+writable and none of them asks for the half that was not brought:
 
     ComposedEvaluation(name="mine", questions=[unit, ...])          # my questions, memrank's scorer
     ComposedEvaluation(name="demo+mine", questions=DemoBenchmark(), scorer=MyScorer())
@@ -40,7 +40,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
-from memrank.core import AdapterResponse, BenchmarkUnit, EvalInfo, Evaluation
+from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, EvalInfo
 from memrank.errors import MemrankError
 
 if TYPE_CHECKING:  # the judge shape is reached lazily; keep the judge out of this import graph.
@@ -62,7 +62,7 @@ class CriteriaMismatch(MemrankError):
 class Scorer:
     """The rule that decides whether what came back is right. One half of an evaluation.
 
-    Subclass it and implement :meth:`score`, which is `Evaluation.score`'s contract unchanged: one
+    Subclass it and implement :meth:`score`, which is `Benchmark.score`'s contract unchanged: one
     unit's responses in, a dict with at least ``composite`` out.
 
     :attr:`criterion_names` is the declaration the composition checks. It names the scored keys
@@ -75,7 +75,7 @@ class Scorer:
     criterion_names: tuple[str, ...] = ()
     #: What this scorer calls itself in the receipt. Derived from the class name when unset.
     identity: str | None = None
-    #: The kind of number this scorer produces, in `Evaluation.quality_metric`'s vocabulary.
+    #: The kind of number this scorer produces, in `Benchmark.quality_metric`'s vocabulary.
     #: ``None`` leaves the question source's declaration standing.
     quality_metric: str | None = None
     # What a number this scorer decided is a number OF, and what it must not be read as, is
@@ -88,7 +88,7 @@ class Scorer:
 
     def score(self, unit: BenchmarkUnit,
               responses: Sequence[AdapterResponse]) -> dict[str, Any]:
-        """Mark one unit. Same contract as :meth:`memrank.core.Evaluation.score`."""
+        """Mark one unit. Same contract as :meth:`memrank.core.Benchmark.score`."""
         raise NotImplementedError
 
     def judge_shape(self) -> JudgeShape | None:
@@ -118,10 +118,10 @@ def _kind(scorer: Scorer) -> str:
 class _Questions:
     """The question half, normalised: how to load, and what it declares about itself."""
 
-    def __init__(self, questions: Evaluation | Sequence[BenchmarkUnit] |
+    def __init__(self, questions: Benchmark | Sequence[BenchmarkUnit] |
                  Callable[[], list[BenchmarkUnit]],
                  *, criterion_names: Sequence[str], prompt_keys: Sequence[str]) -> None:
-        self.source = questions if isinstance(questions, Evaluation) else None
+        self.source = questions if isinstance(questions, Benchmark) else None
         self._supplied = questions
         self.criterion_names = tuple(criterion_names) or (
             tuple(self.source.criterion_names) if self.source else ())
@@ -139,7 +139,7 @@ class _Questions:
 
         Asked of the source's `judge_shape()` rather than of a second declaration, because that
         shape IS where a benchmark's labels and its grading rules are held together. A source
-        that is not an `Evaluation`, or whose shape defines no per-type prompts, carries none.
+        that is not a `Benchmark`, or whose shape defines no per-type prompts, carries none.
         """
         if self.source is None:
             return ()
@@ -153,7 +153,7 @@ class _Questions:
         return f"{len(self._supplied)} unit(s) {_SUPPLIED_IN_PYTHON}"  # type: ignore[arg-type]
 
 
-#: The flags an `Evaluation` question source declares about its own data and protocol. Copied onto
+#: The flags a `Benchmark` question source declares about its own data and protocol. Copied onto
 #: the composition so "memrank's questions, my scorer" keeps the questions' declarations -- their
 #: egress safety, their graph requirement, their reader-context policy -- rather than silently
 #: taking this class's defaults. `quality_metric` is deliberately absent: the scorer decides what
@@ -164,23 +164,23 @@ _SOURCE_FLAGS = (
 )
 
 
-class ComposedEvaluation(Evaluation):
+class ComposedEvaluation(Benchmark):
     """An evaluation built from a question half and a scoring half, supplied independently.
 
     Args:
         name: What this evaluation is called, in artifacts and run rows.
-        questions: An `Evaluation` whose `load()` supplies the questions, a list of
+        questions: An `Benchmark` whose `load()` supplies the questions, a list of
             `BenchmarkUnit`s, or a zero-argument callable returning them.
         scorer: The rule that marks an answer. Defaults to `memrank.SpanRecall`, which is the
             point: bringing questions does not mean writing a scorer.
         dataset_version, info, report_template: Declared where the question half cannot say.
         criterion_names: What the questions expect the scorer to produce. Only needed when the
-            question half is not an `Evaluation` that declares it.
+            question half is not a `Benchmark` that declares it.
         prompt_keys: The per-type grading keys the questions carry, same exception.
     """
 
     def __init__(self, *, name: str,
-                 questions: Evaluation | Sequence[BenchmarkUnit] |
+                 questions: Benchmark | Sequence[BenchmarkUnit] |
                  Callable[[], list[BenchmarkUnit]],
                  scorer: Scorer | None = None,
                  dataset_version: str | None = None,
@@ -253,7 +253,7 @@ class ComposedEvaluation(Evaluation):
             f"was graded against the wrong object for months "
             f"(memrank/judging/shape.py, BinaryJudgeShape._prompt_for).")
 
-    # ---- the Evaluation contract, served from the two halves ----------------------------
+    # ---- the Benchmark contract, served from the two halves ----------------------------
 
     def load(self) -> list[BenchmarkUnit]:
         self.check_declarations()

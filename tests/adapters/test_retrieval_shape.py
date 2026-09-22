@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from memrank.adapters.hindsight import HindsightAdapter
-from memrank.adapters.supermemory import SupermemoryAdapter
+from memrank.adapters.hindsight import Hindsight
+from memrank.adapters.supermemory import Supermemory
 
 
 class _FakeResponse:
@@ -55,9 +55,9 @@ class _StubClient:
         return _FakeResponse(self._body)
 
 
-def _hindsight_returning(n: int) -> tuple[HindsightAdapter, _StubClient]:
+def _hindsight_returning(n: int) -> tuple[Hindsight, _StubClient]:
     body = {"results": [{"id": f"r{i}", "text": f"memory {i}"} for i in range(n)]}
-    a = HindsightAdapter(base_url="http://stub", api_key="k")
+    a = Hindsight(base_url="http://stub", api_key="k")
     stub = _StubClient(body)
     a._client = stub  # type: ignore[assignment]
     a.prepare("u1")
@@ -81,7 +81,7 @@ def test_hindsight_asks_for_a_token_budget_not_a_result_count():
 
 def test_supermemory_states_its_search_mode_rather_than_inheriting_one():
     """The API default is "memories"; the vendor recommends and benchmarks "hybrid"."""
-    a = SupermemoryAdapter(base_url="http://stub")
+    a = Supermemory(base_url="http://stub")
     stub = _StubClient({"results": []})
     a._client = stub  # type: ignore[assignment]
     a._isolation = "iso-1"

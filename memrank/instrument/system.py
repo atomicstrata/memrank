@@ -21,9 +21,10 @@ inferred from a TypeError.
 The optional declarations -- version, token usage, internal timing, stored state -- are plain
 methods returning ``None``. Declaring nothing is recorded as nothing, never as zero.
 
-`Memory` is not defined here. There is ONE memory contract, `memrank.core.MemoryAdapter`, and
-`memrank.instrument.kinds` exports it under the new kind name as the same class object; the
-rename proper is a later ticket, and the CLI keeps its names until then.
+`Memory` is not defined here but in `memrank.instrument.kinds`, because it needs the value
+types in `memrank.contract` and this module is the one `memrank.core` imports. `memrank.core`
+re-exports it, and keeps `MemoryAdapter` and `MemoryEngine` as deprecated aliases of that same
+class object; the CLI keeps its own nouns.
 """
 
 from __future__ import annotations
@@ -90,7 +91,7 @@ class Assistant(System):
 #: The verbs each kind requires, by the kind's class name. Read by the run's refusal check, so
 #: a missing verb is a stated reason rather than an instantiation error a caller has to read.
 REQUIRED_VERBS: dict[str, tuple[str, ...]] = {
-    "MemoryAdapter": ("prepare", "ingest", "retrieve", "cleanup"),
+    "Memory": ("prepare", "ingest", "retrieve", "cleanup"),
     "Model": ("complete",),
     "Retriever": ("rank",),
     "Assistant": ("respond",),
@@ -98,7 +99,7 @@ REQUIRED_VERBS: dict[str, tuple[str, ...]] = {
 
 #: The kind names a person reads and writes, mapped to the class that defines the kind.
 KIND_NAMES: dict[str, str] = {
-    "MemoryAdapter": "memory",
+    "Memory": "memory",
     "Model": "model",
     "Retriever": "retriever",
     "Assistant": "assistant",

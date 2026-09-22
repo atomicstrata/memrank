@@ -72,8 +72,10 @@ modules.
 # `memrank.run` went nowhere and hover showed nothing.
 #
 # The nine spelled `X as X` are not in `__all__`, and the redundant alias is what says
-# "deliberately re-exported" to the linter and to a reader -- these are the deprecated
-# spellings and the sub-nouns, not names this module forgot to use.
+# "deliberately re-exported" to the linter and to a reader -- these are the operator layer and
+# the sub-nouns, not names this module forgot to use. `tests/repo/test_python_vocabulary.py`
+# holds which is which: deprecated (`MemoryAdapter`, `EvalResult`) and merely demoted
+# (`Benchmark`, which keeps its name and is reached through `memrank.evaluation(ref)`).
 import sys as _sys
 from types import ModuleType as _ModuleType
 from typing import Any

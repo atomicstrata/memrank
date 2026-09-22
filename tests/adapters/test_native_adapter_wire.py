@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 import pytest
 
-from memrank.adapters.native import ContractError, NativeAdapter
+from memrank.adapters.native import ContractError, Native
 from memrank.core import Document
 from tests.adapters.test_native_adapter import describe_body, wire
 
@@ -28,9 +28,9 @@ def routed(**bodies: dict[str, Any]) -> Any:
     return handler
 
 
-def prepared(**bodies: dict[str, Any]) -> NativeAdapter:
+def prepared(**bodies: dict[str, Any]) -> Native:
     """An adapter with one open isolation unit, ready to ingest or retrieve."""
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), routed(**bodies))
+    adapter = wire(Native(base_url="http://translator.test"), routed(**bodies))
     adapter.prepare("unit-1")
     return adapter
 
@@ -54,7 +54,7 @@ def test_documents_are_sent_verbatim():
         sent.append(json.loads(request.content or b"{}"))
         return httpx.Response(200, json={})
 
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), handler)
+    adapter = wire(Native(base_url="http://translator.test"), handler)
     adapter.prepare("unit-1")
     adapter.ingest([Document(id="d1", content="hi", user_id="u1", messages=[{"role": "user"}])])
     assert sent[-1]["documents"] == [{
@@ -80,7 +80,7 @@ def test_retrieve_sends_the_contract_fields():
         sent.append(json.loads(request.content or b"{}"))
         return httpx.Response(200, json={"documents": [], "raw": {}})
 
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), handler)
+    adapter = wire(Native(base_url="http://translator.test"), handler)
     adapter.prepare("unit-1")
     adapter.retrieve("where", k=7, user_id="u1")
     assert sent[-1] == {"query": "where", "k": 7, "user_id": "u1", "query_timestamp": None}
@@ -121,7 +121,7 @@ def test_translator_error_is_surfaced_not_swallowed():
             return httpx.Response(200, json=describe_body())
         return httpx.Response(500, json={"error": "engine rejected the batch"})
 
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), handler)
+    adapter = wire(Native(base_url="http://translator.test"), handler)
     with pytest.raises(ContractError, match="engine rejected the batch"):
         adapter.prepare("unit-1")
 

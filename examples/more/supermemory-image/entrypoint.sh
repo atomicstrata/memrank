@@ -24,7 +24,7 @@ done
 
 if [ ! -s "$HOME/.supermemory/env" ]; then
     echo "error: supermemory needs one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY or" >&2
-    echo "       GROQ_API_KEY present to start. It is not spent -- see docs/engine-images.md." >&2
+    echo "       GROQ_API_KEY present to start. It is not spent -- see docs/misc/engine-images.md." >&2
     exit 1
 fi
 chmod 600 "$HOME/.supermemory/env"

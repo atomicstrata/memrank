@@ -167,7 +167,7 @@ internal = [
   # ATO-1831 SETTLED THIS ON 2026-09-02, AND THE ANSWER WAS THAT THEY STAY. Neither image is
   # publishable: `mem0` runs a private fork, and `supermemory` wraps a closed vendor binary that is
   # not ours to hand on. So these four entries are no longer pending a decision -- they record one,
-  # and `docs/engine-images.md` states it per target for the reader. What ships for supermemory
+  # and `docs/misc/engine-images.md` states it per target for the reader. What ships for supermemory
   # instead is the build recipe, `examples/supermemory-image/`, which redistributes nothing.
   #
   # The public suite no longer fails on their absence: `tests/withheld.py` makes a test that needs

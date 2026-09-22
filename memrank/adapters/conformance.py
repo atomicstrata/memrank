@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Check a running translator against the adapter contract (``docs/adapter-contract.md``).
+"""Check a running translator against the system contract (``docs/system-contract.md``).
 
 This exists because memrank ships as an isolated ``uv tool`` install, so somebody writing a
 translator cannot run memrank's own pytest suite against it. Without this, their first signal that
@@ -28,11 +28,11 @@ in the tool examines.
 
 from __future__ import annotations
 
-from memrank.core import REQUIRED_TOKEN_KEYS, Document, MemoryAdapter
+from memrank.core import REQUIRED_TOKEN_KEYS, Document, Memory
 from memrank.docs import doc_url
 from memrank.placement.base import Requirement
 
-_DOC = doc_url("adapter-contract.md")
+_DOC = doc_url("system-contract.md")
 _UNIT_A = "memrank-verify-unit-a"
 _UNIT_B = "memrank-verify-unit-b"
 _USER = "memrank-verify-user"
@@ -50,7 +50,7 @@ def _probe_documents() -> list[Document]:
     ]
 
 
-def _describe(adapter: MemoryAdapter) -> Requirement:
+def _describe(adapter: Memory) -> Requirement:
     """The handshake: version, identity, components and capabilities all stated."""
     try:
         reported = adapter.describe_engine()
@@ -64,7 +64,7 @@ def _describe(adapter: MemoryAdapter) -> Requirement:
                        "")
 
 
-def _ingest(adapter: MemoryAdapter) -> Requirement:
+def _ingest(adapter: Memory) -> Requirement:
     """Open a unit and load the probe documents."""
     try:
         adapter.prepare(_UNIT_A)
@@ -74,7 +74,7 @@ def _ingest(adapter: MemoryAdapter) -> Requirement:
     return Requirement("ingest", True, "accepted 2 documents", "")
 
 
-def _ranking(adapter: MemoryAdapter) -> Requirement:
+def _ranking(adapter: Memory) -> Requirement:
     """Retrieve must return documents ranked best-first -- that ordering IS the measurement."""
     try:
         documents = adapter.retrieve(_QUERY, k=5, user_id=_USER).documents
@@ -93,7 +93,7 @@ def _ranking(adapter: MemoryAdapter) -> Requirement:
                        f"ranked the matching document first of {len(documents)}", "")
 
 
-def _isolation(adapter: MemoryAdapter) -> Requirement:
+def _isolation(adapter: Memory) -> Requirement:
     """A fresh unit must not see the previous one's documents.
 
     The most consequential check here. Leaked state does not raise -- it inflates every score after
@@ -115,7 +115,7 @@ def _isolation(adapter: MemoryAdapter) -> Requirement:
     return Requirement("isolation", True, "a fresh unit saw nothing from the previous one", "")
 
 
-def _metrics(adapter: MemoryAdapter) -> Requirement:
+def _metrics(adapter: Memory) -> Requirement:
     """The engine's usage DECLARATION must be well shaped, where it makes one.
 
     Latency is no longer asked of the engine: memrank times every ingest and retrieve at its own
@@ -137,7 +137,7 @@ def _metrics(adapter: MemoryAdapter) -> Requirement:
     return Requirement("metrics", True, detail, "")
 
 
-def contract_checks(adapter: MemoryAdapter) -> list[Requirement]:
+def contract_checks(adapter: Memory) -> list[Requirement]:
     """Exercise the contract against a live translator and report every finding.
 
     Args:

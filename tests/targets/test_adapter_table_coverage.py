@@ -1,9 +1,9 @@
 """Every registered adapter must appear in every table keyed by adapter name.
 
-Adding an engine means filling roughly eight name-keyed tables (docs/adding-adapters.md). Each one
-raises loudly when its own entry is missing, but only at the moment it is read -- which for some is
-a cloud render nobody runs locally, and for READINESS is a health check that never passes while the
-harness waits for a task that will be killed.
+Adding an engine means filling roughly eight name-keyed tables (docs/systems.md). Each one
+raises loudly when its own entry is missing, but only at the moment it is read -- which for some
+is a cloud render nobody runs locally, and for READINESS is a health check that never passes
+while the harness waits for a task that will be killed.
 
 Derived from REGISTRY rather than a hand-written list on purpose: a list would have to be edited by
 the same person who just forgot the table. This is the enumeration test the chokepoint rule asks
@@ -50,7 +50,7 @@ def test_every_out_of_process_adapter_has_a_table_entry(table_name: str):
     missing = [name for name in _out_of_process() if name not in table]
     assert not missing, (
         f"{table_name} has no entry for {', '.join(missing)}. Absence is not a default: add the "
-        f"entry (an empty dict or None is a positive statement) -- see docs/adding-adapters.md.")
+        f"entry (an empty dict or None is a positive statement) -- see docs/systems.md.")
 
 
 def test_every_adapter_declares_its_launch_requirements():

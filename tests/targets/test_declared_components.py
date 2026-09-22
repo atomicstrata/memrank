@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from memrank.adapters import get_adapter
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 
 
 def test_undeclared_adapter_falls_back_to_env(monkeypatch):
@@ -33,7 +33,7 @@ def test_declared_transport_reaches_the_engine_block():
 
 
 def test_declaring_nothing_leaves_the_record_untouched():
-    adapter = WordOverlapAdapter()
+    adapter = WordOverlap()
     before = adapter.effective_config()
     adapter.declare_components()
     assert adapter.effective_config() == before

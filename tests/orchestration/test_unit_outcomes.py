@@ -26,7 +26,7 @@ from functools import partial
 
 import pytest
 
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.evaluation.cell import RateLimitExhausted, run_cell
 from memrank.evaluation.observer import EvalObserver
 from tests.fakes import MultiUnitFakeBenchmark
@@ -36,7 +36,7 @@ from tests.fakes import MultiUnitFakeBenchmark
 DOOMED = "u1"
 
 
-class _FailingAdapter(WordOverlapAdapter):
+class _FailingAdapter(WordOverlap):
     """Word-overlap retrieval that raises for ONE unit, at a chosen stage.
 
     The unit is identified by ``prepare``'s isolation unit, which carries the unit's
@@ -133,7 +133,7 @@ def test_the_failed_unit_records_where_and_how_it_failed(stage, workers):
 
 
 def test_a_unit_whose_scorer_raises_fails_in_score():
-    cell = _run(WordOverlapAdapter, benchmark=_FailingScoreBenchmark(n_units=3))
+    cell = _run(WordOverlap, benchmark=_FailingScoreBenchmark(n_units=3))
 
     failed = next(row for row in cell["unit_outcomes"] if row["outcome"] == "failed")
     assert (failed["stage"], failed["error"]) == ("score", "ValueError")
@@ -208,7 +208,7 @@ def test_an_interrupt_is_not_a_unit_failure(workers):
 # ------------------------------------------------------------------ #
 
 def test_a_clean_cell_records_every_unit_as_ok():
-    cell = _run(WordOverlapAdapter)
+    cell = _run(WordOverlap)
 
     assert _outcomes(cell) == {"u0": "ok", "u1": "ok", "u2": "ok"}
     assert (cell["units_failed"], cell["unit_failure_rate"]) == (0, 0.0)

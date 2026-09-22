@@ -1,5 +1,12 @@
 # A target memrank does not ship
 
+> **Not core.** memrank's interface is the Python package -- `import memrank`, a
+> [`Memory`](../../02-your-own-system/README.md) subclass handed to `memrank.run`, and that is
+> all it takes to measure a system of your own. This directory is about the *catalog*: naming
+> that system so [the command line](../../../docs/misc/command-line.md) can drive it. *Target* is
+> the command line's word for a named system and *adapter* its word for the class behind one;
+> both are that older surface's vocabulary, kept working but not developed.
+
 `recency` is an engine that returns the *k* most recently ingested documents and never reads the
 question. About twenty lines of Python. This directory wires it into memrank three different ways,
 in ascending order of what each one buys, and everything here runs offline in under a second -- no
@@ -11,7 +18,7 @@ server, no key, no image, no dataset to download.
 
 | Door | You write | You get | Shown in |
 |---|---|---|---|
-| **Instance** | a `MemoryAdapter` subclass | a score, from a script | [`run.py`](run.py) |
+| **Instance** | a `Memory` subclass | a score, from a script | [`run.py`](run.py) |
 | **Registration** | the same class, plus one `register_adapter` call | a catalog ref: `memrank submit`, receipts, sweeps | [`recency_plugin.py`](recency_plugin.py) |
 | **Translator** | a program serving five HTTP endpoints, in any language | the same, without writing Python at all | [`../native-adapter/`](../native-adapter/README.md) |
 
@@ -21,15 +28,15 @@ or when you would rather memrank never imported your code.
 ## Door 1 -- an instance, no setup
 
 ```bash
-python examples/custom-target/run.py
+python examples/more/custom-target/run.py
 ```
 
-`memrank.run` takes any `MemoryAdapter` instance, so nothing has to be configured, registered or
-named. What it prints, and the line worth reading twice:
+The run takes any `Memory` instance, so nothing has to be configured, registered or named. What
+it prints, and the line worth reading twice:
 
 ```
 composite: 0.800  (recency × demo)
-target ref:   None <- None by design: no ref was given, so none is invented
+engine ref:  None <- None by design: no ref was given, so none is invented
 ```
 
 That `None` is the whole difference between the doors. Without a ref there is no address, so there
@@ -41,9 +48,9 @@ check rather than evidence.
 Three settings, once:
 
 ```bash
-export PYTHONPATH=$PWD/examples/custom-target
+export PYTHONPATH=$PWD/examples/more/custom-target
 memrank config set adapters.plugins recency_plugin
-memrank config set targets.path $PWD/examples/custom-target/targets
+memrank config set targets.path $PWD/examples/more/custom-target/targets
 ```
 
 `adapters.plugins` names a module to import; importing [`recency_plugin.py`](recency_plugin.py)
@@ -72,7 +79,7 @@ An in-process engine has nothing to launch and nothing to reach, so it uses
 `AdapterRegistration.in_process(...)`, which needs only two things: what launching it costs in
 credentials, and what the receipt should say about it. An engine memrank has to *start* -- a
 container, or a checkout it launches -- states more, because those rows are what start it. See
-[`../../../docs/adding-adapters.md`](../../../docs/adding-adapters.md).
+[`../../../docs/systems.md`](../../../docs/systems.md).
 
 ## The demo: a corpus too small to tell two engines apart
 
@@ -106,7 +113,8 @@ did is how benchmarks mislead. Real numbers want `locomo` or `beam`.
 
 ## Writing your own
 
-Copy [`recency_plugin.py`](recency_plugin.py) and replace the four method bodies.
+Copy [`recency_plugin.py`](recency_plugin.py) -- a `Memory` subclass called `Recency` -- and
+replace the four method bodies.
 
 | Method | Yours does | The trap |
 |---|---|---|

@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 import pytest
 
-from memrank.adapters.native import CONTRACT_VERSION, ContractError, NativeAdapter
+from memrank.adapters.native import CONTRACT_VERSION, ContractError, Native
 
 
 def describe_body(**overrides: Any) -> dict[str, Any]:
@@ -29,7 +29,7 @@ def describe_body(**overrides: Any) -> dict[str, Any]:
     return body
 
 
-def wire(adapter: NativeAdapter, handler) -> NativeAdapter:
+def wire(adapter: Native, handler) -> Native:
     """Point an adapter at an in-memory transport instead of a real translator."""
     adapter._client = httpx.Client(
         base_url="http://translator.test", transport=httpx.MockTransport(handler))
@@ -45,8 +45,8 @@ def describing(body: dict[str, Any], *, status: int = 200):
     return handler
 
 
-def adapter_for(body: dict[str, Any]) -> NativeAdapter:
-    return wire(NativeAdapter(base_url="http://translator.test"), describing(body))
+def adapter_for(body: dict[str, Any]) -> Native:
+    return wire(Native(base_url="http://translator.test"), describing(body))
 
 
 # ----------------------------------------------------------------------- #
@@ -55,15 +55,15 @@ def adapter_for(body: dict[str, Any]) -> NativeAdapter:
 
 def test_declares_translator_transport():
     """Latency compares only within a transport class, so this label is load-bearing."""
-    assert NativeAdapter.name == "native"
-    assert NativeAdapter.transport == "translator"
+    assert Native.name == "native"
+    assert Native.transport == "translator"
 
 
 def test_base_url_comes_from_the_placement(monkeypatch):
     monkeypatch.delenv("NATIVE_API_URL", raising=False)
-    assert NativeAdapter().base_url == "http://localhost:8099"
+    assert Native().base_url == "http://localhost:8099"
     monkeypatch.setenv("NATIVE_API_URL", "http://127.0.0.1:9001/")
-    assert NativeAdapter().base_url == "http://127.0.0.1:9001"
+    assert Native().base_url == "http://127.0.0.1:9001"
 
 
 # ----------------------------------------------------------------------- #
@@ -86,7 +86,7 @@ def test_describe_is_fetched_once():
         calls.append(request.url.path)
         return httpx.Response(200, json=describe_body())
 
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), handler)
+    adapter = wire(Native(base_url="http://translator.test"), handler)
     adapter.describe_engine()
     adapter.describe_engine()
     assert calls == ["/memrank/v1/describe"]
@@ -138,7 +138,7 @@ def test_missing_capability_is_refused():
 
 def test_describe_failure_surfaces_the_translators_message():
     body = {"error": "engine not started"}
-    adapter = wire(NativeAdapter(base_url="http://translator.test"), describing(body, status=503))
+    adapter = wire(Native(base_url="http://translator.test"), describing(body, status=503))
     with pytest.raises(ContractError, match="engine not started"):
         adapter.describe_engine()
 
@@ -158,7 +158,7 @@ def test_components_are_reported_by_the_engine_not_read_from_env(monkeypatch):
 
 def test_effective_config_never_raises_before_describe():
     """It runs while a run record is written, long after a network failure could be reported."""
-    adapter = NativeAdapter(base_url="http://127.0.0.1:1")
+    adapter = Native(base_url="http://127.0.0.1:1")
     assert adapter.effective_config()["llm"] == {"provider": None, "model": None}
 
 
@@ -169,5 +169,5 @@ def test_cleanup_before_prepare_is_a_no_op():
         calls.append(request.url.path)
         return httpx.Response(200, json={})
 
-    wire(NativeAdapter(base_url="http://translator.test"), handler).cleanup()
+    wire(Native(base_url="http://translator.test"), handler).cleanup()
     assert calls == []

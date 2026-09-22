@@ -5,7 +5,7 @@
 # time, from the vendor's own public installer (https://supermemory.ai/install, reached through the
 # `supermemory` npm launcher). Building here produces the same container the published
 # `supermemory` numbers were measured in, from the vendor's artifact rather than from a copy of it.
-# See docs/engine-images.md for what that means for reproducing a result.
+# See docs/misc/engine-images.md for what that means for reproducing a result.
 #
 # WHY A RECIPE AT ALL. supermemory publishes no server image and no plain OSS server -- the open
 # repository is Cloudflare Workers plus the hosted SaaS. The only self-hostable artifact that

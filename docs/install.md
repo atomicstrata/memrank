@@ -1,238 +1,175 @@
 # Installing memrank
 
-Two minutes. You end with `memrank` on your PATH -- no `uv run`, no virtualenv to activate.
+Memrank is a Python package. You add it to a project, `import memrank`, and a few lines later you
+have a [result](reference/result.md) with named values in it. Nothing on this page needs a running
+engine, a network or an API key.
 
-## 1. Get `uv`
+## 1. Add memrank to a project
+
+```bash
+uv add memrank
+```
+
+Already have a virtualenv and no [uv](https://docs.astral.sh/uv/)? `pip install memrank` into it
+does the same thing.
+
+No project yet? `uv init memrank-try` makes one in a new directory, and `uv add memrank` is run
+from inside it. If you do not have uv at all:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh     # macOS / Linux
 ```
 
-Already have it? `uv --version` needs to be 0.5 or newer.
+Memrank needs Python 3.10 or newer; uv installs one for you if the machine has none.
 
-memrank needs Python 3.10 or newer; uv installs one for you if the machine has none.
+## 2. Run an evaluation
 
-## 2. Install memrank
+`WordOverlap` is a trivial in-process [system](reference/system.md) that ships with the package:
+it keeps documents in a Python list and ranks them by how many words they share with the query.
+`demo` is a small synthetic [evaluation](reference/evaluation.md) that ships with it -- five
+questions about a short conversation. Neither needs anything you have not just installed.
 
-```bash
-uv tool install memrank
+Save this as `first_run.py`:
+
+```python
+import memrank
+from memrank.evaluations import demo
+from memrank.systems import WordOverlap
+
+result = memrank.run(WordOverlap(), demo())
+
+print(result.system.name, "on", result.evaluation.name)
+for value in result.values_of("word-match"):
+    print(f"{value.task_id:<14} {value.value}  decided by {value.decider.value}")
+print(len(result.traces), "traces recorded")
 ```
 
-Check it landed:
+Run it with `uv run python first_run.py`, or with `python first_run.py` in the virtualenv you
+installed into:
+
+```console
+WordOverlap on demo
+q_job          1.0  decided by rule
+q_animal       1.0  decided by rule
+q_visit        1.0  decided by rule
+q_diet         0.0  decided by rule
+q_allergy_neg  1.0  decided by rule
+5 traces recorded
+```
+
+That is the whole of the loop. [`memrank.run`](reference/run.md) puts each
+[task](reference/task.md) to the system, records one [trace](reference/trace.md) per task, and
+applies the evaluation's [measures](reference/measure.md) to those traces. What comes back is a
+[result](reference/result.md): the traces, and the values read off them. Every value names the
+measure that produced it and who decided it -- here, a fixed rule -- so no number on the way out is
+anonymous. `word-match` is a retrieval proxy and not answer correctness, which is what its own
+`why` says on every value it produces.
+
+`print(result)` instead of the loop above lays the whole thing out: the system, the evaluation, and
+every value with its decider and its reason. Nothing you write has to format it.
+
+## 3. See what else ships
+
+[`memrank.catalog()`](reference/catalog.md) prints everything installed, with what each thing
+needs, so you do not have to know a name to find one:
+
+```python
+import memrank
+
+memrank.catalog()
+```
+
+```console
+memrank ships 9 system(s) and 5 evaluation(s).
+
+systems -- `from memrank.systems import WordOverlap`, or `memrank.system("word-overlap")`
+
+  WordOverlap   'word-overlap'    memory   nothing -- in-process, offline
+  NoContext     'no-context'      control  nothing -- the floor: retrieves nothing, answers closed-book
+  FixedContext  'fixed-context'   control  nothing -- the corpus unranked, capped by the token budget
+  FullContext   'full-context'    control  nothing -- the corpus uncapped: the ceiling retrieval aims at
+  AtomicMemory  'atomicmemory'    memory   a running engine, at base_url= or ATOMICMEMORY_API_URL
+  Hindsight     'hindsight'       memory   a running engine, at base_url= or HINDSIGHT_API_URL
+  Supermemory   'supermemory'     memory   a running engine, at base_url= or SUPERMEMORY_BASE_URL
+  Mem0          'mem0'            memory   the mem0 SDK, or a running engine at MEM0_HTTP_URL
+  Native        'native'          memory   a running translator of memrank's system contract, at NATIVE_API_URL
+
+evaluations -- `from memrank.evaluations import demo`, or `memrank.evaluation("demo")`
+
+  demo()            'demo'            nothing -- a bundled synthetic scenario
+                                      measures a substring retrieval proxy and evidence recall
+  relation_graph()  'relation_graph'  nothing -- in-repo fixtures, and a graph-capable system
+                                      measures a structural graph score
+  locomo()          'locomo'          a one-time download, or LOCOMO_DATA_PATH
+                                      measures latency and failures; quality needs a judge
+  longmemeval()     'longmemeval'     a one-time download, or LONGMEMEVAL_DATA_PATH
+                                      measures latency and failures; quality needs a judge
+  beam()            'beam'            a one-time download, or BEAM_DATA_PATH
+                                      measures latency and failures; quality needs a judge
+```
+
+The engine-backed systems take a `base_url=` (and `api_key=` where the engine authenticates) where
+`WordOverlap()` goes, and each reads its own environment variable when the argument is left out.
+Whether you can obtain a given engine's image at all differs per engine --
+[engine images](misc/engine-images.md) says which, and what to run for the two you cannot pull.
+
+## 4. Upgrading
 
 ```bash
-memrank --help
-memrank --version      # the version, and where this install came from
+uv lock --upgrade-package memrank && uv sync      # or: pip install --upgrade memrank
+```
+
+`memrank.__version__` is what you are actually running:
+
+```python
+import memrank
+
+print(memrank.__version__)
+```
+
+```console
+0.4.0
 ```
 
 <details>
-<summary><code>memrank: command not found</code></summary>
+<summary>Working on memrank itself</summary>
 
-uv installs tools into `~/.local/bin`. Add it to your PATH, or let uv do it:
-
-```bash
-uv tool update-shell    # then restart your shell
-```
-</details>
-
-<details>
-<summary>Upgrading later</summary>
-
-For a published install, the upgrade is the ordinary one:
-
-```bash
-uv tool upgrade memrank     # or: pip install --upgrade memrank
-```
-
-For a source install it is the install command again, `--force --refresh` included -- see
-below for why. Which one applies to *your* install is not something you have to remember:
-every memrank message that asks you to upgrade reads your own install metadata and names the
-path that fits it -- including an editable install, where the answer is to update the tree it
-tracks rather than to reinstall anything.
-</details>
-
-<details>
-<summary>Installing from source (contributors)</summary>
-
-The repository is public, so this needs no GitHub credential:
-
-```bash
-uv tool install --force --refresh git+https://github.com/atomicstrata/memrank
-```
-
-`--force` reinstalls over what is already there; `--refresh` is what makes it actually pick up
-a moved branch. Not `uv tool upgrade memrank` -- for a *git* install uv resolves the branch
-against its cache and will tell you there is nothing to upgrade while the branch has moved
-([astral-sh/uv#4317](https://github.com/astral-sh/uv/issues/4317),
-[#9146](https://github.com/astral-sh/uv/issues/9146)). That caveat is about git installs only;
-a published install upgrades normally.
-
-To work on memrank itself, take a checkout instead:
+Take a checkout rather than a package install -- the repository is public, so this needs no GitHub
+credential:
 
 ```bash
 git clone https://github.com/atomicstrata/memrank
 cd memrank
-uv tool install --editable .     # `memrank` tracks your working tree
+uv sync --extra dev
 ```
 
-Code edits apply immediately; changing *dependencies* needs a re-install. For the test suite
-and the rest of the development loop, see [local development](local-development.md).
+Your edits then apply immediately, and `uv run python first_run.py` from that checkout uses them.
+For the test suite and the rest of the development loop, see
+[local development](local-development.md).
 
-`memrank --version` prints where the install came from -- for a git install, the commit -- which
-is the thing to quote when something looks wrong.
+To use an unreleased memrank from a project of your own, add the checkout instead of the package:
+`uv add --editable ../memrank`.
 </details>
-
-## 3. Run an evaluation
-
-Nothing below needs a running engine, a network, or an API key -- `demo` is a synthetic benchmark
-that ships with memrank, and `word-overlap` is a trivial in-process retriever:
-
-```bash
-memrank submit word-overlap demo               # prints a run id immediately, runs in the background
-memrank watch <id>                             # attach until it ends (exit code = outcome)
-memrank runs ls                                # submitted -> running -> done
-memrank runs show <id>                         # state, where it ran, artifact location
-```
-
-That's the whole loop. `submit` always returns immediately with the run id(s); `watch` blocks on
-them, `runs ls` glances at them, `kill <id>` stops one.
-
-## Finding your way around
-
-```bash
-memrank targets ls               # what can be evaluated  (hindsight, atomicmemory, word-overlap, ...)
-memrank evals ls                 # what to evaluate against  (locomo, beam, longmemeval, demo)
-memrank targets show hindsight   # the exact composition, and ✔/✘ per secret it needs
-memrank runs ls --live      # what's still going
-memrank submit --help       # every flag, grouped
-```
-
-`memrank targets show <ref>` marks ✔/✘ per secret **before** anything is spent, so a missing key
-surfaces as a refusal rather than a half-finished run. Store one with
-`memrank secrets set <NAME>`; `memrank secrets ls` shows what the local wallet holds.
-
-## Where a run happens
-
-`--on` selects the placement. The default is `defaults.on` (`memrank config ls`), which is `none`
-on a fresh install.
-
-| | |
-|---|---|
-| `--on none` | an engine you are already running, at its configured URL |
-| `--on local` | a disposable, isolated stack provisioned per run from the target manifest -- needs Docker |
-| `--on cloud` | submitted to the hosted memrank platform -- needs a signed-in session (below) |
-
-```bash
-export HINDSIGHT_API_URL=http://localhost:7000
-memrank submit hindsight locomo:smoke --on none
-```
-
-The variable above points at an engine you started. Whether you can obtain that engine's image
-at all differs per target -- [engine images](engine-images.md) says which, and what to run for the
-two you cannot pull.
-
-Engine URL defaults, each overridable by its environment variable:
-
-| Engine | Variable | Default |
-|---|---|---|
-| AtomicMemory | `ATOMICMEMORY_API_URL` | `http://localhost:3070` |
-| Mem0 (HTTP) | `MEM0_HTTP_URL` | `http://localhost:8888` |
-| Hindsight | `HINDSIGHT_API_URL` | `http://localhost:7000` |
-| Supermemory | `SUPERMEMORY_BASE_URL` | `http://localhost:6767` |
-
-Judged runs send benchmark content to Anthropic and need `ANTHROPIC_API_KEY`. They are on by
-default for `locomo`, `longmemeval` and `beam`, whose only quality metric is the judge's, and off
-where the benchmark scores itself. `--no-judge` measures latency and cost without paying for
-quality.
-
-## Optional: the hosted platform
-
-Everything above works logged out, against your own machine, and accumulates locally. Signing in
-is needed only to submit runs to AtomicStrata's hosted platform and to share a run record with an
-organisation.
-
-```bash
-memrank auth login
-memrank auth status     # who you are, which orgs, when the session expires
-memrank config ls       # every setting, its value, and where that value came from
-```
-
-A browser opens; approve with GitHub. Login also configures the machine -- it writes your default
-org and points submissions at the platform, which is why nothing afterwards needs `--on` or
-`--org`. Only the *first* login writes those defaults, so a later sign-in never overrides one you
-chose since (change it with `memrank config set defaults.org <slug>`).
-
-> **"no default org"?** Membership is not self-served yet. Hosted runs are, for now, limited to
-> accounts AtomicStrata has provisioned; local placements are not.
-
-Hosted runs are held to your org's limits -- a quota on how many you may have started and still
-running, and, for a run composed in the browser rather than submitted from the CLI, that org's
-run-shape ceilings; a submission over either is refused naming the limit it crossed.
-
-<details>
-<summary>Signing in over SSH, or anywhere with no browser</summary>
-
-Nothing extra to do -- `auth login` notices there is no browser and prints a URL instead:
-
-```console
-$ memrank auth login
-No browser here. Open this on any device to sign in:
-
-      https://memrank.dev/signin?flow=Xk7pQ2...&client=cli
-
-  ✓ signed in -- token expires 2026-09-12T...
-```
-
-Open it anywhere -- your laptop, your phone -- and approve with GitHub. The terminal is polling and
-picks it up within a few seconds; the link is good for ten minutes.
-
-Force this path with `--no-browser` when a browser exists but cannot actually open, such as an
-`ssh -X` display that will not come up.
-
-`MEMRANK_TOKEN` still overrides everything and is what CI should use -- but for a person on a
-remote box, the flow above is the answer, and it does not put a 30-day credential in a shell
-history or a second machine's dotfiles.
-</details>
-
-<details>
-<summary>Where the session token is stored</summary>
-
-`~/.memrank/credentials`, mode `0600` -- the model `aws`, `gcloud` and `kubectl` use.
-
-Not the OS keychain by default, deliberately. memrank runs as a Python entry point, so the macOS
-dialog names *python* rather than memrank, and it returns after every reinstall because the
-permission binds to the interpreter. A prompt people learn to click through protects nothing.
-
-Prefer the keychain anyway? `memrank config set auth.keyring true`, then `memrank auth login`
-again. `MEMRANK_TOKEN` overrides both, and is what CI should use.
-</details>
-
-## Connecting an AI agent
-
-Install the optional MCP server with `uv tool install 'memrank[mcp]'`, then configure the agent to
-launch `memrank-mcp`. Run `memrank-mcp --help` for the tool workflow and configuration.
-
-From the source install, the same extra is named against the URL:
-
-```bash
-uv tool install --force --refresh 'memrank[mcp] @ git+https://github.com/atomicstrata/memrank'
-```
 
 ## Known limitations
 
-- **A finished cloud run shows no SCORE** -- `runs ls` prints `—` and `runs show` says
-  `results: (none recorded yet)`. The run did succeed and its artifact was written; nothing pulls
-  it back into the record yet.
-- **`memrank watch` of a cloud run** downloads artifacts straight from object storage on success,
-  which needs credentials most people will not have. Follow cloud runs with `runs ls` instead.
-- **Engine-backed cloud targets** (`mem0`, `atomicmemory`, `hindsight`, `supermemory`) are not
-  serving yet. The same targets work under `--on none` and `--on local`.
+Nothing on this page is affected by the limitations memrank currently carries: every one of them
+concerns a run submitted to the hosted platform and followed from the command line, and they are
+listed under [known limitations](misc/command-line.md) there. A run you start from Python happens
+in this process, against the system you constructed, and its result is the object you get back.
 
-Local placements -- the ones this page leads with -- are not affected by any of the above.
+What a value does and does not license you to say is a different question, and a more important
+one: [methodology](methodology.md) states it, and the README's *What a value is, and what it is
+not* is the short form.
 
 ## Telling us something broke
 
-`memrank --version` and the run id from `runs ls` make a report actionable. The version line says
-where the install came from as well as what it is -- a released version identifies itself, and a
-git install adds the commit, so two people reporting "0.2.0" are distinguishable. Paste the whole
-error text: messages are written to name the fix, and one that doesn't is itself worth reporting.
+`memrank.__version__` and the code you ran make a report actionable. Paste the whole error text:
+messages are written to name the fix, and one that does not is itself worth reporting.
+
+## The command line
+
+Memrank ships a `memrank` command as well, and it is not core: you never need it to get a number,
+and it keeps an older vocabulary of its own. [The command line](misc/command-line.md) is where it
+lives, along with the tool install that puts it on your PATH, tracked runs, placement, the hosted
+platform and the MCP server.

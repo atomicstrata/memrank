@@ -15,7 +15,7 @@
 
 ``docs/`` is a directory in the repository and is NOT in the wheel: ``pyproject.toml`` excludes it
 from the packages that ship, so ``pip install memrank`` leaves no ``docs/`` anywhere on the
-machine. A message that says "see docs/adapter-contract.md" therefore names a file the reader does
+machine. A message that says "see docs/system-contract.md" therefore names a file the reader does
 not have, at the moment they are already stuck -- which is the defect ATO-2125 exists to remove.
 
 The answer is a URL rather than a path: it resolves from any working directory, on a laptop that
@@ -34,7 +34,7 @@ def doc_url(relative: str) -> str:
     """The published URL of ``relative``, a path under the repository's ``docs/`` directory.
 
     Args:
-        relative: A path relative to ``docs/``, e.g. ``adapter-contract.md``.
+        relative: A path relative to ``docs/``, e.g. ``system-contract.md``.
 
     Returns:
         An absolute https URL a reader can open from anywhere.

@@ -28,7 +28,10 @@ downloads a dataset, calls a paid API, or needs a key.
 Each `run.py` is self-contained: it imports `memrank` and nothing else of this repository, so
 you can copy one into your own project and it runs there. What that costs is a little
 duplication between folders, which is the price of being able to read any one of them on its
-own. Nothing formats a result -- `print(result)` and `print(paired)` are memrank's own.
+own. Nothing formats a result: what a folder prints is what `print()` on memrank's own result
+and paired-reading objects produces.
 
-[`more/`](more/README.md) is not a step in the walk: it keeps the material that drives
-memrank's previous run loop, or needs a live engine or Docker.
+[`more/`](more/README.md) is not a step in the walk and is not core: it keeps the material
+that drives memrank's previous run loop -- the one
+[the command line](../docs/misc/command-line.md) calls, with its older vocabulary of *target*
+for a named system -- or that needs a live engine or Docker.

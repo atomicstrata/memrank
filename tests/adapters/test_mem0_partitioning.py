@@ -15,7 +15,7 @@ path is what a bare `mem0` now does, and the unpartitioned one is reached only b
 
 from __future__ import annotations
 
-from memrank.adapters.mem0 import Mem0Adapter
+from memrank.adapters.mem0 import Mem0
 from memrank.benchmarks.locomo import LoCoMoBenchmark
 from memrank.core import Document
 
@@ -41,8 +41,8 @@ class _FakeMemory:
         return {"results": [{"id": f"m-{len(self.searched)}", "memory": "a fact"}]}
 
 
-def _adapter(partitioning=None) -> tuple[Mem0Adapter, _FakeMemory]:
-    adapter = Mem0Adapter(mode="sdk", partitioning=partitioning)
+def _adapter(partitioning=None) -> tuple[Mem0, _FakeMemory]:
+    adapter = Mem0(mode="sdk", partitioning=partitioning)
     memory = _FakeMemory()
     adapter._memory = memory
     adapter.prepare("run-1")

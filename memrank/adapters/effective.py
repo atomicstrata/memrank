@@ -17,7 +17,7 @@ The extraction LLM and embedder of an HTTP memory engine live server-side (set
 out-of-band in the engine's own ``.env``), so the adapter cannot introspect them.
 The operator declares them via ``{PREFIX}LLM_MODEL`` / ``{PREFIX}LLM_PROVIDER`` /
 ``{PREFIX}EMBEDDER_MODEL`` / ``{PREFIX}EMBEDDING_DIMS`` env vars, and these helpers
-read them into the shape ``MemoryAdapter.effective_config`` expects. These names
+read them into the shape ``Memory.effective_config`` expects. These names
 match the ones the mem0 server itself reads (``MEM0_LLM_MODEL``,
 ``MEM0_EMBEDDER_MODEL``, ``MEM0_EMBEDDING_DIMS``), so a single env declaration both
 configures the backend and is recorded truthfully. Missing vars are reported as

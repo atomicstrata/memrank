@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from memrank.adapters.atomicmemory import AtomicMemoryAdapter
+from memrank.adapters.atomicmemory import AtomicMemory
 from memrank.core import Document
 
 
@@ -47,8 +47,8 @@ class _StubClient:
         return _FakeResponse(self._bodies.get(url, {}))
 
 
-def _adapter_with_stub(bodies: dict[str, dict[str, Any]]) -> tuple[AtomicMemoryAdapter, _StubClient]:
-    a = AtomicMemoryAdapter(base_url="http://stub", api_key="k")
+def _adapter_with_stub(bodies: dict[str, dict[str, Any]]) -> tuple[AtomicMemory, _StubClient]:
+    a = AtomicMemory(base_url="http://stub", api_key="k")
     bodies = {"/v1/memories/reset-source": {"success": True}, **bodies}
     stub = _StubClient(bodies)
     a._client = stub  # type: ignore[assignment]
@@ -58,7 +58,7 @@ def _adapter_with_stub(bodies: dict[str, dict[str, Any]]) -> tuple[AtomicMemoryA
 
 
 def test_prepare_resets_source_for_isolation_unit():
-    a = AtomicMemoryAdapter(base_url="http://stub", api_key="k")
+    a = AtomicMemory(base_url="http://stub", api_key="k")
     stub = _StubClient({"/v1/memories/reset-source": {"success": True}})
     a._client = stub  # type: ignore[assignment]
 
@@ -73,14 +73,14 @@ def test_conversation_text_joins_messages():
     doc = Document(id="d1", content="raw",
                    messages=[{"role": "user", "content": "hi"},
                              {"role": "assistant", "content": "yo"}])
-    text = AtomicMemoryAdapter._document_to_conversation_text(doc)
+    text = AtomicMemory._document_to_conversation_text(doc)
     assert isinstance(text, str)
     assert "hi" in text and "yo" in text
 
 
 def test_conversation_text_falls_back_to_content():
     doc = Document(id="d1", content="just content")
-    assert AtomicMemoryAdapter._document_to_conversation_text(doc) == "just content"
+    assert AtomicMemory._document_to_conversation_text(doc) == "just content"
 
 
 def test_ingest_sends_string_conversation_and_no_metadata():
@@ -201,7 +201,7 @@ def test_graph_snapshot_flags_error_on_malformed_audit_body():
 
 def test_timeout_env_override(monkeypatch):
     monkeypatch.delenv("ATOMICMEMORY_TIMEOUT_S", raising=False)
-    assert AtomicMemoryAdapter().timeout_s == 60.0
+    assert AtomicMemory().timeout_s == 60.0
     monkeypatch.setenv("ATOMICMEMORY_TIMEOUT_S", "600")
-    assert AtomicMemoryAdapter().timeout_s == 600.0
-    assert AtomicMemoryAdapter(timeout_s=5).timeout_s == 5.0  # explicit wins
+    assert AtomicMemory().timeout_s == 600.0
+    assert AtomicMemory(timeout_s=5).timeout_s == 5.0  # explicit wins

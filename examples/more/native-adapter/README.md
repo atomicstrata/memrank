@@ -1,9 +1,9 @@
 # Reference translator
 
-A working implementation of the [memrank adapter contract](../../../docs/adapter-contract.md), in
+A working implementation of the [memrank system contract](../../../docs/system-contract.md), in
 about 150 lines of standard-library Python.
 
-Write one of these and memrank can evaluate your memory engine without a fork, a pull request, or
+Write one of these and memrank can measure your memory system without a fork, a pull request, or
 any change to memrank itself. memrank launches your program, drives it over HTTP, and never
 imports your code -- so it can be in any language.
 
@@ -13,7 +13,7 @@ overlap. Benchmark it and you are benchmarking a dict.
 ## Try it
 
 ```bash
-python examples/native-adapter/translator.py --port 8099
+python examples/more/native-adapter/translator.py --port 8099
 ```
 
 Then, from another shell:
@@ -22,7 +22,12 @@ Then, from another shell:
 curl -s http://127.0.0.1:8099/memrank/v1/describe | python -m json.tool
 ```
 
-## Point memrank at it
+## Not core: point memrank at it by name
+
+> The five endpoints above are the whole contract, and a translator that serves them can be
+> measured from Python like any other [`Memory`](../../02-your-own-system/README.md). What
+> follows names it instead, so [the command line](../../../docs/misc/command-line.md) can drive
+> it -- an older surface kept working but not developed. *Target* is its word for a named system.
 
 Make a folder you own -- anywhere, git or not -- and put a descriptor beside the translator:
 
@@ -90,4 +95,4 @@ Three rules the reference implementation demonstrates and that are easy to get w
 Runs against a source-bound target are recorded as `development_observation` with
 `publishable: false`, and a run from a dirty working tree will not sync anywhere. That is about
 memrank having launched code from a mutable checkout, not about your engine. See
-[adapter-contract.md](../../../docs/adapter-contract.md) section 10.
+[the system contract](../../../docs/system-contract.md) section 10.

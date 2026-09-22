@@ -29,11 +29,26 @@ are `engine` and `evaluation`, and every deprecated spelling is keyword-only and
 **The corpus.** Every live document, example and script is scanned for the spellings this
 step retired. A retired spelling in an instruction is a person typing it tomorrow.
 
-**What is deliberately not here.** `MemoryAdapter`, `Benchmark` and `EvalResult` are
-*deprecated*, not retired: they still work, and plan step 22 is what removes them and extends
-the table below. And `memrank submit TARGET EVAL` keeps its own nouns -- *target* is the
-command line's word for a catalog entry, this step did not change it, and
-`examples/more/custom-target/` is about exactly that. Only Python spellings are
+*Retired* here is about what a document may teach, not about what still imports. The nine
+shipped system classes dropped their `Adapter` suffix (ATO-2220) and the old spellings are
+kept as aliases for code outside this repository; :data:`SUFFIXED_ALIASES` names all nine,
+which both feeds the corpus scan and asserts each one still resolves to the same class object.
+So a document that teaches `WordOverlapAdapter` fails, and a checkout that has quietly deleted
+it fails too -- the second is what tells a retired spelling apart from a removed name.
+
+**The operator layer.** A third table names what is importable from `memrank` and deliberately
+off `__all__`, and asserts the entry path never makes a reader meet it. `Benchmark` is the case
+that table exists for (ATO-2210): it could not be renamed to `Evaluation` -- a different class
+holds that name -- so it was demoted instead, and demotion, unlike a rename, leaves nothing
+behind that fails when it is undone. `memrank.evaluation(ref)` is the route to a named
+evaluation; `Benchmark` is what that route resolves one to.
+
+**What is deliberately not here.** `MemoryAdapter`, `MemoryEngine` and `EvalResult` are
+*deprecated*, not retired: they still work, they may still be named in a document that is
+explaining the deprecation, and ATO-2151 is what removes them and extends the table below.
+`Benchmark` is neither -- it is demoted and it stays. And `memrank submit TARGET EVAL` keeps
+its own nouns -- *target* is the command line's word for a catalog entry, this step did not
+change it, and `examples/more/custom-target/` is about exactly that. Only Python spellings are
 scanned, never a file name.
 """
 from __future__ import annotations
@@ -45,6 +60,7 @@ from pathlib import Path
 import pytest
 
 import memrank
+import memrank.adapters
 import memrank.core
 from memrank.evaluation.api import DEPRECATED_PARAMETERS
 from memrank.evaluation.api import run as cell_run
@@ -70,6 +86,24 @@ POSITIONAL = ("system", "evaluation")
 #: And of the previous run, which the command line and the cloud still call.
 CELL_POSITIONAL = ("engine", "evaluation")
 
+#: ``{alias: the name it is an alias of}``. The nine shipped system classes dropped the
+#: `Adapter` suffix (ATO-2220). Each old spelling is still importable from
+#: `memrank.adapters` -- out-of-tree code that names one keeps working, and removing them is
+#: ATO-2151 -- but no document or script may teach one, so each also appears in `RETIRED`
+#: below. Naming them here is what keeps *retired spelling* from drifting into *removed name*:
+#: a deleted alias fails here rather than in somebody else's checkout.
+SUFFIXED_ALIASES = {
+    "AtomicMemoryAdapter": "AtomicMemory",
+    "FixedContextAdapter": "FixedContext",
+    "FullContextAdapter": "FullContext",
+    "HindsightAdapter": "Hindsight",
+    "Mem0Adapter": "Mem0",
+    "NativeAdapter": "Native",
+    "NoContextAdapter": "NoContext",
+    "SupermemoryAdapter": "Supermemory",
+    "WordOverlapAdapter": "WordOverlap",
+}
+
 #: ``{regex: what to write instead}``. Each pattern is a PYTHON spelling this step retired.
 RETIRED = {
     r"\brun\(\s*target\s*=": "run(engine=...)",
@@ -78,8 +112,28 @@ RETIRED = {
     r"\bresult\.adapter\b": "result.engine",
     r"\bresult\.benchmark\b": "result.evaluation",
     r"\bmemrank\.EvalResult\b": "memrank.Result",
+    **{rf"\b{alias}\b": current for alias, current in SUFFIXED_ALIASES.items()},
 }
 RETIRED_PATTERNS = {re.compile(pattern): instead for pattern, instead in RETIRED.items()}
+
+#: Importable from `memrank` and deliberately absent from `SURFACE`: the previous surface, which
+#: the command line and the cloud call and a reader of the entry path never has to meet. Named
+#: here so that putting one back on the front page is an edit to this list rather than a thing
+#: nobody notices. `Benchmark` is demoted, not deprecated -- it keeps its name and still works.
+OPERATOR_LAYER = ("AdapterResponse", "Benchmark", "BenchmarkUnit", "ComposedEvaluation",
+                  "EvalInfo", "EvalResult", "MemoryAdapter", "MemoryEngine", "Scorer",
+                  "SpanRecall")
+
+#: The same layer, in names that are also ordinary English words. Their import is checked with
+#: the rest; the prose scan cannot see them, because `benchmark` in a sentence about what `demo`
+#: is means the word and not `memrank.benchmark`, and a scan that cannot tell those apart fails
+#: on prose nobody should change.
+OPERATOR_LAYER_UNSCANNABLE = ("benchmark",)
+
+#: Layer 1 of the information architecture: what a person reads before they have chosen to go
+#: deeper. `docs/misc/` -- where the command line and the catalog are documented -- is not here,
+#: because that is exactly where the operator layer is allowed to be taught.
+ENTRY_PATH = ("README.md", "docs/install.md", "docs/reference/*.md")
 
 #: Where instructions live -- prose a reader may copy from, and scripts they may run.
 LIVE_GLOBS = ("*.md", "docs/**/*.md", "examples/**/*.md", "notebooks/**/*.md",
@@ -124,7 +178,7 @@ def test_no_live_file_teaches_a_retired_python_name(path: Path):
 
 
 #: Files the scan must reach, or every case above passes vacuously.
-MUST_COVER = ("README.md", "examples/02-your-own-system/run.py", "docs/adding-adapters.md")
+MUST_COVER = ("README.md", "examples/02-your-own-system/run.py", "docs/systems.md")
 
 
 def test_the_scan_reaches_the_files_that_teach_the_python_surface():
@@ -177,6 +231,19 @@ def test_the_result_answers_to_the_nouns():
     assert (result.engine, result.evaluation, result.engine_ref) == ("word-overlap", "demo", "ref")
 
 
+def test_every_retired_suffixed_spelling_still_imports_as_the_same_class():
+    """Retired from the documents, not from the package: out-of-tree code keeps working.
+
+    Deleting an alias is ATO-2151 and is a release-note change; doing it by accident here
+    would break every caller the rename pushed onto the new name, silently.
+    """
+    for alias, current in SUFFIXED_ALIASES.items():
+        old = getattr(memrank.adapters, alias, None)
+        assert old is not None, f"memrank.adapters.{alias} stopped importing"
+        assert old is getattr(memrank.adapters, current), (
+            f"{alias} must be the same class object as {current}, not a second class beside it")
+
+
 def test_the_deprecated_exports_are_the_same_objects():
     """Not near-copies: the same class, so a subclass written against either name is one type.
 
@@ -188,3 +255,37 @@ def test_the_deprecated_exports_are_the_same_objects():
     assert memrank.Benchmark is memrank.core.Evaluation
     assert memrank.Result is not memrank.EvalResult, (
         "the new Result is the read form of the new run; the stored artifact is EvalResult")
+
+
+def _entry_path_files() -> list[Path]:
+    found: set[Path] = set()
+    for glob in ENTRY_PATH:
+        found.update(p for p in ROOT.glob(glob) if p.is_file())
+    return sorted(found)
+
+
+def test_the_operator_layer_is_importable_and_off_the_surface():
+    """Demoted means both halves: still there, and not on the first page a person reads."""
+    for name in OPERATOR_LAYER + OPERATOR_LAYER_UNSCANNABLE:
+        assert getattr(memrank, name, None) is not None, f"memrank.{name} stopped importing"
+        assert name not in SURFACE, f"{name} is the operator layer; it cannot be on the surface"
+
+
+@pytest.mark.parametrize("path", _entry_path_files(),
+                         ids=lambda p: p.relative_to(ROOT).as_posix())
+def test_the_entry_path_never_makes_a_reader_meet_the_operator_layer(path: Path):
+    """A first result must be reachable without learning the vocabulary underneath it."""
+    text = path.read_text(encoding="utf-8")
+    met = [name for name in OPERATOR_LAYER
+           if re.search(rf"(?<![\w.]){re.escape(name)}\b", text)]
+    assert not met, (f"{path.relative_to(ROOT)} teaches {', '.join(met)} -- the entry path "
+                     "reaches a named evaluation with memrank.evaluation(ref); the operator "
+                     "layer is taught in docs/misc/")
+
+
+def test_the_entry_path_scan_reaches_the_front_page_and_the_reference():
+    """Guards the guard: a moved file would empty this scan and pass every case above."""
+    scanned = {p.relative_to(ROOT).as_posix() for p in _entry_path_files()}
+    assert "README.md" in scanned
+    assert "docs/install.md" in scanned
+    assert any(p.startswith("docs/reference/") for p in scanned), "the reference folder is layer 1"

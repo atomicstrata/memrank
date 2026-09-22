@@ -7,7 +7,7 @@ prepare/ingest/retrieve -- never crash in the scorer's ``_raw_graph``.
 
 from __future__ import annotations
 
-from memrank.adapters.word_overlap import WordOverlapAdapter
+from memrank.adapters.word_overlap import WordOverlap
 from memrank.benchmarks.relation_graph import RelationGraphBenchmark
 from memrank.runner import run_cell
 
@@ -25,7 +25,7 @@ def _minimal_kwargs() -> dict[str, object]:
 
 def test_run_cell_skips_non_graph_adapter_for_graph_benchmark():
     result = run_cell(
-        WordOverlapAdapter(),
+        WordOverlap(),
         RelationGraphBenchmark(slice="smoke"),
         **_minimal_kwargs(),
     ).to_dict()

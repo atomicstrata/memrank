@@ -15,7 +15,7 @@
 
 Run from the repo root:
 
-    python examples/custom-target/run.py
+    python examples/more/custom-target/run.py
 
 This is the same engine `memrank submit recency demo` drives, reached the other way: an
 instance handed straight to `memrank.run`, which needs no `adapters.plugins`, no
@@ -31,11 +31,11 @@ Registering the same engine (see README.md) is what earns the ref, and the recei
 # the seven, and this script is about the artifact the cell run returns.
 from memrank.evaluation.api import run as run_cell
 
-from recency_plugin import RecencyAdapter  # isort: skip  -- same directory; see README.md
+from recency_plugin import Recency  # isort: skip  -- same directory; see README.md
 
 
 def main() -> None:
-    result = run_cell(RecencyAdapter(), "demo", repeats=1)
+    result = run_cell(Recency(), "demo", repeats=1)
 
     print(f"composite: {result.composite:.3f}  ({result.engine} × {result.evaluation})")
     for row in result.per_query:

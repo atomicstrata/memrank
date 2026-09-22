@@ -36,7 +36,7 @@ from typing import Any
 import pytest
 
 from memrank.adapters import errors as adapter_errors
-from memrank.adapters.hindsight import HindsightAdapter
+from memrank.adapters.hindsight import Hindsight
 from memrank.core import Document
 
 SETTLED = {"success": True, "bank_id": "b", "items_count": 1, "async": False,
@@ -85,8 +85,8 @@ class _Client:
         return _Response({})
 
 
-def _adapter(client: _Client, **kwargs: Any) -> HindsightAdapter:
-    adapter = HindsightAdapter(base_url="http://stub", api_key="k", **kwargs)
+def _adapter(client: _Client, **kwargs: Any) -> Hindsight:
+    adapter = Hindsight(base_url="http://stub", api_key="k", **kwargs)
     adapter._client = client  # type: ignore[assignment]
     return adapter
 
@@ -127,7 +127,7 @@ def test_a_setting_this_adapter_cannot_send_is_refused_before_the_run_starts():
     verification below passed because nothing had been claimed. A complete, plausible, wrong run.
     """
     with pytest.raises(ValueError, match="cannot send ingest settings"):
-        HindsightAdapter(base_url="http://stub", ingest={"enable_obserrvations": False})
+        Hindsight(base_url="http://stub", ingest={"enable_obserrvations": False})
 
 
 # ------------------------------------------------------------------ #

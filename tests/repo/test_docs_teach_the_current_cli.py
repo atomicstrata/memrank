@@ -161,7 +161,7 @@ def test_no_live_instruction_is_refused_by_the_cli(path: Path):
 #: published projection too and most of these do not exist there. Asserting an internal path
 #: unconditionally would turn the anti-vacuity guard into the thing that fails a clean public
 #: checkout -- the same defect this guard exists to prevent, in its own body.
-PUBLIC_MUST_COVER = ("docs/adapter-contract.md", "docs/local-development.md", "docs/SPEC.md")
+PUBLIC_MUST_COVER = ("docs/system-contract.md", "docs/local-development.md", "docs/SPEC.md")
 INTERNAL_MUST_COVER = ("scripts/local-eval.sh", "scripts/internal/build-push.sh", "AGENTS.md",
                        "deploy/README.md",
                        "docs-internal/repro/2026-08-04-judged-matched-baseline.md")
