@@ -1,0 +1,1478 @@
+{
+  "version": "1.1",
+  "provenance": {
+    "title": "SQuAD: Stanford Question Answering Dataset, v1.1 development subset",
+    "creators": [
+      "Pranav Rajpurkar",
+      "Jian Zhang",
+      "Konstantin Lopyrev",
+      "Percy Liang"
+    ],
+    "year": 2016,
+    "upstream_url": "https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json",
+    "upstream_sha256": "95aa6a52d5d6a735563366753ca50492a658031da74f301ac5238b03966972c9",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "selection": "First 32 paragraphs in data/article/paragraph array order; first 2 questions in each paragraph qas array; retain all answer annotations for those questions.",
+    "passages": 32,
+    "questions": 64,
+    "changes": "Selected 32 passages and 64 questions; reformatted JSON with ensure_ascii=True, indent=2, a trailing newline, and this provenance field.",
+    "wikipedia_sources": [
+      {
+        "passage_id": "squad-v1.1-a0-p0",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p1",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p2",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p3",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p4",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p5",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p6",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p7",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p8",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p9",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p10",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p11",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p12",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p13",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p14",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p15",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p16",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p17",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p18",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p19",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p20",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p21",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p22",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p23",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p24",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p25",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p26",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p27",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p28",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p29",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p30",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      },
+      {
+        "passage_id": "squad-v1.1-a0-p31",
+        "url": "https://en.wikipedia.org/wiki/Super_Bowl_50"
+      }
+    ]
+  },
+  "data": [
+    {
+      "title": "Super_Bowl_50",
+      "paragraphs": [
+        {
+          "context": "Super Bowl 50 was an American football game to determine the champion of the National Football League (NFL) for the 2015 season. The American Football Conference (AFC) champion Denver Broncos defeated the National Football Conference (NFC) champion Carolina Panthers 24\u201310 to earn their third Super Bowl title. The game was played on February 7, 2016, at Levi's Stadium in the San Francisco Bay Area at Santa Clara, California. As this was the 50th Super Bowl, the league emphasized the \"golden anniversary\" with various gold-themed initiatives, as well as temporarily suspending the tradition of naming each Super Bowl game with Roman numerals (under which the game would have been known as \"Super Bowl L\"), so that the logo could prominently feature the Arabic numerals 50.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 177,
+                  "text": "Denver Broncos"
+                },
+                {
+                  "answer_start": 177,
+                  "text": "Denver Broncos"
+                },
+                {
+                  "answer_start": 177,
+                  "text": "Denver Broncos"
+                }
+              ],
+              "question": "Which NFL team represented the AFC at Super Bowl 50?",
+              "id": "56be4db0acb8001400a502ec"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 249,
+                  "text": "Carolina Panthers"
+                },
+                {
+                  "answer_start": 249,
+                  "text": "Carolina Panthers"
+                },
+                {
+                  "answer_start": 249,
+                  "text": "Carolina Panthers"
+                }
+              ],
+              "question": "Which NFL team represented the NFC at Super Bowl 50?",
+              "id": "56be4db0acb8001400a502ed"
+            }
+          ]
+        },
+        {
+          "context": "The Panthers finished the regular season with a 15\u20131 record, and quarterback Cam Newton was named the NFL Most Valuable Player (MVP). They defeated the Arizona Cardinals 49\u201315 in the NFC Championship Game and advanced to their second Super Bowl appearance since the franchise was founded in 1995. The Broncos finished the regular season with a 12\u20134 record, and denied the New England Patriots a chance to defend their title from Super Bowl XLIX by defeating them 20\u201318 in the AFC Championship Game. They joined the Patriots, Dallas Cowboys, and Pittsburgh Steelers as one of four teams that have made eight appearances in the Super Bowl.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 77,
+                  "text": "Cam Newton"
+                },
+                {
+                  "answer_start": 77,
+                  "text": "Cam Newton"
+                },
+                {
+                  "answer_start": 77,
+                  "text": "Cam Newton"
+                }
+              ],
+              "question": "Which Carolina Panthers player was named Most Valuable Player?",
+              "id": "56be4e1facb8001400a502f6"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 467,
+                  "text": "8"
+                },
+                {
+                  "answer_start": 601,
+                  "text": "eight"
+                },
+                {
+                  "answer_start": 601,
+                  "text": "eight"
+                }
+              ],
+              "question": "How many appearances have the Denver Broncos made in the Super Bowl?",
+              "id": "56be4e1facb8001400a502f9"
+            }
+          ]
+        },
+        {
+          "context": "The Broncos took an early lead in Super Bowl 50 and never trailed. Newton was limited by Denver's defense, which sacked him seven times and forced him into three turnovers, including a fumble which they recovered for a touchdown. Denver linebacker Von Miller was named Super Bowl MVP, recording five solo tackles, 2\u00bd sacks, and two forced fumbles.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 248,
+                  "text": "Von Miller"
+                },
+                {
+                  "answer_start": 248,
+                  "text": "Von Miller"
+                },
+                {
+                  "answer_start": 252,
+                  "text": "Miller"
+                }
+              ],
+              "question": "Who was the Super Bowl 50 MVP?",
+              "id": "56be4eafacb8001400a50302"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 314,
+                  "text": "2"
+                },
+                {
+                  "answer_start": 328,
+                  "text": "two"
+                },
+                {
+                  "answer_start": 328,
+                  "text": "two"
+                }
+              ],
+              "question": "How many fumbles did Von Miller force in Super Bowl 50?",
+              "id": "56be4eafacb8001400a50303"
+            }
+          ]
+        },
+        {
+          "context": "CBS broadcast Super Bowl 50 in the U.S., and charged an average of $5 million for a 30-second commercial during the game. The Super Bowl 50 halftime show was headlined by the British rock group Coldplay with special guest performers Beyonc\u00e9 and Bruno Mars, who headlined the Super Bowl XLVII and Super Bowl XLVIII halftime shows, respectively. It was the third-most watched U.S. broadcast ever.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 0,
+                  "text": "CBS"
+                },
+                {
+                  "answer_start": 0,
+                  "text": "CBS"
+                },
+                {
+                  "answer_start": 0,
+                  "text": "CBS"
+                }
+              ],
+              "question": "Which network broadcasted Super Bowl 50 in the U.S.?",
+              "id": "56be5333acb8001400a5030a"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 67,
+                  "text": "$5 million"
+                },
+                {
+                  "answer_start": 67,
+                  "text": "$5 million"
+                },
+                {
+                  "answer_start": 67,
+                  "text": "$5 million"
+                }
+              ],
+              "question": "What was the average cost for a 30 second commercial during Super Bowl 50?",
+              "id": "56be5333acb8001400a5030b"
+            }
+          ]
+        },
+        {
+          "context": "In early 2012, NFL Commissioner Roger Goodell stated that the league planned to make the 50th Super Bowl \"spectacular\" and that it would be \"an important game for us as a league\".",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 32,
+                  "text": "Roger Goodell"
+                },
+                {
+                  "answer_start": 32,
+                  "text": "Roger Goodell"
+                },
+                {
+                  "answer_start": 38,
+                  "text": "Goodell"
+                }
+              ],
+              "question": "Who was the NFL Commissioner in early 2012?",
+              "id": "56be53b8acb8001400a50314"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 85,
+                  "text": "the 50th Super Bowl"
+                },
+                {
+                  "answer_start": 85,
+                  "text": "the 50th"
+                },
+                {
+                  "answer_start": 89,
+                  "text": "50th"
+                }
+              ],
+              "question": "Which Super Bowl did Roger Goodell speak about?",
+              "id": "56be53b8acb8001400a50315"
+            }
+          ]
+        },
+        {
+          "context": "The league eventually narrowed the bids to three sites: New Orleans' Mercedes-Benz Superdome, Miami's Sun Life Stadium, and the San Francisco Bay Area's Levi's Stadium.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 56,
+                  "text": "New Orleans' Mercedes-Benz Superdome"
+                },
+                {
+                  "answer_start": 56,
+                  "text": "New Orleans' Mercedes-Benz Superdome"
+                },
+                {
+                  "answer_start": 69,
+                  "text": "Mercedes-Benz Superdome"
+                }
+              ],
+              "question": "Which Louisiana venue was one of three considered for Super Bowl 50?",
+              "id": "56be5438acb8001400a5031a"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 94,
+                  "text": "Miami's Sun Life Stadium"
+                },
+                {
+                  "answer_start": 94,
+                  "text": "Miami's Sun Life Stadium"
+                },
+                {
+                  "answer_start": 102,
+                  "text": "Sun Life Stadium"
+                }
+              ],
+              "question": "Which Florida venue was one of three considered for Super Bowl 50?",
+              "id": "56be5438acb8001400a5031b"
+            }
+          ]
+        },
+        {
+          "context": "The league announced on October 16, 2012, that the two finalists were Sun Life Stadium and Levi's Stadium. The South Florida/Miami area has previously hosted the event 10 times (tied for most with New Orleans), with the most recent one being Super Bowl XLIV in 2010. The San Francisco Bay Area last hosted in 1985 (Super Bowl XIX), held at Stanford Stadium in Stanford, California, won by the home team 49ers. The Miami bid depended on whether the stadium underwent renovations. However, on May 3, 2013, the Florida legislature refused to approve the funding plan to pay for the renovations, dealing a significant blow to Miami's chances.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 24,
+                  "text": "October 16, 2012"
+                },
+                {
+                  "answer_start": 24,
+                  "text": "October 16, 2012,"
+                },
+                {
+                  "answer_start": 24,
+                  "text": "October 16, 2012"
+                }
+              ],
+              "question": "When were the two finalists for hosting Super Bowl 50 announced?",
+              "id": "56be54bdacb8001400a50322"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 168,
+                  "text": "10"
+                },
+                {
+                  "answer_start": 168,
+                  "text": "10"
+                },
+                {
+                  "answer_start": 168,
+                  "text": "10"
+                }
+              ],
+              "question": "How many times has the South Florida/Miami area hosted the Super Bowl?",
+              "id": "56be54bdacb8001400a50323"
+            }
+          ]
+        },
+        {
+          "context": "On May 21, 2013, NFL owners at their spring meetings in Boston voted and awarded the game to Levi's Stadium. The $1.2 billion stadium opened in 2014. It is the first Super Bowl held in the San Francisco Bay Area since Super Bowl XIX in 1985, and the first in California since Super Bowl XXXVII took place in San Diego in 2003.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 3,
+                  "text": "May 21, 2013"
+                },
+                {
+                  "answer_start": 3,
+                  "text": "May 21, 2013"
+                },
+                {
+                  "answer_start": 3,
+                  "text": "May 21, 2013,"
+                }
+              ],
+              "question": "When was Levi's Stadium awarded the right to host Super Bowl 50?",
+              "id": "56be5523acb8001400a5032c"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 17,
+                  "text": "NFL owners"
+                },
+                {
+                  "answer_start": 17,
+                  "text": "NFL owners"
+                },
+                {
+                  "answer_start": 17,
+                  "text": "NFL owners"
+                }
+              ],
+              "question": "Who voted on the venue for Super Bowl 50?",
+              "id": "56be5523acb8001400a5032d"
+            }
+          ]
+        },
+        {
+          "context": "For the third straight season, the number one seeds from both conferences met in the Super Bowl. The Carolina Panthers became one of only ten teams to have completed a regular season with only one loss, and one of only six teams to have acquired a 15\u20131 record, while the Denver Broncos became one of four teams to have made eight appearances in the Super Bowl. The Broncos made their second Super Bowl appearance in three years, having reached Super Bowl XLVIII, while the Panthers made their second Super Bowl appearance in franchise history, their other appearance being Super Bowl XXXVIII. Coincidentally, both teams were coached by John Fox in their last Super Bowl appearance prior to Super Bowl 50.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 636,
+                  "text": "John Fox"
+                },
+                {
+                  "answer_start": 636,
+                  "text": "John Fox"
+                },
+                {
+                  "answer_start": 641,
+                  "text": "Fox"
+                }
+              ],
+              "question": "Who coached each Super Bowl 50 participant in their most recent Super Bowl appearance prior to Super Bowl 50?",
+              "id": "56be572b3aeaaa14008c9052"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 138,
+                  "text": "ten"
+                },
+                {
+                  "answer_start": 138,
+                  "text": "ten"
+                },
+                {
+                  "answer_start": 219,
+                  "text": "six"
+                }
+              ],
+              "question": "How many NFL teams have finished the regular season with one loss?",
+              "id": "56beb2a03aeaaa14008c922f"
+            }
+          ]
+        },
+        {
+          "context": "Despite waiving longtime running back DeAngelo Williams and losing top wide receiver Kelvin Benjamin to a torn ACL in the preseason, the Carolina Panthers had their best regular season in franchise history, becoming the seventh team to win at least 15 regular season games since the league expanded to a 16-game schedule in 1978. Carolina started the season 14\u20130, not only setting franchise records for the best start and the longest single-season winning streak, but also posting the best start to a season by an NFC team in NFL history, breaking the 13\u20130 record previously shared with the 2009 New Orleans Saints and the 2011 Green Bay Packers. With their NFC-best 15\u20131 regular season record, the Panthers clinched home-field advantage throughout the NFC playoffs for the first time in franchise history. Ten players were selected to the Pro Bowl (the most in franchise history) along with eight All-Pro selections.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 38,
+                  "text": "DeAngelo Williams"
+                },
+                {
+                  "answer_start": 38,
+                  "text": "DeAngelo Williams"
+                },
+                {
+                  "answer_start": 47,
+                  "text": "Williams"
+                }
+              ],
+              "question": "Whic Carolina Panthers running back was waived?",
+              "id": "56be59683aeaaa14008c9058"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 85,
+                  "text": "Kelvin Benjamin"
+                },
+                {
+                  "answer_start": 85,
+                  "text": "Kelvin Benjamin"
+                },
+                {
+                  "answer_start": 92,
+                  "text": "Benjamin"
+                }
+              ],
+              "question": "Which Carolina Panthers wide receiver suffered a torn ACL before the season began?",
+              "id": "56be59683aeaaa14008c9059"
+            }
+          ]
+        },
+        {
+          "context": "The Panthers offense, which led the NFL in scoring (500 points), was loaded with talent, boasting six Pro Bowl selections. Pro Bowl quarterback Cam Newton had one of his best seasons, throwing for 3,837 yards and rushing for 636, while recording a career-high and league-leading 45 total touchdowns (35 passing, 10 rushing), a career-low 10 interceptions, and a career-best quarterback rating of 99.4. Newton's leading receivers were tight end Greg Olsen, who caught a career-high 77 passes for 1,104 yards and seven touchdowns, and wide receiver Ted Ginn, Jr., who caught 44 passes for 739 yards and 10 touchdowns; Ginn also rushed for 60 yards and returned 27 punts for 277 yards. Other key receivers included veteran Jerricho Cotchery (39 receptions for 485 yards), rookie Devin Funchess (31 receptions for 473 yards and five touchdowns), and second-year receiver Corey Brown (31 receptions for 447 yards). The Panthers backfield featured Pro Bowl running back Jonathan Stewart, who led the team with 989 rushing yards and six touchdowns in 13 games, along with Pro Bowl fullback Mike Tolbert, who rushed for 256 yards and caught 18 passes for another 154 yards. Carolina's offensive line also featured two Pro Bowl selections: center Ryan Kalil and guard Trai Turner.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 98,
+                  "text": "six"
+                },
+                {
+                  "answer_start": 98,
+                  "text": "six"
+                },
+                {
+                  "answer_start": 98,
+                  "text": "six"
+                }
+              ],
+              "question": "How many Pro Bowlers were on the Panthers offense?",
+              "id": "56beb3a03aeaaa14008c9247"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 279,
+                  "text": "45"
+                },
+                {
+                  "answer_start": 279,
+                  "text": "45"
+                },
+                {
+                  "answer_start": 279,
+                  "text": "45"
+                }
+              ],
+              "question": "How many total touchdowns did Cam Newton score?",
+              "id": "56beb3a03aeaaa14008c9248"
+            }
+          ]
+        },
+        {
+          "context": "The Panthers defense gave up just 308 points, ranking sixth in the league, while also leading the NFL in interceptions with 24 and boasting four Pro Bowl selections. Pro Bowl defensive tackle Kawann Short led the team in sacks with 11, while also forcing three fumbles and recovering two. Fellow lineman Mario Addison added 6\u00bd sacks. The Panthers line also featured veteran defensive end Jared Allen, a 5-time pro bowler who was the NFL's active career sack leader with 136, along with defensive end Kony Ealy, who had 5 sacks in just 9 starts. Behind them, two of the Panthers three starting linebackers were also selected to play in the Pro Bowl: Thomas Davis and Luke Kuechly. Davis compiled 5\u00bd sacks, four forced fumbles, and four interceptions, while Kuechly led the team in tackles (118) forced two fumbles, and intercepted four passes of his own. Carolina's secondary featured Pro Bowl safety Kurt Coleman, who led the team with a career high seven interceptions, while also racking up 88 tackles and Pro Bowl cornerback Josh Norman, who developed into a shutdown corner during the season and had four interceptions, two of which were returned for touchdowns.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 34,
+                  "text": "308"
+                },
+                {
+                  "answer_start": 34,
+                  "text": "308"
+                },
+                {
+                  "answer_start": 34,
+                  "text": "308"
+                }
+              ],
+              "question": "How many points did the Panthers defense surrender?",
+              "id": "56beb4343aeaaa14008c925b"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 470,
+                  "text": "136"
+                },
+                {
+                  "answer_start": 470,
+                  "text": "136"
+                },
+                {
+                  "answer_start": 470,
+                  "text": "136"
+                }
+              ],
+              "question": "How many career sacks did Jared Allen have?",
+              "id": "56beb4343aeaaa14008c925c"
+            }
+          ]
+        },
+        {
+          "context": "Following their loss in the divisional round of the previous season's playoffs, the Denver Broncos underwent numerous coaching changes, including a mutual parting with head coach John Fox (who had won four divisional championships in his four years as Broncos head coach), and the hiring of Gary Kubiak as the new head coach. Under Kubiak, the Broncos planned to install a run-oriented offense with zone blocking to blend in with quarterback Peyton Manning's shotgun passing skills, but struggled with numerous changes and injuries to the offensive line, as well as Manning having his worst statistical season since his rookie year with the Indianapolis Colts in 1998, due to a plantar fasciitis injury in his heel that he had suffered since the summer, and the simple fact that Manning was getting old, as he turned 39 in the 2015 off-season. Although the team had a 7\u20130 start, Manning led the NFL in interceptions. In week 10, Manning suffered a partial tear of the plantar fasciitis in his left foot. He set the NFL's all-time record for career passing yards in this game, but was benched after throwing four interceptions in favor of backup quarterback Brock Osweiler, who took over as the starter for most of the remainder of the regular season. Osweiler was injured, however, leading to Manning's return during the Week 17 regular season finale, where the Broncos were losing 13\u20137 against the 4\u201311 San Diego Chargers, resulting in Manning re-claiming the starting quarterback position for the playoffs by leading the team to a key 27\u201320 win that enabled the team to clinch the number one overall AFC seed. Under defensive coordinator Wade Phillips, the Broncos' defense ranked number one in total yards allowed, passing yards allowed and sacks, and like the previous three seasons, the team has continued to set numerous individual, league and franchise records. With the defense carrying the team despite the issues with the offense, the Broncos finished the regular season with a 12\u20134 record and earned home-field advantage throughout the AFC playoffs.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 291,
+                  "text": "Gary Kubiak"
+                },
+                {
+                  "answer_start": 291,
+                  "text": "Gary Kubiak"
+                },
+                {
+                  "answer_start": 332,
+                  "text": "Kubiak"
+                }
+              ],
+              "question": "Who is the head coach of the Broncos?",
+              "id": "56beb4e43aeaaa14008c9265"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 1157,
+                  "text": "Brock Osweiler"
+                },
+                {
+                  "answer_start": 1157,
+                  "text": "Brock Osweiler"
+                },
+                {
+                  "answer_start": 1163,
+                  "text": "Osweiler"
+                }
+              ],
+              "question": "Who played quarterback for the Broncos after Peyton Manning was benched?",
+              "id": "56beb4e43aeaaa14008c9266"
+            }
+          ]
+        },
+        {
+          "context": "Manning finished the year with a career-low 67.9 passer rating, throwing for 2,249 yards and nine touchdowns, with 17 interceptions. In contrast, Osweiler threw for 1,967 yards, 10 touchdowns and six interceptions for a rating of 86.4. Veteran receiver Demaryius Thomas led the team with 105 receptions for 1,304 yards and six touchdowns, while Emmanuel Sanders caught 76 passes for 1,135 yards and six scores, while adding another 106 yards returning punts. Tight end Owen Daniels was also a big element of the passing game with 46 receptions for 517 yards. Running back C. J. Anderson was the team's leading rusher 863 yards and seven touchdowns, while also catching 25 passes for 183 yards. Running back Ronnie Hillman also made a big impact with 720 yards, five touchdowns, 24 receptions, and a 4.7 yards per carry average. Overall, the offense ranked 19th in scoring with 355 points and did not have any Pro Bowl selections.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 44,
+                  "text": "67.9"
+                },
+                {
+                  "answer_start": 44,
+                  "text": "67.9"
+                },
+                {
+                  "answer_start": 44,
+                  "text": "67.9"
+                }
+              ],
+              "question": "What was Peyton Manning's passer rating for the season?",
+              "id": "56beb57b3aeaaa14008c9279"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 115,
+                  "text": "17"
+                },
+                {
+                  "answer_start": 115,
+                  "text": "17"
+                },
+                {
+                  "answer_start": 115,
+                  "text": "17"
+                }
+              ],
+              "question": "How many picks did Peyton Manning throw in the season?",
+              "id": "56beb57b3aeaaa14008c927a"
+            }
+          ]
+        },
+        {
+          "context": "The Broncos' defense ranked first in the NFL yards allowed (4,530) for the first time in franchise history, and fourth in points allowed (296). Defensive ends Derek Wolfe and Malik Jackson each had 5\u00bd sacks. Pro Bowl linebacker Von Miller led the team with 11 sacks, forced four fumbles, and recovered three. Linebacker DeMarcus Ware was selected to play in the Pro Bowl for the ninth time in his career, ranking second on the team with 7\u00bd sacks. Linebacker Brandon Marshall led the team in total tackles with 109, while Danny Trevathan ranked second with 102. Cornerbacks Aqib Talib (three interceptions) and Chris Harris, Jr. (two interceptions) were the other two Pro Bowl selections from the defense.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 60,
+                  "text": "4,530"
+                },
+                {
+                  "answer_start": 60,
+                  "text": "4,530"
+                },
+                {
+                  "answer_start": 60,
+                  "text": "4,530"
+                }
+              ],
+              "question": "How many yards did the Broncos' defense give up?",
+              "id": "56beb6533aeaaa14008c928d"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 198,
+                  "text": "5\u00bd"
+                },
+                {
+                  "answer_start": 198,
+                  "text": "5\u00bd"
+                },
+                {
+                  "answer_start": 198,
+                  "text": "5\u00bd"
+                }
+              ],
+              "question": "How many sacks did Derek Wolfe register?",
+              "id": "56beb6533aeaaa14008c928e"
+            }
+          ]
+        },
+        {
+          "context": "The Panthers beat the Seattle Seahawks in the divisional round, running up a 31\u20130 halftime lead and then holding off a furious second half comeback attempt to win 31\u201324, avenging their elimination from a year earlier. The Panthers then blew out the Arizona Cardinals in the NFC Championship Game, 49\u201315, racking up 487 yards and forcing seven turnovers.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 22,
+                  "text": "Seattle Seahawks"
+                },
+                {
+                  "answer_start": 18,
+                  "text": "the Seattle Seahawks"
+                },
+                {
+                  "answer_start": 30,
+                  "text": "Seahawks"
+                }
+              ],
+              "question": "Who lost to the Panthers in the divisional round of the playoffs?",
+              "id": "56beb6f23aeaaa14008c92a1"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 249,
+                  "text": "Arizona Cardinals"
+                },
+                {
+                  "answer_start": 249,
+                  "text": "Arizona Cardinals"
+                },
+                {
+                  "answer_start": 257,
+                  "text": "Cardinals"
+                }
+              ],
+              "question": "Who did the Panthers face in the NFC Championship Game?",
+              "id": "56beb6f23aeaaa14008c92a2"
+            }
+          ]
+        },
+        {
+          "context": "The Broncos defeated the Pittsburgh Steelers in the divisional round, 23\u201316, by scoring 11 points in the final three minutes of the game. They then beat the defending Super Bowl XLIX champion New England Patriots in the AFC Championship Game, 20\u201318, by intercepting a pass on New England's 2-point conversion attempt with 17 seconds left on the clock. Despite Manning's problems with interceptions during the season, he didn't throw any in their two playoff games.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 25,
+                  "text": "Pittsburgh Steelers"
+                },
+                {
+                  "answer_start": 21,
+                  "text": "the Pittsburgh Steelers"
+                },
+                {
+                  "answer_start": 36,
+                  "text": "Steelers"
+                }
+              ],
+              "question": "Who lost to the Broncos in the divisional round?",
+              "id": "56beb7953aeaaa14008c92ab"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 88,
+                  "text": "11"
+                },
+                {
+                  "answer_start": 88,
+                  "text": "11"
+                },
+                {
+                  "answer_start": 88,
+                  "text": "11"
+                }
+              ],
+              "question": "How many points did the Broncos score in the last three minutes of the game versus Pittsburgh?",
+              "id": "56beb7953aeaaa14008c92ac"
+            }
+          ]
+        },
+        {
+          "context": "Carolina suffered a major setback when Thomas Davis, an 11-year veteran who had already overcome three ACL tears in his career, went down with a broken arm in the NFC Championship Game. Despite this, he insisted he would still find a way to play in the Super Bowl. His prediction turned out to be accurate.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 39,
+                  "text": "Thomas Davis"
+                },
+                {
+                  "answer_start": 39,
+                  "text": "Thomas Davis,"
+                },
+                {
+                  "answer_start": 46,
+                  "text": "Davis"
+                }
+              ],
+              "question": "What Carolina player was injured in the NFC Championship Game?",
+              "id": "56beb7fd3aeaaa14008c92b5"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 143,
+                  "text": "a broken arm"
+                },
+                {
+                  "answer_start": 143,
+                  "text": "a broken arm"
+                },
+                {
+                  "answer_start": 145,
+                  "text": "broken arm"
+                }
+              ],
+              "question": "What injury did Thomas Davis suffer in the NFC Championship?",
+              "id": "56beb7fd3aeaaa14008c92b6"
+            }
+          ]
+        },
+        {
+          "context": "Peyton Manning became the first quarterback ever to lead two different teams to multiple Super Bowls. He is also the oldest quarterback ever to play in a Super Bowl at age 39. The past record was held by John Elway, who led the Broncos to victory in Super Bowl XXXIII at age 38 and is currently Denver's Executive Vice President of Football Operations and General Manager.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 172,
+                  "text": "39"
+                },
+                {
+                  "answer_start": 172,
+                  "text": "39"
+                },
+                {
+                  "answer_start": 172,
+                  "text": "39"
+                },
+                {
+                  "answer_start": 172,
+                  "text": "39"
+                }
+              ],
+              "question": "How old was Peyton Manning when he played in Super Bowl 50?",
+              "id": "56beb86b3aeaaa14008c92bd"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 204,
+                  "text": "John Elway"
+                },
+                {
+                  "answer_start": 204,
+                  "text": "John Elway"
+                },
+                {
+                  "answer_start": 209,
+                  "text": "Elway"
+                },
+                {
+                  "answer_start": 209,
+                  "text": "Elway"
+                }
+              ],
+              "question": "Who previously held the record for being the oldest quarterback to play in a Super Bowl?",
+              "id": "56beb86b3aeaaa14008c92be"
+            }
+          ]
+        },
+        {
+          "context": "This was the first Super Bowl to feature a quarterback on both teams who was the #1 pick in their draft classes. Manning was the #1 selection of the 1998 NFL draft, while Newton was picked first in 2011. The matchup also pits the top two picks of the 2011 draft against each other: Newton for Carolina and Von Miller for Denver. Manning and Newton also set the record for the largest age difference between opposing Super Bowl quarterbacks at 13 years and 48 days (Manning was 39, Newton was 26).",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 149,
+                  "text": "1998"
+                },
+                {
+                  "answer_start": 149,
+                  "text": "1998"
+                },
+                {
+                  "answer_start": 149,
+                  "text": "1998"
+                }
+              ],
+              "question": "When was Manning picked #1 in the NFL Draft?",
+              "id": "56beb90c3aeaaa14008c92c7"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 198,
+                  "text": "2011"
+                },
+                {
+                  "answer_start": 198,
+                  "text": "2011"
+                },
+                {
+                  "answer_start": 198,
+                  "text": "2011"
+                }
+              ],
+              "question": "When was Newton the first selection in the NFL Draft?",
+              "id": "56beb90c3aeaaa14008c92c8"
+            }
+          ]
+        },
+        {
+          "context": "With Rivera having been a linebacker with the Chicago Bears in Super Bowl XX, and Kubiak replacing Elway at the end of the Broncos' defeats in Super Bowls XXI and XXIV, this will be the first Super Bowl in which both head coaches played in the game themselves.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 63,
+                  "text": "Super Bowl XX"
+                },
+                {
+                  "answer_start": 63,
+                  "text": "Super Bowl XX"
+                },
+                {
+                  "answer_start": 74,
+                  "text": "XX"
+                }
+              ],
+              "question": "In what Super Bowl did Rivera play?",
+              "id": "56beb97c3aeaaa14008c92db"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 46,
+                  "text": "Chicago Bears"
+                },
+                {
+                  "answer_start": 42,
+                  "text": "the Chicago Bears"
+                },
+                {
+                  "answer_start": 54,
+                  "text": "Bears"
+                }
+              ],
+              "question": "What team did Rivera play for in Super Bowl XX?",
+              "id": "56beb97c3aeaaa14008c92dc"
+            }
+          ]
+        },
+        {
+          "context": "Concerns were raised over whether Levi's Stadium's field was of a high enough quality to host a Super Bowl; during the inaugural season, the field had to be re-sodded multiple times due to various issues, and during a week 6 game earlier in the 2015 season, a portion of the turf collapsed under Baltimore Ravens kicker Justin Tucker, causing him to slip and miss a field goal, although the field has not had any major issues since. As is customary for Super Bowl games played at natural grass stadiums, the NFL re-sodded the field with a new playing surface; a hybrid Bermuda 419 turf. NFL and Atlanta Braves field director Ed Mangan stated that the field was in \"great shape\" for gameday. However, the turf showed problem throughout the game, with a number of players needing to change their cleats during the game and player slipping during plays all throughout the game.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 320,
+                  "text": "Justin Tucker"
+                },
+                {
+                  "answer_start": 320,
+                  "text": "Justin Tucker"
+                },
+                {
+                  "answer_start": 327,
+                  "text": "Tucker"
+                }
+              ],
+              "question": "Who slipped on the Levi's Stadium turf in week 6 of the 2015 NFL season?",
+              "id": "56beba103aeaaa14008c92e5"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 569,
+                  "text": "Bermuda 419"
+                },
+                {
+                  "answer_start": 569,
+                  "text": "Bermuda 419"
+                },
+                {
+                  "answer_start": 562,
+                  "text": "hybrid Bermuda 419"
+                }
+              ],
+              "question": "What is the name of the turf used in Levi's Stadium for the Super Bowl?",
+              "id": "56beba103aeaaa14008c92e6"
+            }
+          ]
+        },
+        {
+          "context": "As the designated home team in the annual rotation between AFC and NFC teams, the Broncos elected to wear their road white jerseys with matching white pants. Elway stated, \"We've had Super Bowl success in our white uniforms.\" The Broncos last wore matching white jerseys and pants in the Super Bowl in Super Bowl XXXIII, Elway's last game as Denver QB, when they defeated the Atlanta Falcons 34\u201319. In their only other Super Bowl win in Super Bowl XXXII, Denver wore blue jerseys, which was their primary color at the time. They also lost Super Bowl XXI when they wore white jerseys, but they are 0-4 in Super Bowls when wearing orange jerseys, losing in Super Bowl XII, XXII, XXIV, and XLVIII. The only other AFC champion team to have worn white as the designated home team in the Super Bowl was the Pittsburgh Steelers; they defeated the Seattle Seahawks 21\u201310 in Super Bowl XL 10 seasons prior. The Broncos' decision to wear white meant the Panthers would wear their standard home uniform: black jerseys with silver pants.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 82,
+                  "text": "Broncos"
+                },
+                {
+                  "answer_start": 78,
+                  "text": "the Broncos"
+                },
+                {
+                  "answer_start": 82,
+                  "text": "Broncos"
+                }
+              ],
+              "question": "Who was designated as the home team in the Super Bowl?",
+              "id": "56bebad93aeaaa14008c92f9"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 392,
+                  "text": "34\u201319"
+                },
+                {
+                  "answer_start": 392,
+                  "text": "34\u201319"
+                },
+                {
+                  "answer_start": 392,
+                  "text": "34\u201319"
+                }
+              ],
+              "question": "What was the final score of Super Bowl XXXIII?",
+              "id": "56bebad93aeaaa14008c92fa"
+            }
+          ]
+        },
+        {
+          "context": "The Panthers used the San Jose State practice facility and stayed at the San Jose Marriott. The Broncos practiced at Stanford University and stayed at the Santa Clara Marriott.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 22,
+                  "text": "San Jose State"
+                },
+                {
+                  "answer_start": 22,
+                  "text": "San Jose State"
+                },
+                {
+                  "answer_start": 22,
+                  "text": "San Jose State"
+                }
+              ],
+              "question": "At what university's facility did the Panthers practice?",
+              "id": "56bebb293aeaaa14008c9303"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 117,
+                  "text": "Stanford University"
+                },
+                {
+                  "answer_start": 117,
+                  "text": "Stanford University"
+                },
+                {
+                  "answer_start": 117,
+                  "text": "Stanford"
+                }
+              ],
+              "question": "At what university's facility did the Broncos practice?",
+              "id": "56bebb293aeaaa14008c9304"
+            }
+          ]
+        },
+        {
+          "context": "On June 4, 2014, the NFL announced that the practice of branding Super Bowl games with Roman numerals, a practice established at Super Bowl V, would be temporarily suspended, and that the game would be named using Arabic numerals as Super Bowl 50 as opposed to Super Bowl L. The use of Roman numerals will be reinstated for Super Bowl LI. Jaime Weston, the league's vice president of brand and creative, explained that a primary reason for the change was the difficulty of designing an aesthetically pleasing logo with the letter \"L\" using the standardized logo template introduced at Super Bowl XLV. The logo also deviates from the template by featuring large numerals, colored in gold, behind the Vince Lombardi Trophy, instead of underneath and in silver as in the standard logo.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 3,
+                  "text": "June 4, 2014"
+                },
+                {
+                  "answer_start": 0,
+                  "text": "On June 4, 2014"
+                },
+                {
+                  "answer_start": 11,
+                  "text": "2014"
+                }
+              ],
+              "question": "When did the NFL announce the suspension of using Roman numerals to brand the Super Bowl?",
+              "id": "56bebbbf3aeaaa14008c9315"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 129,
+                  "text": "Super Bowl V"
+                },
+                {
+                  "answer_start": 129,
+                  "text": "Super Bowl V"
+                },
+                {
+                  "answer_start": 140,
+                  "text": "V"
+                }
+              ],
+              "question": "What was the first Super Bowl branded with Roman numerals?",
+              "id": "56bebbbf3aeaaa14008c9316"
+            }
+          ]
+        },
+        {
+          "context": "Various gold-themed promotions and initiatives were held throughout the 2015 NFL season to tie into the \"Golden Super Bowl\"; gold-tinted logos were implemented across the NFL's properties and painted on fields, the numbering of the 50-yard line on fields was colored gold, and beginning on week 7, all sideline jackets and hats featured gold-trimmed logos. Gold footballs were given to each high school that has had a player or coach appear in the Super Bowl, and \"homecoming\" events were also held by Super Bowl-winning teams at games.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 8,
+                  "text": "gold"
+                },
+                {
+                  "answer_start": 8,
+                  "text": "gold"
+                },
+                {
+                  "answer_start": 267,
+                  "text": "gold"
+                }
+              ],
+              "question": "What color was featured in promotions related to Super Bowl 50?",
+              "id": "56bebc383aeaaa14008c931f"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 290,
+                  "text": "week 7"
+                },
+                {
+                  "answer_start": 72,
+                  "text": "2015"
+                },
+                {
+                  "answer_start": 290,
+                  "text": "week 7,"
+                }
+              ],
+              "question": "When did sideline jackets and hats start to feature gold-trimmed logos?",
+              "id": "56bebc383aeaaa14008c9320"
+            }
+          ]
+        },
+        {
+          "context": "The annual NFL Experience was held at the Moscone Center in San Francisco. In addition, \"Super Bowl City\" opened on January 30 at Justin Herman Plaza on The Embarcadero, featuring games and activities that will highlight the Bay Area's technology, culinary creations, and cultural diversity. More than 1 million people are expected to attend the festivities in San Francisco during Super Bowl Week. San Francisco mayor Ed Lee said of the highly visible homeless presence in this area \"they are going to have to leave\". San Francisco city supervisor Jane Kim unsuccessfully lobbied for the NFL to reimburse San Francisco for city services in the amount of $5 million.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 42,
+                  "text": "Moscone Center"
+                },
+                {
+                  "answer_start": 38,
+                  "text": "the Moscone Center"
+                },
+                {
+                  "answer_start": 42,
+                  "text": "Moscone Center"
+                }
+              ],
+              "question": "In what venue did the NFL Experience take place?",
+              "id": "56bebcbe3aeaaa14008c9325"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 60,
+                  "text": "San Francisco"
+                },
+                {
+                  "answer_start": 60,
+                  "text": "San Francisco"
+                },
+                {
+                  "answer_start": 60,
+                  "text": "San Francisco"
+                }
+              ],
+              "question": "In what city is the Moscone Center located?",
+              "id": "56bebcbe3aeaaa14008c9326"
+            }
+          ]
+        },
+        {
+          "context": "In addition, there are $2 million worth of other ancillary events, including a week-long event at the Santa Clara Convention Center, a beer, wine and food festival at Bellomy Field at Santa Clara University, and a pep rally. A professional fundraiser will aid in finding business sponsors and individual donors, but still may need the city council to help fund the event. Additional funding will be provided by the city council, which has announced plans to set aside seed funding for the event.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 184,
+                  "text": "Santa Clara University"
+                },
+                {
+                  "answer_start": 184,
+                  "text": "Santa Clara University"
+                },
+                {
+                  "answer_start": 184,
+                  "text": "Santa Clara University"
+                }
+              ],
+              "question": "At what university is Bellomy Field located?",
+              "id": "56bebd713aeaaa14008c932f"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 23,
+                  "text": "$2 million"
+                },
+                {
+                  "answer_start": 23,
+                  "text": "$2 million"
+                },
+                {
+                  "answer_start": 23,
+                  "text": "$2 million"
+                }
+              ],
+              "question": "How much money is being spent on other Super Bowl-related events?",
+              "id": "56bebd713aeaaa14008c9330"
+            }
+          ]
+        },
+        {
+          "context": "The game's media day, which was typically held on the Tuesday afternoon prior to the game, was moved to the Monday evening and re-branded as Super Bowl Opening Night. The event was held on February 1, 2016 at SAP Center in San Jose. Alongside the traditional media availabilities, the event featured an opening ceremony with player introductions on a replica of the Golden Gate Bridge.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 108,
+                  "text": "Monday"
+                },
+                {
+                  "answer_start": 189,
+                  "text": "February 1, 2016"
+                },
+                {
+                  "answer_start": 108,
+                  "text": "Monday"
+                }
+              ],
+              "question": "On what day was Super Bowl Opening Night held?",
+              "id": "56bebde53aeaaa14008c9335"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 54,
+                  "text": "Tuesday"
+                },
+                {
+                  "answer_start": 54,
+                  "text": "Tuesday afternoon prior to the game"
+                },
+                {
+                  "answer_start": 54,
+                  "text": "Tuesday"
+                }
+              ],
+              "question": "On what day does the Super Bowl media day traditionally take place?",
+              "id": "56bebde53aeaaa14008c9336"
+            }
+          ]
+        },
+        {
+          "context": "For the first time, the Super Bowl 50 Host Committee and the NFL have openly sought disabled veteran and lesbian, gay, bisexual and transgender-owned businesses in Business Connect, the Super Bowl program that provides local companies with contracting opportunities in and around the Super Bowl. The host committee has already raised over $40 million through sponsors including Apple, Google, Yahoo!, Intel, Gap, Chevron, and Dignity Health.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 164,
+                  "text": "Business Connect"
+                },
+                {
+                  "answer_start": 164,
+                  "text": "Business Connect"
+                },
+                {
+                  "answer_start": 164,
+                  "text": "Business Connect"
+                }
+              ],
+              "question": "What is the name of the program that provides contracting work to local companies?",
+              "id": "56bebe873aeaaa14008c933f"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 339,
+                  "text": "$40 million"
+                },
+                {
+                  "answer_start": 334,
+                  "text": "over $40 million"
+                },
+                {
+                  "answer_start": 339,
+                  "text": "$40 million"
+                }
+              ],
+              "question": "How much money has been raised by the host committee?",
+              "id": "56bebe873aeaaa14008c9340"
+            }
+          ]
+        },
+        {
+          "context": "The Super Bowl 50 Host Committee has vowed to be \"the most giving Super Bowl ever\", and will dedicate 25 percent of all money it raises for philanthropic causes in the Bay Area. The committee created the 50 fund as its philanthropic initiative and focuses on providing grants to aid with youth development, community investment and sustainable environments.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 102,
+                  "text": "25"
+                },
+                {
+                  "answer_start": 102,
+                  "text": "25 percent"
+                },
+                {
+                  "answer_start": 102,
+                  "text": "25"
+                }
+              ],
+              "question": "What percentage of money raised by the Host Committee will be used for charitable causes?",
+              "id": "56bebec43aeaaa14008c9349"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 200,
+                  "text": "the 50 fund"
+                },
+                {
+                  "answer_start": 200,
+                  "text": "the 50 fund"
+                },
+                {
+                  "answer_start": 204,
+                  "text": "50 fund"
+                }
+              ],
+              "question": "What is the name of the Host Committee's charitable initiative?",
+              "id": "56bebec43aeaaa14008c934a"
+            }
+          ]
+        },
+        {
+          "context": "In addition to the Vince Lombardi Trophy that all Super Bowl champions receive, the winner of Super Bowl 50 will also receive a large, 18-karat gold-plated \"50\". Each digit will weigh 33 lb (15 kg) for a total of 66 lb (30 kg). Like the Lombardi Trophy, the \"50\" will be designed by Tiffany & Co.",
+          "qas": [
+            {
+              "answers": [
+                {
+                  "answer_start": 19,
+                  "text": "Vince Lombardi"
+                },
+                {
+                  "answer_start": 19,
+                  "text": "Vince Lombardi"
+                },
+                {
+                  "answer_start": 25,
+                  "text": "Lombardi"
+                }
+              ],
+              "question": "Who is the trophy given to the Super Bowl champion named for?",
+              "id": "56bec0353aeaaa14008c934d"
+            },
+            {
+              "answers": [
+                {
+                  "answer_start": 135,
+                  "text": "18"
+                },
+                {
+                  "answer_start": 135,
+                  "text": "18"
+                },
+                {
+                  "answer_start": 135,
+                  "text": "18"
+                }
+              ],
+              "question": "The \"50\" given to the Super Bowl winner is plated with how many karats of gold?",
+              "id": "56bec0353aeaaa14008c934e"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

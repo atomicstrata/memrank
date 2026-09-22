@@ -88,6 +88,12 @@ QUALITY_METRICS: dict[str, MetricDeclaration] = {
         label="recall",
         of="retrieval recall (a substring proxy)",
         not_of="end-to-end answer correctness"),
+    # Unlike the answer substring proxy, this checks only the known source passage;
+    # the scorer never inspects an answer.
+    "passage_recall": MetricDeclaration(
+        label="passage recall",
+        of="full-passage retrieval recall",
+        not_of="answer-span or end-to-end answer correctness"),
     "graph_score": MetricDeclaration(
         label="graph score",
         of="a relation-graph structural score (graph correctness)",

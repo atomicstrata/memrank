@@ -34,19 +34,17 @@ value is invented on an evaluation's behalf.
 adjudicated it. It is never bundled into a shipped evaluation -- that would put a key and a bill
 on the path of a first run -- and running it without a key raises rather than deciding anything.
 
-**Metric applicability (`substring_recall_supported`).** Some evaluations (BEAM, and the judged
-tiers of LoCoMo and LongMemEval) have prose gold answers, so the substring proxy is structurally
-invalid -- every one declares `substring_recall_supported`. The **rankable surfaces withhold the
-score automatically** when it is False: `memrank submit`'s terminal output and summary show
-`n/a (judge required)` (summary `composite` is `null`), and the comparison and report renderings
-withhold the composite and the per-ability/per-category tables.
+**Metric applicability.** `substring_recall_supported` says whether the answer-substring proxy
+applies. `composite_rankable` independently says whether the evaluation's own composite may be
+shown and ranked without a judge. Graph and passage retrieval scores can have the first flag
+False and the second True. A passage score measures **full-passage retrieval recall, not
+answer-span or end-to-end answer correctness**.
 
-The **detailed/diagnostic JSON tiers** (per-cell `{adapter}__{benchmark}.json` and each compare
-row) intentionally keep the raw `composite` for inspection -- but always paired with
-`substring_recall_supported: false` (and the compare artifact's
-`metadata.quality_metric: "withheld (judge required)"`). **Contract for consumers: `composite` is
-a valid quality score only when `substring_recall_supported` is true; otherwise rank from a
-judged run.**
+When `composite_rankable` is False, rankable surfaces withhold the raw composite and its
+per-ability/per-category tables; a valid judged run supplies the quality number. Detailed JSON
+may carry a raw composite for inspection, paired with its applicability declarations.
+**Contract for consumers: use `composite_rankable` to decide whether a raw composite is valid
+for ranking, and `quality_metric` to say what it measures.**
 
 **A published row requires a complete record, not a score.** The leaderboard admits any run
 whose provenance and quality declarations are complete, and reports whatever quality it has: the

@@ -132,8 +132,11 @@ zero for it and is not a quality signal at all.
 **Structurally invalid metrics are withheld, not caveated.** Each benchmark declares
 `substring_recall_supported` and `composite_rankable`. Where the composite is not rankable without
 a judge, the rankable surfaces refuse to show one and report `withheld (judge required)`. The
-contract for consumers: **`composite` is a valid quality score only when
-`substring_recall_supported` is true; otherwise rank from a judged run.**
+flags are independent: `substring_recall_supported` describes the answer-substring proxy,
+while `composite_rankable` describes the evaluation's own composite. Graph and passage retrieval
+scores do not require that proxy. Contract for consumers: **rank a raw `composite` only when
+`composite_rankable` is true, and interpret it through `quality_metric`; otherwise use a valid
+judged run.**
 
 **The context budget is declared and symmetric.** The default holds every arm to the same
 retrieval token budget, because without it "retrieved better" and "returned more text" are the

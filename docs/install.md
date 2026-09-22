@@ -26,15 +26,15 @@ the steps in order, stop at the first failure, and report what it saw.
 uv add memrank                  # or, into a virtualenv you already have: pip install memrank
 ```
 
-## 3. Run the smoke evaluation
+## 3. Run the quick-start evaluation
 
 Save this as `first_run.py`:
 
 ```python
-from memrank.evaluations import Demo
+from memrank.evaluations import SQuAD
 from memrank.systems import TFIDF
 
-evaluation = Demo()
+evaluation = SQuAD()
 result = evaluation.run(system=TFIDF())
 
 print(result)
@@ -42,13 +42,14 @@ print(result)
 
 Run it with `uv run python first_run.py`, or with `python first_run.py` in the virtualenv you
 installed into. [`TFIDF`](systems/tfidf.md) is keyword search weighted by how rare each word is,
-and [`Demo`](evaluations/demo.md) is five questions about a short conversation, so this needs
-nothing beyond what you just installed.
+and [`SQuAD`](evaluations/squad.md) is 64 questions about 32 bundled passages, so this needs
+nothing beyond what you just installed. It measures full-passage retrieval recall, not
+answer-span or end-to-end answer correctness.
 
 ## 4. What done looks like
 
-The run prints a `system:` line naming `TFIDF`, an `evaluation:` line naming `demo` with 5
-tasks, one line per value, and a `traces:` line reading `5 recorded, 0 with errors`. That is the
+The run prints a `system:` line naming `TFIDF`, an `evaluation:` line naming `squad` with 64
+tasks, one line per value, and a `traces:` line reading `64 recorded, 0 with errors`. That is the
 whole of the check. An agent reports those two heading lines and the traces line back, and
 nothing else.
 

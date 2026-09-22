@@ -23,6 +23,7 @@ from __future__ import annotations
 from memrank.core import QUALITY_METRIC_DESCRIPTIONS, QUALITY_METRIC_LABELS
 from memrank.quality import (
     DATASET_VERSION_UNSET,
+    QUALITY_METRICS,
     UNFREEZABLE,
     declaration_for,
     is_reproducible,
@@ -41,11 +42,20 @@ _DESCRIPTIONS = {
 
 
 def test_the_derived_labels_are_the_literals_they_replaced():
-    assert QUALITY_METRIC_LABELS == _LABELS
+    for kind, literal in _LABELS.items():
+        assert QUALITY_METRIC_LABELS[kind] == literal
 
 
 def test_the_derived_descriptions_are_the_literals_they_replaced():
-    assert QUALITY_METRIC_DESCRIPTIONS == _DESCRIPTIONS
+    for kind, literal in _DESCRIPTIONS.items():
+        assert QUALITY_METRIC_DESCRIPTIONS[kind] == literal
+
+
+def test_the_declared_metric_kinds_are_exactly_these():
+    assert set(QUALITY_METRICS) == {
+        "substring_recall", "graph_score", "judged_answer_correctness",
+        "judged_nugget_rubric", "passage_recall",
+    }
 
 
 def test_a_metric_this_memrank_does_not_know_claims_nothing_about_itself():
