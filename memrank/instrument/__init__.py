@@ -13,9 +13,8 @@
 # permissions and limitations under the License.
 """The seven: system, evaluation, task, trace, measure, run, result.
 
-The conceptual model these implement is
-`docs-internal/directions/2026-09-21-memrank-abstractions.md` and decision 0009; one module
-per noun, and the names here are the words in that record.
+One module per noun, and the names here are the words the conceptual model uses -- the
+nouns are the vocabulary, so the code spells them the way the documentation does.
 
 Nothing is imported eagerly. `memrank.core` imports `memrank.instrument.system`, so a package
 body that reached back into `memrank.core` would close the loop -- and `import memrank` stays

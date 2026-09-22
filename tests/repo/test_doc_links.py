@@ -134,13 +134,12 @@ KNOWN_PUBLIC_TO_INTERNAL_LINKS: set[str] = set()
 def _strip_fenced_blocks(text: str) -> str:
     """The document with its fenced blocks blanked out, line count preserved.
 
-    A link inside a fence is not the quoting document's own link. `docs-internal/` evidence
-    artifacts reproduce whole sections of their sources between fences, verbatim and deliberately
-    -- the poster at `docs-internal/research/2026-09-10-evaluation-validity-poster-evidence/`
-    states in terms that links inside its quotations resolve from the source file, not from it.
-    Reading those as the poster's own reports breaks it cannot fix: repointing the target would
-    make the quotation no longer a quotation, and pinning it would record a defect in this scan as
-    a defect in the evidence.
+    A link inside a fence is not the quoting document's own link. Evidence artifacts reproduce
+    whole sections of their sources between fences, verbatim and deliberately, and state in terms
+    that links inside those quotations resolve from the source file and not from the quoting
+    document. Reading them as the quoting document's own reports breaks it cannot fix:
+    repointing the target would make the quotation no longer a quotation, and pinning it would
+    record a defect in this scan as a defect in the evidence.
 
     Lines are blanked rather than dropped so that anything later keyed to line numbers still lines
     up. An unclosed fence swallows the rest of the file, which is what a markdown renderer does

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memrank"
-version = "0.4.1"
-description = "Open, vendor-neutral instrument that measures how well a memory helps answer questions about what it was told earlier."
+version = "0.4.2"
+description = "Open, vendor-neutral tool for reproducible, auditable evaluation of memory systems."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

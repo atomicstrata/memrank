@@ -11,26 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The evaluations memrank ships, as functions -- `from memrank.evaluations import demo`.
+"""The evaluations memrank ships, as classes -- `from memrank.evaluations import Demo`.
 
 `memrank.evaluation("demo")` needs the string first, and a string is not navigable: nothing in
 an editor follows it, nothing states what a tier or a slice may be, and nothing tells a reader
-what else is out there. Each function here takes the keywords its benchmark takes, typed, and
-returns the same `memrank.Evaluation` the string form returns -- they call
-`memrank.evaluation(...)` underneath, so there is one conversion and not two.
+what else is out there. Each class here is a subclass of `memrank.Evaluation` whose constructor
+takes the keywords its benchmark takes, typed, and loads it -- so `Demo()` beside
+`WordOverlap()` reads as two nouns of one shape, and "go to definition" on either lands on a
+class whose docstring says what it is.
 
-============  ======================================================================
-name          what it needs
-============  ======================================================================
-demo()        nothing -- a bundled synthetic scenario
-relation_gr.  nothing -- in-repo fixtures
-locomo()      a one-time download, or LOCOMO_DATA_PATH; judging for any quality number
-longmemeval() a one-time download, or LONGMEMEVAL_DATA_PATH; judging likewise
-beam()        a one-time download, or BEAM_DATA_PATH; judging likewise
-============  ======================================================================
+The construction goes through `memrank.evaluation(...)` underneath, so there is one conversion
+and not two, and an instance carries exactly the fields the string form produces.
 
-Each benchmark class is imported INSIDE its function. `import memrank` reaches this module, and
-a dataset loader's module graph is not something a caller who asked for `demo()` should pay
+================  ==================================================================
+name              what it needs
+================  ==================================================================
+Demo()            nothing -- a bundled synthetic scenario
+RelationGraph()   nothing -- in-repo fixtures
+LoCoMo()          a one-time download, or LOCOMO_DATA_PATH; judging for any quality
+LongMemEval()     a one-time download, or LONGMEMEVAL_DATA_PATH; judging likewise
+BEAM()            a one-time download, or BEAM_DATA_PATH; judging likewise
+================  ==================================================================
+
+Each benchmark class is imported INSIDE its constructor. `import memrank` reaches this module,
+and a dataset loader's module graph is not something a caller who asked for `Demo()` should pay
 for. `memrank.catalog()` prints this table at runtime.
 """
 
@@ -40,8 +44,21 @@ from memrank.instrument.catalog import ShippedEvaluation, evaluation
 from memrank.instrument.evaluation import Evaluation
 
 
-def demo(slice: str | None = None, k: int = 10,
-         data_path: str | None = None) -> Evaluation:
+class _Shipped(Evaluation):
+    """What the five below share: taking on the fields of an evaluation already built.
+
+    Each subclass differs only in which benchmark it loads. Spelling the six field names out in
+    five constructors would make a new field five edits and four chances to forget one.
+    """
+
+    def _adopt(self, built: Evaluation) -> None:
+        """Become the evaluation `built` is. Called by a subclass constructor, once."""
+        Evaluation.__init__(self, name=built.name, version=built.version, tasks=built.tasks,
+                            measures=built.measures, clearing=built.clearing,
+                            metadata=built.metadata)
+
+
+class Demo(_Shipped):
     """One hand-crafted multi-session scenario: 5 questions about what it was told earlier.
 
     Needs nothing -- the scenario is bundled, synthetic and offline, so this is the evaluation
@@ -51,12 +68,16 @@ def demo(slice: str | None = None, k: int = 10,
     `data_path` (or DEMO_DATA_PATH) points the loader at a scenario of your own, which is then
     no longer synthetic and no longer egress-safe.
     """
-    from memrank.benchmarks.demo import DemoBenchmark
 
-    return evaluation(DemoBenchmark(slice=slice, k=k, data_path=data_path))
+    def __init__(self, slice: str | None = None, k: int = 10,
+                 data_path: str | None = None) -> None:
+        from memrank.benchmarks.demo import DemoBenchmark
+
+        built = evaluation(DemoBenchmark(slice=slice, k=k, data_path=data_path))
+        self._adopt(built)
 
 
-def relation_graph(slice: str | None = None, k: int = 10) -> Evaluation:
+class RelationGraph(_Shipped):
     """Four synthetic fixtures asking whether a memory built the right relations between facts.
 
     Needs nothing -- the fixtures are in the repository -- but the system must be graph-capable:
@@ -64,12 +85,15 @@ def relation_graph(slice: str | None = None, k: int = 10) -> Evaluation:
     benchmark's own structural graph score, which is self-contained and needs no judge, plus
     latency and failure rate.
     """
-    from memrank.benchmarks.relation_graph import RelationGraphBenchmark
 
-    return evaluation(RelationGraphBenchmark(slice=slice, k=k))
+    def __init__(self, slice: str | None = None, k: int = 10) -> None:
+        from memrank.benchmarks.relation_graph import RelationGraphBenchmark
+
+        built = evaluation(RelationGraphBenchmark(slice=slice, k=k))
+        self._adopt(built)
 
 
-def locomo(slice: str | None = None, k: int = 10) -> Evaluation:
+class LoCoMo(_Shipped):
     """Ten multi-session conversations, ~199 QA pairs each, about what was said across sessions.
 
     Needs a one-time download (or LOCOMO_DATA_PATH pointing at the dataset), and a judge for any
@@ -78,12 +102,15 @@ def locomo(slice: str | None = None, k: int = 10) -> Evaluation:
     substring proxy is computed. Unjudged, this measures latency and failure rate and nothing
     else. `slice` is "smoke", "mini" or None for the full set.
     """
-    from memrank.benchmarks.locomo import LoCoMoBenchmark
 
-    return evaluation(LoCoMoBenchmark(slice=slice, k=k))
+    def __init__(self, slice: str | None = None, k: int = 10) -> None:
+        from memrank.benchmarks.locomo import LoCoMoBenchmark
+
+        built = evaluation(LoCoMoBenchmark(slice=slice, k=k))
+        self._adopt(built)
 
 
-def longmemeval(slice: str | None = None, k: int = 10) -> Evaluation:
+class LongMemEval(_Shipped):
     """~500 questions across six question types, each with its own haystack of sessions.
 
     Needs a one-time download (or LONGMEMEVAL_DATA_PATH), and a judge for any quality number:
@@ -91,12 +118,15 @@ def longmemeval(slice: str | None = None, k: int = 10) -> Evaluation:
     substring proxy is computed. Unjudged, this measures latency and failure rate. `slice` is
     "smoke", "mini" or None for the full set.
     """
-    from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
 
-    return evaluation(LongMemEvalBenchmark(slice=slice, k=k))
+    def __init__(self, slice: str | None = None, k: int = 10) -> None:
+        from memrank.benchmarks.longmemeval import LongMemEvalBenchmark
+
+        built = evaluation(LongMemEvalBenchmark(slice=slice, k=k))
+        self._adopt(built)
 
 
-def beam(tier: str = "100k", slice: str | None = None, k: int = 10) -> Evaluation:
+class BEAM(_Shipped):
     """20 conversations / 400 questions at 100k, 35 / 700 at 500k and 1m; 2 questions per ability.
 
     Needs a one-time download from HuggingFace (or BEAM_DATA_PATH), and a judge for any quality
@@ -105,24 +135,27 @@ def beam(tier: str = "100k", slice: str | None = None, k: int = 10) -> Evaluatio
     this measures latency and failure rate. `tier` is "100k", "500k" or "1m", and an unknown one
     is refused here, before anything is fetched.
     """
-    from memrank.benchmarks.beam import BEAMBenchmark
 
-    return evaluation(BEAMBenchmark(tier=tier, slice=slice, k=k))
+    def __init__(self, tier: str = "100k", slice: str | None = None, k: int = 10) -> None:
+        from memrank.benchmarks.beam import BEAMBenchmark
+
+        built = evaluation(BEAMBenchmark(tier=tier, slice=slice, k=k))
+        self._adopt(built)
 
 
 #: The same table the module docstring carries, in the form `memrank.catalog()` prints. One
 #: entry per name in `memrank.benchmarks.REGISTRY`, which `tests/instrument` holds it to.
 SHIPPED: tuple[ShippedEvaluation, ...] = (
-    ShippedEvaluation("demo", "demo", "a substring retrieval proxy and evidence recall",
+    ShippedEvaluation("Demo", "demo", "a substring retrieval proxy and evidence recall",
                       "nothing -- a bundled synthetic scenario"),
-    ShippedEvaluation("relation_graph", "relation_graph", "a structural graph score",
+    ShippedEvaluation("RelationGraph", "relation_graph", "a structural graph score",
                       "nothing -- in-repo fixtures, and a graph-capable system"),
-    ShippedEvaluation("locomo", "locomo", "latency and failures; quality needs a judge",
+    ShippedEvaluation("LoCoMo", "locomo", "latency and failures; quality needs a judge",
                       "a one-time download, or LOCOMO_DATA_PATH"),
-    ShippedEvaluation("longmemeval", "longmemeval", "latency and failures; quality needs a judge",
+    ShippedEvaluation("LongMemEval", "longmemeval", "latency and failures; quality needs a judge",
                       "a one-time download, or LONGMEMEVAL_DATA_PATH"),
-    ShippedEvaluation("beam", "beam", "latency and failures; quality needs a judge",
+    ShippedEvaluation("BEAM", "beam", "latency and failures; quality needs a judge",
                       "a one-time download, or BEAM_DATA_PATH"),
 )
 
-__all__ = ["SHIPPED", "beam", "demo", "locomo", "longmemeval", "relation_graph"]
+__all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph"]

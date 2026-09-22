@@ -40,10 +40,9 @@ class Requirement:
     """One precondition a placement needs, and what was actually found.
 
     Reported rather than raised, so a caller can name EVERY missing precondition in one pass
-    instead of failing at the first in resolution order. See
-    docs-internal/decisions/decision-placement-owns-its-requirements.md -- the knowledge belongs to the
-    placement that needs it, and the same rows are what enforcement raises on, so a diagnosis
-    cannot drift from the thing it diagnoses.
+    instead of failing at the first in resolution order. The knowledge belongs to the placement
+    that needs it, and the same rows are what enforcement raises on, so a diagnosis cannot drift
+    from the thing it diagnoses.
     """
 
     name: str

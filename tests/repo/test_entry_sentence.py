@@ -21,14 +21,18 @@ sessions in September 2026 failed at exactly this point: a person who had read t
 could not say what memrank measures.
 
 Three surfaces drift because nothing compares them. This compares them: each must carry the
-direction brief's sentence about what is measured, each must use the one word for what memrank
-is, and each must say which pieces are the person's. The word is asserted in both directions --
-present, and the retired one absent -- because a surface that gains the sentence and keeps
-calling memrank a benchmark suite has half-landed and reads as landed.
+one-line definition, and each must use the one word for what memrank is. The word is asserted in
+both directions -- present, and the retired one absent -- because a surface that gains the
+sentence and keeps calling memrank a benchmark suite has half-landed and reads as landed.
 
 `pyproject.toml` is the fourth surface, and it is what PyPI renders, so it carries the sentence
-and the word too. It is one line with no room for the ownership half, which is why that half is
-asserted of the three prose surfaces only.
+and the word too.
+
+The sentence pinned here is the maintainer's own, recorded in direction decision 0011 and landed
+by ATO-2249: *"Memrank is a tool for reproducible, auditable evaluation of memory systems."* It
+replaced a longer predicate about what is measured, and with it went a second assertion that the
+entry surface also named which pieces were the reader's. That half now belongs to the quick start,
+where a reader meets it while running something rather than before they have run anything.
 """
 from __future__ import annotations
 
@@ -47,19 +51,15 @@ from memrank.runner import _APP_HELP
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: The sentence, from the direction brief's section 1 -- *"memrank measures how well a memory helps
-#: answer questions about what it was told earlier"*. Only the predicate is pinned: the subject
-#: is "Memrank" on one surface and "it" on the others, and that is prose, not vocabulary.
-MEASURES = "measures how well a memory helps answer questions about what it was told earlier"
+#: The predicate of the one line, from direction decision 0011 -- *"Memrank is a tool for
+#: reproducible, auditable evaluation of memory systems."* Only the predicate is pinned: the
+#: subject is "Memrank" on one surface and "it" on the others, and that is prose, not vocabulary.
+MEASURES = "reproducible, auditable evaluation of memory systems"
 
-#: Which half of the work is the person's. T1's recognition test is both halves: a reader must
-#: restate what is measured AND name which pieces are theirs.
-OWNERSHIP = "you bring the engine"
-
-#: One word for what memrank is, and the word it is not. `docs-internal/VISION.md` and the
-#: roadmap treat the distinction as load-bearing: an instrument is run by its user against their
-#: own system; a benchmark suite is a fixed set of tests with a scoreboard.
-WORD = "instrument"
+#: One word for what memrank is, and the word it is not. The distinction is load-bearing: a
+#: tool is run by its user against their own system; a benchmark suite is a fixed set of tests
+#: with a scoreboard.
+WORD = "tool"
 RETIRED_WORD = "benchmark suite"
 
 
@@ -100,16 +100,10 @@ def test_every_entry_surface_says_what_memrank_measures(surface: str):
 
 
 @pytest.mark.parametrize("surface", sorted(SURFACES))
-def test_every_entry_surface_names_which_pieces_are_the_persons(surface: str):
-    """The other half of T1: what the person supplies, said where they first look."""
-    assert OWNERSHIP in SURFACES[surface](), f"{surface} does not say which pieces are the reader's"
-
-
-@pytest.mark.parametrize("surface", sorted(SURFACES))
 def test_every_entry_surface_uses_one_word_for_what_memrank_is(surface: str):
     """Present and absent, so a half-done rewording fails rather than passing quietly."""
     text = SURFACES[surface]()
-    assert WORD in text, f"{surface} does not call memrank an {WORD}"
+    assert WORD in text, f"{surface} does not call memrank a {WORD}"
     assert RETIRED_WORD not in text, f"{surface} still calls memrank a {RETIRED_WORD}"
 
 

@@ -25,12 +25,12 @@ import pytest
 from memrank.instrument.catalog import evaluation
 from memrank.instrument.measures import FailureRate, WordMatch
 from memrank.instrument.result import Result
-from memrank.instrument.run import measure, run
+from memrank.instrument.run import measure
 from tests.instrument.fakes import TinyMemory, two_task_evaluation
 
 
 def test_a_saved_result_loads_back_with_its_traces_typed(tmp_path):
-    original = run(TinyMemory(), two_task_evaluation(measures=(WordMatch(),)))
+    original = two_task_evaluation(measures=(WordMatch(),)).run(system=TinyMemory())
 
     path = original.save(tmp_path / "run.json")
     loaded = Result.load(path)
@@ -43,9 +43,9 @@ def test_a_saved_result_loads_back_with_its_traces_typed(tmp_path):
 
 def test_measuring_afterwards_over_a_saved_result_equals_measuring_in_the_run(tmp_path):
     system = TinyMemory()
-    measured_in_the_run = run(system, two_task_evaluation(measures=(WordMatch(),)))
+    measured_in_the_run = two_task_evaluation(measures=(WordMatch(),)).run(system=system)
 
-    without = run(TinyMemory(), two_task_evaluation())
+    without = two_task_evaluation().run(system=TinyMemory())
     later = measure(Result.load(without.save(tmp_path / "run.json")), WordMatch())
 
     assert [(v.measure, v.task_id, v.value) for v in later.values] == [
@@ -53,7 +53,7 @@ def test_measuring_afterwards_over_a_saved_result_equals_measuring_in_the_run(tm
 
 
 def test_a_measure_added_later_keeps_what_was_already_measured():
-    result = run(TinyMemory(), two_task_evaluation(measures=(WordMatch(),)))
+    result = two_task_evaluation(measures=(WordMatch(),)).run(system=TinyMemory())
 
     extended = measure(result, FailureRate())
 
@@ -65,14 +65,14 @@ def test_measuring_a_refused_run_says_there_is_nothing_to_measure():
     class NotASystem:
         address = None
 
-    refused = run(NotASystem(), two_task_evaluation())
+    refused = two_task_evaluation().run(system=NotASystem())
 
     with pytest.raises(ValueError, match="no traces to measure"):
         measure(refused, WordMatch())
 
 
 def test_a_stored_result_states_the_schema_it_was_written_under(tmp_path):
-    path = run(TinyMemory(), two_task_evaluation()).save(tmp_path / "run.json")
+    path = two_task_evaluation().run(system=TinyMemory()).save(tmp_path / "run.json")
     written = path.read_text(encoding="utf-8")
     path.write_text(written.replace('"instrument-1"', '"instrument-99"'), encoding="utf-8")
 
@@ -81,7 +81,7 @@ def test_a_stored_result_states_the_schema_it_was_written_under(tmp_path):
 
 
 def test_a_demo_result_round_trips_and_re_measures_to_the_same_numbers(tmp_path):
-    first = run(TinyMemory(), evaluation("demo"))
+    first = evaluation("demo").run(system=TinyMemory())
 
     again = measure(Result.load(first.save(tmp_path / "demo.json")), FailureRate())
 

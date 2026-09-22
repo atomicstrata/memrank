@@ -14,10 +14,10 @@
 """Hindsight scopes memory the way AMB does, and nothing may quietly collapse that.
 
 The audit recorded hindsight's partitioning as DRIFT -- "bank per question" for AMB against "one
-bank" for us (F3). It is not drift. AMB keys banks by USER,
-``"bank_id": self._bank_id_for(user_id)`` (docs-internal/engines/engine-hindsight.md section 3), and memrank
-creates one bank per benchmark unit. On LongMemEval a unit IS a question, so both produce one bank
-per question; on LoCoMo both produce one bank per conversation.
+bank" for us (F3). It is not drift. AMB keys banks by USER --
+``"bank_id": self._bank_id_for(user_id)`` -- and memrank creates one bank per benchmark unit.
+On LongMemEval a unit IS a question, so both produce one bank per question; on LoCoMo both
+produce one bank per conversation.
 
 So no `partitioning:` block was added for this engine -- it would express what already happens. What
 was missing is anything that FAILS if the scoping changes, which is what these tests are. They pin

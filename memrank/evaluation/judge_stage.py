@@ -49,7 +49,7 @@ class AllVerdictsUnparseable(MemrankError):
     (`_judge_one_query`); losing all of them is a broken judge, not a thin result.
 
     Structural rather than a warning on purpose. The only signal on this path was
-    ``observer.warning``, and the library default `memrank.run()` wires `NULL_OBSERVER`, whose
+    ``observer.warning``, and a run called without an observer gets `NULL_OBSERVER`, whose
     `warning` does nothing -- so a run with nobody listening said nothing at all.
     """
 
@@ -363,7 +363,7 @@ def _judge_metrics(cfg, suff, corr, corr_ctx, n_judged, skipped: dict[str, int],
         # The explicit denominator: how many queries the shape could grade. A subset run can
         # never masquerade as a full one when the artifact says what "all of them" meant --
         # the numerator/denominator mix-up is the failure behind the field's one retracted
-        # LoCoMo number (docs-internal/2026-08-13-audit-locomo-protocol-vs-memrank-and-the-field.md T3).
+        # LoCoMo number.
         "n_scoreable": n_scoreable if n_scoreable is not None else n_judged + n_unparseable,
         # Cells carry their n so a reader can detect mislabeled or refiltered comparisons --
         # LoCoMo's per-category counts {282, 321, 96, 841} are a fingerprint.

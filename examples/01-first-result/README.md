@@ -2,7 +2,7 @@
 
 `uv run python examples/01-first-result/run.py`
 
-A system memrank ships (`WordOverlap`) on the evaluation memrank ships (`demo`), each imported
+A system memrank ships (`WordOverlap`) on the evaluation memrank ships (`Demo`), each imported
 by name so your editor can follow it to its own definition. No engine, no network, no key,
 about a second.
 

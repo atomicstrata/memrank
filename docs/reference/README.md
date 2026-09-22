@@ -1,6 +1,6 @@
 # Reference: the seven words, one page each
 
-Memrank is a Python package and `memrank.run(system, evaluation)` is its entry point. Seven
+Memrank is a Python package and `evaluation.run(system=...)` is its entry point. Seven
 words describe everything it does, and two readings sit above them. This folder holds one page
 per word. Each page opens with a concrete instance, then says what the word means, then says
 who supplies it and what memrank supplies, then names the Python you would type.

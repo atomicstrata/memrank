@@ -70,7 +70,7 @@ TICKETS = Evaluation(
 )
 
 system = memrank.system("word-overlap")
-result = memrank.run(system, TICKETS)
+result = TICKETS.run(system=system)
 
 print(result)
 

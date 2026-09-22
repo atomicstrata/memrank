@@ -52,8 +52,7 @@ CORPUS_DIRNAME = "corpus"
 # where they were written. They are a storage LAYOUT fact, and the layout has two readers on
 # opposite sides of the public boundary: `runs/reconcile.py` skips these directories on sync (the
 # CLI never wants them), and `api/results_repository.py` serves out of them. Keeping them in
-# `analysis/` made a published module import an unpublished package for two strings -- see
-# docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md.
+# `analysis/` made a published module import an unpublished package for two strings.
 
 
 class ArtifactFetchError(MemrankError):

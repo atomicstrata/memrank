@@ -26,7 +26,6 @@ from memrank.core import BenchmarkUnit, Document, Recall
 from memrank.instrument.catalog import evaluation, from_benchmark
 from memrank.instrument.evaluation import Clearing
 from memrank.instrument.kinds import Memory
-from memrank.instrument.run import run
 from tests.instrument.fakes import TinyMemory
 
 
@@ -54,7 +53,7 @@ def test_a_converted_task_carries_the_question_the_expectation_and_the_group_s_d
 
 
 def test_the_demo_evaluation_runs_end_to_end_and_the_benchmark_s_own_score_agrees():
-    result = run(TinyMemory(), evaluation("demo"))
+    result = evaluation("demo").run(system=TinyMemory())
 
     assert result.refusal is None
     assert len(result.traces) == 5
@@ -95,7 +94,7 @@ class GraphMemory(Memory):
 def test_relation_graph_converts_and_runs_end_to_end_on_a_graph_capable_memory():
     converted = evaluation("relation_graph", slice="ambiguous-update")
 
-    result = run(GraphMemory(), converted)
+    result = converted.run(system=GraphMemory())
 
     assert result.refusal is None
     assert [t.task_id for t in result.traces] == ["q_planning_preference", "q_demo_preference"]
@@ -107,7 +106,7 @@ def test_relation_graph_converts_and_runs_end_to_end_on_a_graph_capable_memory()
 
 
 def test_a_graph_benchmark_handed_no_snapshot_says_so_rather_than_scoring_zero():
-    result = run(TinyMemory(), evaluation("relation_graph", slice="ambiguous-update"))
+    result = evaluation("relation_graph", slice="ambiguous-update").run(system=TinyMemory())
 
     scored = result.values_of("relation_graph-score")[0]
     assert scored.value is None and "graph_snapshot" in scored.why

@@ -69,6 +69,6 @@ class TinyMemory(memrank.Memory):
 
 system = TinyMemory()
 evaluation = memrank.evaluation("demo")
-result = memrank.run(system, evaluation)
+result = evaluation.run(system=system)
 
 print(result)

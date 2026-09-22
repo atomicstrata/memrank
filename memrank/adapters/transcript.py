@@ -16,8 +16,7 @@
 Every text-ingesting adapter used to render documents its own way, and none of them
 carried WHEN the conversation happened. Engines therefore stamped memories with
 ingestion time: a 2023 LoCoMo conversation was stored as "August 2026", and 321 of
-1540 temporal queries were unanswerable by construction
-(docs/2026-08-04-audit-vendor-spec-vs-our-configuration.md, F15).
+1540 temporal queries were unanswerable by construction.
 
 Only hindsight has a native ingest-timestamp field. The AtomicMemory wire contract has
 none (am-wire IngestRequest is user_id/conversation/source_site/source_url/session_id),

@@ -94,13 +94,13 @@ class Hindsight(Memory):
         # settings: 8192 fact tokens and 8192 chunk tokens, both already above the 5000-token
         # budget the runner enforces, and `budget` left to the engine's own `mid`. A faithful
         # variant overrides them with the vendor's published figures (budget=high, 32768 / 16384)
-        # -- see docs-internal/engines/engine-hindsight.md. Since 2026-08-19 that variant is the BARE
-        # `hindsight`, and `hindsight:matched` is the one that clears back to these defaults.
+        # -- and since 2026-08-19 that variant is the BARE `hindsight`, with `hindsight:matched`
+        # the one that clears back to these defaults.
         self.retrieval = dict(retrieval or {})
         # Bank-creation settings, from the target's `ingest:` block. Empty by default, which is the
         # positive statement "the engine's own defaults" -- hindsight ships observations ON. Only
         # The bare, faithful `hindsight` states otherwise, because AMB disabled them to produce
-        # the published numbers (docs-internal/engines/engine-hindsight.md section 3). `hindsight:matched` clears
+        # the published numbers. `hindsight:matched` clears
         # the block back to empty, which is why "empty" has to mean the engine's default here.
         self.ingest_settings = dict(ingest or {})
         unsupported = set(self.ingest_settings) - _SUPPORTED_INGEST_SETTINGS

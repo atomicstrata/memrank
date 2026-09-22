@@ -121,8 +121,8 @@ def evaluation(ref: str | Benchmark, **overrides: Any) -> Evaluation:
     `Benchmark` already built. Loading happens here, which is where a dataset may be fetched.
 
     An unknown ref names the known ones and points at `memrank.evaluations`, where the same
-    evaluations are typed functions an editor can follow -- a reader who had to guess the
-    string is the reader who did not know there was a catalog.
+    evaluations are classes an editor can follow -- a reader who had to guess the string is the
+    reader who did not know there was a catalog.
     """
     if isinstance(ref, Benchmark):
         return from_benchmark(ref)
@@ -172,7 +172,7 @@ class ShippedSystem:
 class ShippedEvaluation:
     """One evaluation memrank ships, as `memrank.catalog()` reports it."""
 
-    #: What to type in Python: `memrank.evaluations.demo`.
+    #: What to type in Python: `memrank.evaluations.Demo`.
     python_name: str
     #: What to type as a string: `memrank.evaluation("demo")`.
     name: str
@@ -218,7 +218,7 @@ class Catalog:
             "",
             *_system_lines(self.systems),
             "",
-            "evaluations -- `from memrank.evaluations import demo`, "
+            "evaluations -- `from memrank.evaluations import Demo`, "
             "or `memrank.evaluation(\"demo\")`",
             "",
             *_evaluation_lines(self.evaluations),

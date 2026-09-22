@@ -20,21 +20,25 @@ later. This is the same control for the Python surface, and it has the same two 
 
 **The surface.** `memrank.__all__` is pinned to the seven, the kinds a person subclasses, the
 measures memrank ships and the two readings above the run -- so a name cannot join the first
-thing a person reads without a deliberate edit here -- and `memrank.run`'s parameters are
-checked by position: the first two are `system` and `evaluation`. The previous run keeps its
-own contract, checked here too: it is `memrank.evaluation.api.run`, its first two parameters
+thing a person reads without a deliberate edit here -- and the run is a verb on the evaluation,
+`Evaluation.run(system)`, whose first parameter is checked by position. The previous run keeps
+its own contract, checked here too: it is `memrank.evaluation.api.run`, its first two parameters
 are `engine` and `evaluation`, and every deprecated spelling is keyword-only and named in
 :data:`memrank.evaluation.api.DEPRECATED_PARAMETERS`. A third spelling fails here.
 
 **The corpus.** Every live document, example and script is scanned for the spellings this
 step retired. A retired spelling in an instruction is a person typing it tomorrow.
 
-*Retired* here is about what a document may teach, not about what still imports. The nine
-shipped system classes dropped their `Adapter` suffix (ATO-2220) and the old spellings are
-kept as aliases for code outside this repository; :data:`SUFFIXED_ALIASES` names all nine,
-which both feeds the corpus scan and asserts each one still resolves to the same class object.
-So a document that teaches `WordOverlapAdapter` fails, and a checkout that has quietly deleted
-it fails too -- the second is what tells a retired spelling apart from a removed name.
+*Retired* here is about what a document may teach, not about what still imports -- except for
+`memrank.run(...)`, which is retired in both senses (ATO-2247): decision 0008 chose
+`evaluation.run(system)`, the 0.4.x build shipped the free function anyway, and this is
+greenfield, so the free function left the package surface rather than staying as an alias. The
+nine shipped system classes are the other shape: they dropped their `Adapter` suffix
+(ATO-2220) and the old spellings are kept as aliases for code outside this repository;
+:data:`SUFFIXED_ALIASES` names all nine, which both feeds the corpus scan and asserts each one
+still resolves to the same class object. So a document that teaches `WordOverlapAdapter` fails,
+and a checkout that has quietly deleted it fails too -- the second is what tells a retired
+spelling apart from a removed name.
 
 **The operator layer.** A third table names what is importable from `memrank` and deliberately
 off `__all__`, and asserts the entry path never makes a reader meet it. `Benchmark` is the case
@@ -78,11 +82,12 @@ ROOT = Path(__file__).resolve().parents[2]
 SURFACE = ("Assistant", "Clearing", "Decider", "Document", "Evaluation", "Expected",
            "FailureRate", "Judge", "Latency", "Measure", "Memory", "Model", "Paired", "Recall",
            "Result", "Retriever", "Scope", "System", "Task", "Trace", "Value", "WordMatch",
-           "__version__", "catalog", "evaluation", "evaluations", "measure", "paired", "run",
+           "__version__", "catalog", "evaluation", "evaluations", "measure", "paired",
            "system", "systems")
 
-#: The two positional parameters of `memrank.run`, in order.
-POSITIONAL = ("system", "evaluation")
+#: The positional parameter of the run verb. The evaluation is `self`, which is the whole point
+#: of the verb living on it: the one thing left to name is the system.
+POSITIONAL = ("system",)
 #: And of the previous run, which the command line and the cloud still call.
 CELL_POSITIONAL = ("engine", "evaluation")
 
@@ -106,6 +111,7 @@ SUFFIXED_ALIASES = {
 
 #: ``{regex: what to write instead}``. Each pattern is a PYTHON spelling this step retired.
 RETIRED = {
+    r"\bmemrank\.run\(": "evaluation.run(system=...)",
     r"\brun\(\s*target\s*=": "run(engine=...)",
     r"\brun\([^)]*\beval\s*=": "run(evaluation=...)",
     r"\bresult\.target\b": "result.engine_ref",
@@ -198,10 +204,21 @@ def _positional(function) -> tuple[str, ...]:
                  if p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD)
 
 
-def test_run_takes_the_system_and_the_evaluation_by_position():
-    """`run(system, evaluation)`: the two arguments a first number needs, in that order."""
-    assert _positional(memrank.run) == POSITIONAL
-    assert memrank.run.__module__ == "memrank.instrument.run"
+def test_the_run_is_a_verb_on_the_evaluation_taking_the_system():
+    """`evaluation.run(system=...)`: the evaluation is the subject, the system the argument.
+
+    Checked on a BOUND method, which is what a caller holds: `self` is already the evaluation,
+    so the signature a person reads has exactly one positional name left, and it is the system.
+    """
+    bound = memrank.Evaluation(name="any", version="1").run
+    assert _positional(bound) == POSITIONAL
+    assert memrank.Evaluation.run.__module__ == "memrank.instrument.evaluation"
+
+
+def test_the_free_run_function_is_off_the_package_surface():
+    """Greenfield, not deprecated: `memrank.run` is gone, and nothing answers to it."""
+    assert not hasattr(memrank, "run"), (
+        "memrank.run is the free function decision 0008 rejected; the verb is Evaluation.run")
 
 
 def test_the_previous_run_keeps_its_own_nouns_where_the_cli_and_the_cloud_call_it():

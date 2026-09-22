@@ -216,7 +216,7 @@ def _match_text(text: str, facts: dict[str, dict[str, Any]]) -> str | None:
     """Resolve a memory text to a fact id by normalized exact-or-alias match,
     falling back to containment ONLY when token overlap is high enough to be
     unambiguous. Fixtures supply ``aliases`` for expected paraphrases; this is a
-    near-verbatim matcher, not a semantic one (see docs-internal/relation-graph-benchmark.md)."""
+    near-verbatim matcher, not a semantic one."""
     n = _norm(text)
     if not n:
         return None

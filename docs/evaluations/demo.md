@@ -1,0 +1,46 @@
+# Demo -- `demo`
+
+```python
+from memrank.evaluations import Demo
+
+evaluation = Demo()
+```
+
+One small hand-written conversation and five questions about it -- the evaluation a first number
+is taken on.
+
+## How it works
+
+The bundled scenario is three short messages from one person: they moved city for a job, a
+relative is visiting, they have an allergy, they order a particular dinner. Memrank hands those
+to the [system](../reference/system.md) as documents, then asks five questions about them --
+including one whose honest answer is that the conversation does not say, so a system that always
+returns something cannot win by returning something.
+
+Each question states the words a correct recall has to contain, and which message is the evidence
+for it.
+
+## Why it matters
+
+It is the only evaluation that needs nothing whatever: no download, no key, no service. That is
+what makes it the one to check an installation, a system you just wrote, or a
+[measure](../reference/measure.md) of your own against.
+
+It measures two things beside latency and failures: whether the expected words appeared in
+something the system recalled, and whether the evidence message was recalled at all. Both are
+**retrieval proxies decided by a fixed rule**, not answer correctness, and every value says so.
+They are meaningful here because the scenario was written so its answers are literal spans -- a
+property of this evaluation, not of word matching in general.
+
+## What it needs
+
+Nothing. The scenario ships inside the package.
+
+Pointing it at a scenario of your own, with `data_path=` or `DEMO_DATA_PATH`, makes it no longer
+synthetic -- which also means it is no longer safe to send to a judge without saying so.
+
+## References
+
+- [evaluation](../reference/evaluation.md) -- what an evaluation is.
+- [Measures](../measures.md) -- what a word-match value declares about itself.
+- [Methodology](../methodology.md) -- why a retrieval proxy is not answer correctness.

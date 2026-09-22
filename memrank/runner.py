@@ -27,7 +27,7 @@ captures latency/token metrics, and writes a reproducibility receipt.
 Operator and cross-record-analysis commands (``leaderboard*``, ``arena*``, ``compare``,
 ``report``, ``compare-versions``, ``mlflow-sync``) used to live here. They now live in
 :mod:`memrank.ops`, reached through ``scripts/internal/memrank-ops.py`` -- ``memrank`` shows exactly
-one product. See docs-internal/interface-model.md section 7.
+one product.
 """
 
 from __future__ import annotations
@@ -53,8 +53,8 @@ from memrank.cli.evals import evals_app
 from memrank.cli.monitor import logs as _logs_cmd
 from memrank.cli.retired import refuse_retired_flags, register_retired
 
-# Flat aliases for the hot path, per docs-internal/interface-model.md -- exactly `ps`, `watch`, `logs`,
-# `kill`, and the SAME functions their `runs` forms are, not reimplementations. `ps` used to read
+# Flat aliases for the hot path -- exactly `ps`, `watch`, `logs` and `kill`, and the SAME
+# functions their `runs` forms are, not reimplementations. `ps` used to read
 # local status.json files only, so it and `runs ls` disagreed about what was running: a cloud
 # sweep submitted from another directory was invisible to one and 89% complete according to the
 # other.
@@ -253,10 +253,9 @@ class _BoundedTyper(typer.Typer):
 #: Named once because the root callback below would otherwise silently replace it with its
 #: own docstring -- Typer prefers the callback's help over the app's.
 _APP_HELP = (
-    "Memrank is an open, vendor-neutral instrument: it measures how well a memory helps "
-    "answer questions about what it was told earlier. You bring the engine, and your own "
-    "questions if you have them; memrank brings everything between and writes down what "
-    "produced the number."
+    "Memrank is an open, vendor-neutral tool for reproducible, auditable evaluation of "
+    "memory systems. You supply the system; memrank puts the evaluation to it and writes "
+    "down what produced every value."
 )
 
 
@@ -471,7 +470,7 @@ def submit(
     # the placement AFTER minting, so a missing Docker became a run record marked failed with
     # `internal error: FileNotFoundError: 'docker'` -- memrank blaming itself for the machine. The
     # rows come from the placement that needs them, so this cannot drift from what actually stops
-    # the run (docs-internal/decisions/decision-placement-owns-its-requirements.md).
+    # the run.
     # Every source target in the sweep, not just the first: each launches its own directory, so
     # each has its own markers and launcher to be missing. Naming them one run at a time would be
     # the round-trip a single honest refusal removes.

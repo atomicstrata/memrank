@@ -15,13 +15,13 @@
 
 `memrank.system("word-overlap")` presupposes the string. Nothing in an editor follows a string,
 so a reader who has one cannot reach the class, and a reader who has none cannot find out what
-exists. These hold the three things that fixes: the classes are the registered classes and not
-copies of them, every shipped evaluation is a typed function returning the same `Evaluation`,
-and one call prints the whole catalog.
+exists. These hold the three things that fixes: the systems are the registered classes and not
+copies of them, every shipped evaluation is an `Evaluation` subclass whose constructor builds
+what the string form builds, and one call prints the whole catalog.
 
-The downloading three are checked WITHOUT downloading: the function exists, it is typed, and a
-tier it does not have is refused before anything is fetched. A test that pulled LoCoMo to prove
-`locomo()` is a function would be a test nobody runs offline.
+The downloading three are checked WITHOUT downloading: the class exists, its constructor is
+typed, and a tier it does not have is refused before anything is fetched. A test that pulled
+LoCoMo to prove `LoCoMo` is a class would be a test nobody runs offline.
 """
 from __future__ import annotations
 
@@ -36,10 +36,10 @@ from memrank.benchmarks import REGISTRY as EVALUATION_REGISTRY
 from memrank.instrument.catalog import catalog, evaluation, system
 from memrank.instrument.evaluation import Evaluation
 
-#: The evaluations whose `load()` may reach the network. Built here, never called.
-DOWNLOADS = ("locomo", "longmemeval", "beam")
+#: The evaluations whose `load()` may reach the network. Named here, never constructed.
+DOWNLOADS = ("LoCoMo", "LongMemEval", "BEAM")
 #: The evaluations that are wholly in-tree, so a test may actually build one.
-OFFLINE = ("demo", "relation_graph")
+OFFLINE = ("Demo", "RelationGraph")
 
 
 @pytest.mark.parametrize("entry", systems.SHIPPED, ids=lambda e: e.python_name)
@@ -57,39 +57,66 @@ def test_the_systems_module_covers_the_registry_exactly():
     assert len(systems.SHIPPED) == len(SYSTEM_REGISTRY)
 
 
-@pytest.mark.parametrize("name", OFFLINE)
-def test_an_offline_evaluation_function_builds_the_evaluation_it_names(name: str):
-    """Built for real, because these two need nothing: the object is the seven's `Evaluation`."""
-    built = getattr(evaluations, name)()
+#: The one entry per shipped evaluation, keyed by the Python name the classes are reached under.
+BY_PYTHON_NAME = {entry.python_name: entry for entry in evaluations.SHIPPED}
+
+
+@pytest.mark.parametrize("python_name", OFFLINE)
+def test_an_offline_evaluation_class_builds_what_the_string_form_builds(python_name: str):
+    """Built for real, because these two need nothing. `Demo()` is `evaluation("demo")`."""
+    entry = BY_PYTHON_NAME[python_name]
+
+    built = getattr(evaluations, python_name)()
+    by_string = evaluation(entry.name)
 
     assert isinstance(built, Evaluation)
-    assert built.name == name
-    assert built.tasks
+    assert built.name == entry.name
+    assert built.tasks == by_string.tasks
+    assert (built.version, built.clearing, built.metadata) == (
+        by_string.version, by_string.clearing, by_string.metadata)
+    assert [type(m) for m in built.measures] == [type(m) for m in by_string.measures]
 
 
-@pytest.mark.parametrize("name", DOWNLOADS)
-def test_a_downloading_evaluation_function_exists_and_is_typed(name: str):
-    """Signature only -- calling one fetches a dataset, and that is not this test's business."""
-    function = getattr(evaluations, name)
-    hints = typing.get_type_hints(function)
+@pytest.mark.parametrize("python_name", OFFLINE)
+def test_an_offline_evaluation_instance_copies_and_revalidates(python_name: str):
+    """A subclass of a frozen model still has to survive the two moves every model gets."""
+    built = getattr(evaluations, python_name)()
 
-    assert callable(function)
-    assert hints["return"] is Evaluation
-    assert all(parameter in hints for parameter in inspect.signature(function).parameters)
+    copied = built.model_copy()
+    revalidated = Evaluation(**{field: getattr(built, field) for field in Evaluation.model_fields})
+
+    assert copied.tasks == built.tasks
+    assert type(revalidated) is Evaluation
+    assert (revalidated.name, revalidated.version, revalidated.tasks) == (
+        built.name, built.version, built.tasks)
+
+
+@pytest.mark.parametrize("python_name", DOWNLOADS)
+def test_a_downloading_evaluation_class_exists_and_is_typed(python_name: str):
+    """Signature only -- constructing one fetches a dataset, which is not this test's business."""
+    shipped = getattr(evaluations, python_name)
+    hints = typing.get_type_hints(shipped.__init__)
+
+    assert isinstance(shipped, type)
+    assert issubclass(shipped, Evaluation)
+    assert all(parameter in hints
+               for parameter in inspect.signature(shipped.__init__).parameters
+               if parameter != "self")
 
 
 def test_an_unknown_beam_tier_is_refused_before_anything_is_fetched():
     """The benchmark's own error, raised by its constructor, so no download is even begun."""
     with pytest.raises(ValueError) as refused:
-        evaluations.beam(tier="9000k")
+        evaluations.BEAM(tier="9000k")
 
     assert "9000k" in str(refused.value)
 
 
 def test_the_evaluations_module_covers_the_registry_exactly():
-    """A registered evaluation with no function is one a reader can only reach by guessing."""
+    """A registered evaluation with no class is one a reader can only reach by guessing."""
     assert {e.name for e in evaluations.SHIPPED} == set(EVALUATION_REGISTRY)
-    assert all(callable(getattr(evaluations, e.python_name)) for e in evaluations.SHIPPED)
+    assert all(issubclass(getattr(evaluations, e.python_name), Evaluation)
+               for e in evaluations.SHIPPED)
 
 
 def test_the_catalog_lists_every_registered_name_once(capsys):

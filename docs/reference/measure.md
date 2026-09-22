@@ -65,7 +65,7 @@ from collections.abc import Sequence
 
 import memrank
 from memrank import Decider, Measure, Scope, Trace, Value
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
 
@@ -81,7 +81,7 @@ class RecalledCount(Measure):
                 for trace in traces]
 
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 measured = memrank.measure(result, RecalledCount())
 print(measured.values_of("recalled-count")[0].value)
 ```

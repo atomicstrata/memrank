@@ -18,10 +18,10 @@ The failure this closes: with no Docker on PATH, `submit --on local` printed
 memrank blaming itself for the user's machine -- and it printed it *after* minting a run, so what
 the user was left with was a run record marked failed rather than a refusal.
 
-There is deliberately no `doctor` command wrapping these rows (docs-internal/interface-model.md section 6). The
-rows come from the placement that needs them and are what `provision` enforces on, so the refusal
-a user reads and the failure that would have happened cannot drift apart -- the SkyPilot
-`sky check` failure mode recorded in docs-internal/decisions/decision-placement-owns-its-requirements.md.
+There is deliberately no `doctor` command wrapping these rows. They come from the placement
+that needs them and are what `provision` enforces on, so the refusal a user reads and the
+failure that would have happened cannot drift apart -- which is the SkyPilot `sky check`
+failure mode, where a green check and a red run answer to different code.
 """
 from __future__ import annotations
 

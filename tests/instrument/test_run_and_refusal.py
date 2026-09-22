@@ -21,7 +21,6 @@ rule says it is.
 from __future__ import annotations
 
 from memrank.instrument.evaluation import Clearing, Evaluation
-from memrank.instrument.run import run
 from memrank.instrument.task import Task
 from tests.instrument.fakes import (
     Broke,
@@ -40,7 +39,7 @@ from tests.instrument.fakes import (
 def test_a_run_produces_one_trace_per_task_and_values_that_name_their_decider():
     system = TinyMemory()
 
-    result = run(system, two_task_evaluation(measures=(Broke(),)))
+    result = two_task_evaluation(measures=(Broke(),)).run(system=system)
 
     assert result.refusal is None
     assert [t.task_id for t in result.traces] == ["t_job", "t_visit"]
@@ -52,7 +51,7 @@ def test_a_run_produces_one_trace_per_task_and_values_that_name_their_decider():
 def test_the_system_is_given_the_group_s_documents_once_and_the_trace_says_which():
     system = TinyMemory()
 
-    result = run(system, two_task_evaluation())
+    result = two_task_evaluation().run(system=system)
 
     assert system.prepared == ["g1"], "one group, one preparation"
     assert len(system.store.get("g1", [])) == 0, "cleared at the end of the group"
@@ -63,7 +62,7 @@ def test_the_system_is_given_the_group_s_documents_once_and_the_trace_says_which
 def test_a_task_that_breaks_is_a_trace_with_a_reason_and_the_loop_carries_on():
     system = TinyMemory(fails_on="What is Alex?")
 
-    result = run(system, two_task_evaluation(measures=(Broke(),)))
+    result = two_task_evaluation(measures=(Broke(),)).run(system=system)
 
     broke, ran = result.traces
     assert broke.error.step == "retrieve" and "retrieve refused" in broke.error.message
@@ -74,14 +73,14 @@ def test_a_task_that_breaks_is_a_trace_with_a_reason_and_the_loop_carries_on():
 def test_a_group_that_cannot_be_prepared_still_yields_one_trace_per_task():
     system = TinyMemory(fails_on="g1", fails_at="prepare")
 
-    result = run(system, two_task_evaluation())
+    result = two_task_evaluation().run(system=system)
 
     assert len(result.traces) == 2
     assert {t.error.step for t in result.traces} == {"prepare"}
 
 
 def test_attempts_produce_one_trace_per_task_per_attempt():
-    result = run(TinyMemory(), two_task_evaluation(), attempts=3)
+    result = two_task_evaluation().run(system=TinyMemory(), attempts=3)
 
     assert len(result.traces) == 6
     assert sorted(t.attempt for t in result.traces) == [1, 1, 2, 2, 3, 3]
@@ -91,7 +90,7 @@ def test_attempts_produce_one_trace_per_task_per_attempt():
 def test_the_clearing_rule_in_force_is_recorded_and_observed():
     system = TinyMemory()
 
-    per_task = run(system, two_task_evaluation(clearing=Clearing.PER_TASK))
+    per_task = two_task_evaluation(clearing=Clearing.PER_TASK).run(system=system)
 
     assert system.prepared == ["t_job", "t_visit"]
     assert system.cleaned == 2
@@ -102,7 +101,7 @@ def test_the_clearing_rule_in_force_is_recorded_and_observed():
 def test_clearing_at_the_end_prepares_once_over_the_whole_evaluation():
     system = TinyMemory()
 
-    run(system, two_task_evaluation(clearing=Clearing.AT_END))
+    two_task_evaluation(clearing=Clearing.AT_END).run(system=system)
 
     assert system.prepared == ["tiny"] and system.cleaned == 1
 
@@ -111,7 +110,7 @@ def test_a_run_refuses_before_touching_a_system_that_lacks_a_required_verb():
     class NotEvenASystem:
         address = None
 
-    result = run(NotEvenASystem(), two_task_evaluation())
+    result = two_task_evaluation().run(system=NotEvenASystem())
 
     assert result.traces == () and result.values == ()
     assert "not a memrank System" in result.refusal
@@ -120,7 +119,7 @@ def test_a_run_refuses_before_touching_a_system_that_lacks_a_required_verb():
 def test_a_run_refuses_a_measure_that_reads_a_name_nothing_produces():
     system = TinyMemory()
 
-    result = run(system, two_task_evaluation(measures=(ReadsTheUnknown(),)))
+    result = two_task_evaluation(measures=(ReadsTheUnknown(),)).run(system=system)
 
     assert "reads vibes" in result.refusal
     assert system.prepared == [], "the refusal happened before the first prepare"
@@ -131,7 +130,7 @@ def test_a_measure_may_read_another_measure_s_name():
         name = "doubles"
         reads = ("counts",)
 
-    result = run(TinyMemory(), two_task_evaluation(measures=(Counts(), Doubles())))
+    result = two_task_evaluation(measures=(Counts(), Doubles())).run(system=TinyMemory())
 
     assert result.refusal is None
     assert [v.measure for v in result.values] == ["counts", "doubles"]
@@ -140,14 +139,14 @@ def test_a_measure_may_read_another_measure_s_name():
 def test_a_run_refuses_when_a_measure_needs_an_answer_and_nothing_writes_one():
     system = TinyMemory()
 
-    result = run(system, two_task_evaluation(measures=(NeedsAnAnswer(),)))
+    result = two_task_evaluation(measures=(NeedsAnAnswer(),)).run(system=system)
 
     assert "answerer=" in result.refusal and system.prepared == []
 
 
 def test_an_answer_writer_satisfies_that_refusal_and_is_named_on_the_trace():
-    result = run(TinyMemory(), two_task_evaluation(measures=(NeedsAnAnswer(),)),
-                 answerer=FirstPassage())
+    result = two_task_evaluation(measures=(NeedsAnAnswer(),)).run(
+        system=TinyMemory(), answerer=FirstPassage())
 
     assert result.refusal is None
     assert result.traces[0].answered.produced_by == "first-passage"
@@ -160,14 +159,14 @@ def test_a_system_that_answers_for_itself_needs_no_writer():
                                 tasks=(Task(id="t1", prompt="What about whales?"),),
                                 measures=(NeedsAnAnswer(),))
 
-        result = run(system, evaluation)
+        result = evaluation.run(system=system)
 
         assert result.refusal is None
         assert result.traces[0].answered.produced_by == "system"
 
 
 def test_a_system_that_cannot_be_told_things_refuses_material_rather_than_ignoring_it():
-    result = run(TinyRetriever(), two_task_evaluation())
+    result = two_task_evaluation().run(system=TinyRetriever())
 
     assert "no verb to be told things with" in result.refusal
 
@@ -176,14 +175,14 @@ def test_a_retriever_ranks_its_own_corpus():
     evaluation = Evaluation(name="ranking", version="1",
                             tasks=(Task(id="t1", prompt="largest animal"),))
 
-    result = run(TinyRetriever(), evaluation)
+    result = evaluation.run(system=TinyRetriever())
 
     assert result.refusal is None
     assert [d.id for d in result.traces[0].recalled.documents] == ["c1"]
 
 
 def test_the_result_records_the_system_and_the_evaluation_version():
-    result = run(TinyMemory(), two_task_evaluation())
+    result = two_task_evaluation().run(system=TinyMemory())
 
     assert result.system.name == "TinyMemory" and result.system.kind == "memory"
     assert result.system.version == "tiny-1", "the system's own word, recorded as its word"

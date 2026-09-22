@@ -81,7 +81,7 @@ demo = memrank.evaluation("demo")
 mine = Evaluation(name=demo.name, version=demo.version, tasks=demo.tasks,
                   measures=(AnswerLength(),), clearing=demo.clearing)
 
-print(memrank.run(WordOverlap(), mine))
+print(mine.run(system=WordOverlap()))
 ```
 
 ```console
@@ -98,7 +98,7 @@ recalls, and no answer writer was given, the run refuses and names what to pass 
 ships no reader that runs in-process without a model key, so it will not invent one:
 
 ```console
-REFUSED before the system was touched: judge reads `answered`, a memory system only recalls, and no answer writer was given; pass answerer=<your writer> to memrank.run (memrank ships no reader that runs in-process without a model key)
+REFUSED before the system was touched: judge reads `answered`, a memory system only recalls, and no answer writer was given; pass answerer=<your writer> to evaluation.run (memrank ships no reader that runs in-process without a model key)
 ```
 
 Both checks belong to the run's setup (`memrank/instrument/refusal.py`). `memrank.measure`,
@@ -139,7 +139,7 @@ class Unreachable(memrank.Memory):
         raise ConnectionError("no route to the service")
 
 
-result = memrank.run(Unreachable(), memrank.evaluation("demo"))
+result = memrank.evaluation("demo").run(system=Unreachable())
 
 for value in (result.values_of("word-match")[0], *result.values_of("demo-score"),
               *result.values_of("failure-rate")):
@@ -239,7 +239,7 @@ class MatchRate(Measure):
                           f"{len(mine) - len(decided)} undecided task(s) left out")]
 
 
-result = memrank.run(WordOverlap(), memrank.evaluation("demo"))
+result = memrank.evaluation("demo").run(system=WordOverlap())
 result.save("/tmp/demo-run.json")                 # the traces persist, typed
 
 stored = Result.load("/tmp/demo-run.json")        # a different process, days later

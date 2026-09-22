@@ -33,8 +33,7 @@ first tracks the file. `test_no_untracked_path_would_be_published` closes that w
 the decision one step earlier, while the material is still undecided.
 
 The manifest is deliberately a PREFIX list with an exceptions table, and the exceptions table is
-deliberately written out in full. See `publish.toml` and
-`docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md`.
+deliberately written out in full. `publish.toml` says why.
 """
 from __future__ import annotations
 
@@ -58,7 +57,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "publish.toml"
 
 #: The three published entry points. `memrank.runner` is the `memrank` command, `mcp_server` the
-#: `memrank-mcp` command, and `evaluation.api` is `memrank.run()` -- the Python abstraction.
+#: `memrank-mcp` command, and `evaluation.api` is the previous run -- the Python abstraction.
 ENTRY_POINTS = ("memrank.runner", "memrank.mcp_server", "memrank.evaluation.api")
 
 PUBLIC, INTERNAL = mf.PUBLIC, mf.INTERNAL
@@ -128,11 +127,10 @@ def test_no_exception_names_a_path_that_is_gone(manifest, tracked):
 def test_no_untracked_path_would_be_published(manifest, undecided):
     """Undecided material under a public prefix, caught before the commit that publishes it.
 
-    This is the finding of `docs-internal/2026-08-25-audit-pre-release-readiness.md` section 6: `docs/pitch/`
-    and `docs/research/` sat untracked under a now-public prefix, and would have classified PUBLIC
-    the instant anyone staged them. Nothing would have objected -- a prefix rule matches a whole
-    directory, so internal material lands inside a public tree by inheriting a classification that
-    was never made about it.
+    This was found once, before the split: `docs/pitch/` and `docs/research/` sat untracked under
+    a now-public prefix, and would have classified PUBLIC the instant anyone staged them.
+    Nothing would have objected -- a prefix rule matches a whole directory, so internal material
+    lands inside a public tree by inheriting a classification that was never made about it.
 
     So the guard is deliberately about the DECISION, not about the content: no rule can tell an
     internal pitch deck from a public methodology note once both sit under `docs/`. What it can

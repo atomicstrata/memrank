@@ -21,9 +21,9 @@ units, or an empty result standing in for a failure.
 
 Deliberately narrow. It asserts the published contract and nothing else -- not whether the machine
 is healthy, not whether credentials exist, not whether the engine is any good.
-``docs-internal/interface-model.md`` rejects a general ``doctor`` command for good reasons, and those reasons
-still apply: every check here is about a third party's implementation of a spec, which nothing else
-in the tool examines.
+memrank has no general ``doctor`` command, deliberately, and the reason that decision was made
+applies here too: every check in this module is about a third party's implementation of a spec,
+which nothing else in the tool examines.
 """
 
 from __future__ import annotations

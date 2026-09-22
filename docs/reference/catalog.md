@@ -26,18 +26,18 @@ systems -- `from memrank.systems import WordOverlap`, or `memrank.system("word-o
   Mem0          'mem0'            memory   the mem0 SDK, or a running engine at MEM0_HTTP_URL
   Native        'native'          memory   a running translator of memrank's system contract, at NATIVE_API_URL
 
-evaluations -- `from memrank.evaluations import demo`, or `memrank.evaluation("demo")`
+evaluations -- `from memrank.evaluations import Demo`, or `memrank.evaluation("demo")`
 
-  demo()            'demo'            nothing -- a bundled synthetic scenario
-                                      measures a substring retrieval proxy and evidence recall
-  relation_graph()  'relation_graph'  nothing -- in-repo fixtures, and a graph-capable system
-                                      measures a structural graph score
-  locomo()          'locomo'          a one-time download, or LOCOMO_DATA_PATH
-                                      measures latency and failures; quality needs a judge
-  longmemeval()     'longmemeval'     a one-time download, or LONGMEMEVAL_DATA_PATH
-                                      measures latency and failures; quality needs a judge
-  beam()            'beam'            a one-time download, or BEAM_DATA_PATH
-                                      measures latency and failures; quality needs a judge
+  Demo()           'demo'            nothing -- a bundled synthetic scenario
+                                     measures a substring retrieval proxy and evidence recall
+  RelationGraph()  'relation_graph'  nothing -- in-repo fixtures, and a graph-capable system
+                                     measures a structural graph score
+  LoCoMo()         'locomo'          a one-time download, or LOCOMO_DATA_PATH
+                                     measures latency and failures; quality needs a judge
+  LongMemEval()    'longmemeval'     a one-time download, or LONGMEMEVAL_DATA_PATH
+                                     measures latency and failures; quality needs a judge
+  BEAM()           'beam'            a one-time download, or BEAM_DATA_PATH
+                                     measures latency and failures; quality needs a judge
 ```
 
 ## What it is
@@ -48,7 +48,7 @@ you build -- it is the door onto the ones memrank already has.
 Every row carries three things: the **Python name** you can import and an editor can follow,
 the **string** the same thing answers to, and **what it needs from you** -- a running engine, a
 download, an environment variable, or nothing at all. That third column is the useful one:
-`WordOverlap` and `demo` need nothing, which is why they are what a first result is made of.
+`WordOverlap` and `Demo` need nothing, which is why they are what a first result is made of.
 
 `catalog()` both prints and returns, because there are two readers. A person runs it for the
 table; a program reads `catalog().systems` and `catalog().evaluations` for the entries.
@@ -87,8 +87,8 @@ demo
 - `memrank.catalog()` -- prints the table and returns it.
 - `memrank.systems` -- the module: `WordOverlap`, `NoContext`, `FixedContext`, `FullContext`,
   `AtomicMemory`, `Hindsight`, `Supermemory`, `Mem0`, `Native`.
-- `memrank.evaluations` -- the module: `demo`, `relation_graph`, `locomo`, `longmemeval`,
-  `beam`.
+- `memrank.evaluations` -- the module: `Demo`, `RelationGraph`, `LoCoMo`, `LongMemEval`,
+  `BEAM`.
 - `memrank.system("<name>")` and `memrank.evaluation("<name>")` -- the same things by string.
 
 ## Going deeper

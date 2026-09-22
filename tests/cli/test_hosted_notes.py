@@ -14,9 +14,9 @@
 """Organizations, sign-in and syncing are mentioned only where the hosted side is in play.
 
 Both directions, at both call sites that reach for the org universe while serving a request that
-may be entirely local -- ``runs ls`` and the hook after each finished run. Observed on 2026-09-16
-(`docs-internal/research/2026-09-15-usability/`): a local evaluation printed a note about a
-default org and one about not being signed in, directly where the person was reading a score.
+may be entirely local -- ``runs ls`` and the hook after each finished run. Observed in a
+usability session on 2026-09-16: a local evaluation printed a note about a default org and one
+about not being signed in, directly where the person was reading a score.
 
 The rule these pin is :mod:`memrank.placement.hosted`'s: absent is silent, broken is not.
 """

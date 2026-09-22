@@ -122,8 +122,8 @@ class TinyMemoryV2(TinyMemory):
 # its slots on them.
 version_1 = TinyMemory()
 version_2 = TinyMemoryV2()
-result_before = memrank.run(version_1, TICKETS, k=2)
-result_after = memrank.run(version_2, TICKETS, k=2)
+result_before = TICKETS.run(system=version_1, k=2)
+result_after = TICKETS.run(system=version_2, k=2)
 reading = memrank.paired(result_before, result_after)
 
 print(reading)

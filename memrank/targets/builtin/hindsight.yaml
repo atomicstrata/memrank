@@ -4,13 +4,13 @@
 # THE BARE REF IS THE VENDOR'S. Until 2026-08-19 this file was the matched arm and the faithful one
 # was `hindsight:amb`, which is the opposite of how mem0 is arranged and was nobody's decision. A
 # ref names the configuration its OWNER ships; the MODE is carried by `context_budget` and by
-# nothing else (docs-internal/decisions/decision-matched-and-faithful-run-modes.md).
+# nothing else.
 #
 # Results answer "can we land near their published figure" and MUST NOT enter the leaderboard.
 #
 # Transcribed from vectorize-io/agent-memory-benchmark's hindsight provider, the configuration
-# behind their published LoCoMo 92.0 / LongMemEval 94.6 (docs-internal/engines/engine-hindsight.md section 3):
-# budget=high, max_tokens=32768 facts, max_chunk_tokens=16384 raw chunks. Those runs average
+# behind their published LoCoMo 92.0 / LongMemEval 94.6: budget=high, max_tokens=32768 facts,
+# max_chunk_tokens=16384 raw chunks. Those runs average
 # 36k-44k context tokens per question -- roughly 8x memrank's matched budget, which is precisely
 # why this cannot be a matched-mode target.
 #

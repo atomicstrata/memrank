@@ -80,7 +80,7 @@ def test_abstention_is_a_suffix_not_a_question_type():
     """The 30 `_abs` items sit INSIDE the six buckets; `question_type` keeps the base type.
 
     Treating abstention as a seventh `question_type` is the single most common third-party
-    error (docs-internal/benchmarks/benchmark-longmemeval.md section 2).
+    error.
     """
     assert "abstention" not in _QUESTION_TYPES
     assert len(_QUESTION_TYPES) == 6

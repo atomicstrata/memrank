@@ -6,11 +6,10 @@ A **run** is the act of putting an evaluation's questions to a system and record
 happened. One line:
 
 ```python
-import memrank
-from memrank.evaluations import demo
+from memrank.evaluations import Demo
 from memrank.systems import WordOverlap
 
-result = memrank.run(WordOverlap(), demo())
+result = Demo().run(system=WordOverlap())
 print(len(result.traces), "traces,", len(result.values), "values")
 ```
 
@@ -25,10 +24,15 @@ It needed no engine, no network and no API key.
 
 ## What it is
 
-`memrank.run(system, evaluation)` is the entry point of the package, and it takes exactly the
-two things a number needs: the [system](system.md) under test and the [evaluation](evaluation.md)
-to put to it. You compose the run at the call -- there is no configuration file between you and
-it, and nothing is registered in advance.
+`evaluation.run(system=...)` is the entry point of the package. It is a verb on the
+[evaluation](evaluation.md), and the one thing it takes is the [system](system.md) under test:
+the evaluation is what you are holding, and the system is what you are putting it to. You
+compose the run at the call -- there is no configuration file between you and it, and nothing
+is registered in advance.
+
+The verb rather than a function of two arguments is deliberate. `run(a, b)` gives a reader
+nothing to tell them which of the two is the system, and that is the question people actually
+asked; `Demo().run(system=WordOverlap())` answers it in the line itself.
 
 What it does, in order:
 
@@ -59,16 +63,17 @@ cannot produce what is asked of it costs you nothing and tells you why.
 ```python
 import inspect
 
-import memrank
+from memrank.evaluations import Demo
 
-print(inspect.signature(memrank.run))
+print(inspect.signature(Demo().run))
 ```
 
 ```console
-(system: 'System', evaluation: 'Evaluation', *, answerer: 'Answerer | None' = None, k: 'int' = 10, attempts: 'int' = 1) -> 'Result'
+(system: 'System', *, answerer: 'Answerer | None' = None, k: 'int' = 10, attempts: 'int' = 1) -> 'Result'
 ```
 
-- `memrank.run(system, evaluation)` -- the two positional arguments, in that order.
+- `evaluation.run(system=...)` -- the system is the only argument; the evaluation is the
+  receiver. Every other argument is keyword-only.
 - `k=` -- how many documents to ask a memory or retriever for. Default 10.
 - `attempts=` -- how many times to put each task. Default 1.
 - `answerer=` -- a writer that turns what was recalled into an answer, needed when a measure

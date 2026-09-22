@@ -2,8 +2,7 @@
 #
 # WHAT THIS IS. `atomicstrata/memrank` is produced from this repository by dropping every path
 # this file classifies `internal`. That projection is meant to be a mechanical prefix operation,
-# not a judgement call repeated by whoever runs it -- which is the entire objective of
-# `docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md`.
+# not a judgement call repeated by whoever runs it.
 #
 # HOW IT IS READ. A path is classified by its LONGEST matching prefix; `[exceptions]` overrides
 # any prefix. A prefix ending in `/` matches a directory; one that does not is an exact path.

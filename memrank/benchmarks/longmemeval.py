@@ -74,8 +74,8 @@ _DATA_URL = (
     "/resolve/main/longmemeval_s_cleaned.json"
 )
 
-#: Digest of `longmemeval_s_cleaned.json` (277,383,467 bytes), the artifact
-#: docs-internal/decisions/decision-longmemeval-runs-the-official-protocol.md pins. Unlike LoCoMo -- one
+#: Digest of `longmemeval_s_cleaned.json` (277,383,467 bytes), the artifact the official
+#: LongMemEval protocol runs against. Unlike LoCoMo -- one
 #: upstream commit, ever -- this dataset MOVES: the original release now carries a deprecation
 #: banner, the 2025/09 cleanup renamed the files, and a third-party re-review found 77 of 500
 #: records (15.4%) wrong even in the cleaned file. A tag resolving to "whatever HuggingFace

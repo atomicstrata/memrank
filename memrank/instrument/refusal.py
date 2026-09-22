@@ -89,6 +89,6 @@ def refusal(system: object, evaluation: Evaluation, answerer: object | None) -> 
         return (
             f"{', '.join(m.name for m in measures if 'answered' in m.reads)} reads `answered`, "
             f"a {kind} system only recalls, and no answer writer was given; pass "
-            f"answerer=<your writer> to memrank.run (memrank ships no reader that runs "
+            f"answerer=<your writer> to evaluation.run (memrank ships no reader that runs "
             f"in-process without a model key)")
     return None

@@ -19,8 +19,7 @@ tree can state: the CLI projection, driven cell by cell.
 The other two paths are the hosted API's -- it projects a score from the synced record, and when
 this machine holds no artifact the listing shows the number the API sent.
 `tests/internal/test_runs_cli_composite_api.py` drives the SAME table of cells through those,
-importing the helpers below so the two halves cannot drift onto different fixtures. See
-docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 3.
+importing the helpers below so the two halves cannot drift onto different fixtures.
 """
 from __future__ import annotations
 

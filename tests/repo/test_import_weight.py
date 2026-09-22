@@ -70,7 +70,7 @@ def _published_anyway() -> set[str]:
     return {p[: -len(".py")].replace("/", ".").removesuffix(".__init__")
             for p in manifest["exceptions"].get("public", []) if p.endswith(".py")}
 
-#: The command-line framework. A library caller who called `memrank.run(...)` asked for an
+#: The command-line framework. A library caller who ran an evaluation asked for an
 #: evaluation, not for a terminal -- `memrank.config` imported `memrank.term.style` (and so
 #: `typer`) at module level to serve ONE line, in a secrets-prompting path a library run cannot
 #: reach, and that put the whole terminal stack into every such caller's process.
@@ -110,7 +110,7 @@ PREVIOUS_SURFACE_ONLY = ("tiktoken", "anthropic")
 #: Pyright and mypy read. `systems` and `evaluations` are here for the same reason one step
 #: further out: a string name is not navigable either, and these are the modules that give the
 #: shipped systems and evaluations Python names an editor can follow.
-STATIC_NAMES = ("run", "measure", "paired", "system", "evaluation", "Result", "Task", "Trace",
+STATIC_NAMES = ("measure", "paired", "system", "evaluation", "Result", "Task", "Trace",
                 "Measure", "Value", "System", "Memory", "Evaluation", "WordMatch",
                 "catalog", "systems", "evaluations")
 
@@ -183,7 +183,7 @@ def test_importing_memrank_does_not_pull_the_previous_surface_in(tmp_path):
 
 
 def test_a_completed_library_run_imports_no_terminal_machinery(tmp_path):
-    """`memrank.run(...)` end to end, then: is the command-line framework in the process?
+    """`evaluation.run(system=...)` end to end: is the command-line framework in the process?
 
     The run is the typed one over the seven, which is what a library caller now reaches for,
     written the way the README writes it: `memrank.system("word-overlap")` rather than an
@@ -196,7 +196,7 @@ def test_a_completed_library_run_imports_no_terminal_machinery(tmp_path):
     """
     loaded = _modules_after(
         'import memrank\n'
-        'memrank.run(memrank.system("word-overlap"), memrank.evaluation("demo"))', tmp_path)
+        'memrank.evaluation("demo").run(system=memrank.system("word-overlap"))', tmp_path)
 
     leaked = sorted(set(TERMINAL_ONLY) & loaded)
     assert leaked == [], (
@@ -214,7 +214,7 @@ def test_a_completed_library_run_imports_no_command_line_module(tmp_path):
     """
     loaded = _modules_after(
         'import memrank\n'
-        'memrank.run(memrank.system("word-overlap"), memrank.evaluation("demo"))', tmp_path)
+        'memrank.evaluation("demo").run(system=memrank.system("word-overlap"))', tmp_path)
 
     leaked = sorted(m for m in loaded if m == "memrank.cli" or m.startswith("memrank.cli."))
     assert leaked == [], (
@@ -237,7 +237,7 @@ def test_the_cli_does_not_import_an_internal_package():
     `publish.toml` says these packages never ship. The CLI reaching one is not a packaging
     inconvenience like the check above -- it is a public tree that cannot import its own entry
     point, and it would be found by the first outsider to `pip install memrank` rather than
-    here. Documented in docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md; enforced here.
+    here.
     """
     loaded = _imported_by(CLI_MODULES)
     published = _published_anyway()

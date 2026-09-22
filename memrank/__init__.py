@@ -11,20 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Memrank -- an open, vendor-neutral instrument: it measures how well a memory helps
-answer questions about what it was told earlier.
+"""Memrank -- an open, vendor-neutral tool for reproducible, auditable evaluation of
+memory systems.
 
-You bring the engine, and your own tasks if you have them. Memrank brings everything
-between: it gives the material, puts the tasks, records what happened, and applies the
-measures that turn those records into named values. (A memory is one kind of system it
-measures; `System` below names the others.)
+You supply the system. Memrank puts the evaluation's tasks to it, records what happened,
+and applies the measures that turn those records into named values. (A memory is one kind
+of system it evaluates; `System` below names the others.)
 
     import memrank
+    from memrank.evaluations import Demo
 
     class MyMemory(memrank.Memory):
         ...                                        # the four verbs its kind requires
 
-    result = memrank.run(MyMemory(), memrank.evaluation("demo"))
+    result = Demo().run(system=MyMemory())
     result.values                                  # named values, each with its decider
     result.traces                                  # one per task per attempt, always
 
@@ -36,7 +36,7 @@ Seven things, and nothing else has to be learned:
   ``memrank.systems.WordOverlap()`` is one memrank ships, and
   ``memrank.system("word-overlap")`` is the same class by its catalog name.
 - **evaluation** -- a named, versioned bundle: its tasks, the measures it ships with, and the
-  rule for when state is cleared. ``memrank.evaluations.demo()`` builds one from an in-tree
+  rule for when state is cleared. ``memrank.evaluations.Demo()`` builds one from an in-tree
   benchmark, ``memrank.evaluation("demo")`` does the same by name, and
   ``memrank.Evaluation(...)`` is the same object, written by hand.
 - **task** -- one thing to put to the system: the context, the prompt, what is expected.
@@ -44,8 +44,9 @@ Seven things, and nothing else has to be learned:
   including on failure.
 - **measure** -- a named rule from traces to values, declaring what it reads and who decides.
   ``WordMatch``, ``Judge``, ``Latency``, ``FailureRate``.
-- **run** -- the act: ``run(system, evaluation)``. It refuses BEFORE touching the system when
-  the run cannot be set up, and returns a result with no traces and a stated reason.
+- **run** -- the act, and a verb on the evaluation: ``evaluation.run(system=...)``. It refuses
+  BEFORE touching the system when the run cannot be set up, and returns a result with no traces
+  and a stated reason. The evaluation owns the verb so that the objects say which is which.
 - **result** -- the traces and the values, each value carrying its measure's name and its
   decider. Never a bare number, and never a verdict.
 
@@ -55,7 +56,7 @@ evaluation side by side. Neither says "better".
 
 What memrank ships is reachable without knowing a single string. ``memrank.catalog()`` prints
 it all; ``memrank.systems`` holds the shipped systems as classes and ``memrank.evaluations``
-the shipped evaluations as functions, so "go to definition" lands on the real thing where a
+the shipped evaluations as classes too, so "go to definition" lands on the real thing where a
 string literal led nowhere. ``memrank.system(name)`` and ``memrank.evaluation(name)`` remain
 for choosing by string, which is what a config file and the command line have.
 
@@ -69,7 +70,7 @@ modules.
 # Every name below is a plain import, so "go to definition" lands on the class or the function
 # and a type checker sees the real signature. They were resolved through a module-level
 # `__getattr__` until this commit, which is invisible to every editor: command-click on
-# `memrank.run` went nowhere and hover showed nothing.
+# `memrank.measure` went nowhere and hover showed nothing.
 #
 # The nine spelled `X as X` are not in `__all__`, and the redundant alias is what says
 # "deliberately re-exported" to the linter and to a reader -- these are the operator layer and
@@ -98,7 +99,7 @@ from memrank.instrument.paired import Paired, paired
 from memrank.instrument.paired import PairingRefused as PairingRefused
 from memrank.instrument.result import Result
 from memrank.instrument.run import Answerer as Answerer
-from memrank.instrument.run import measure, run
+from memrank.instrument.run import measure
 from memrank.instrument.system import Assistant, Model, Retriever, System
 from memrank.instrument.task import Expected, Task
 from memrank.instrument.trace import Trace
@@ -126,7 +127,7 @@ __version__ = _installed_version()
 #: are secondary -- because importing them costs what the seven do not: the cell run reaches
 #: `memrank.metrics.cost` and so `tiktoken`, and the judge reaches `anthropic`. Measured at the
 #: time of writing, `import memrank` is ~20ms with these lazy and ~340ms with them static, and
-#: none of it is on the path of a caller who asked for `memrank.run`.
+#: none of it is on the path of a caller who asked for `evaluation.run`.
 #:
 #: They are off the front page rather than deprecated-and-hidden: each is reachable by its own
 #: full module path, which is where "go to definition" finds it. `tests/repo/test_import_weight.py`
@@ -220,7 +221,6 @@ __all__ = [
     "evaluations",
     "measure",
     "paired",
-    "run",
     "system",
     "systems",
 ]

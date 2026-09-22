@@ -16,7 +16,7 @@ characterise either. A pairing never says "better".
 Both forms reach the same class, and `memrank.catalog()` prints them side by side.
 
 - **The Python name** -- `from memrank.systems import WordOverlap`, `WordOverlap()`, and
-  `from memrank.evaluations import demo`, `demo()`. Use it when you are writing code: your
+  `from memrank.evaluations import Demo`, `Demo()`. Use it when you are writing code: your
   editor follows it to the definition, hover shows what it needs, and the keyword arguments
   are typed. Example 01 is written this way.
 - **The string name** -- `memrank.system("word-overlap")`, `memrank.evaluation("demo")`. Use it

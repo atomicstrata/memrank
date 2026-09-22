@@ -3,8 +3,7 @@
 The receipt is where that starts: it declares the evidence class, and the default must be the
 publishable one. What the LEADERBOARD then does with a non-publishable receipt -- refuse to
 normalize it, and say why -- is asserted in `tests/internal/leaderboard/test_development_evidence.py`,
-because `memrank.leaderboard` is not in a public tree. See
-docs-internal/plans/2026-08-25-repo-boundary-execution-plan.md, Phase 3.
+because `memrank.leaderboard` is not in a public tree.
 """
 from memrank.provenance.receipt import build_receipt
 
