@@ -229,7 +229,7 @@ def test_a_checkout_is_told_to_sync_rather_than_to_install(monkeypatch):
 
 
 def test_a_base_dependency_is_not_reported_as_a_missing_extra(monkeypatch):
-    """`datasets` is a base dependency; advising `--extra datasets` would send someone the wrong
+    """`tiktoken` is a base dependency; advising `--extra tiktoken` would send someone the wrong
     way. A failed import there means the install is broken, not incomplete."""
     from memrank.errors import MemrankError, optional_import
 

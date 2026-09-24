@@ -18,3 +18,19 @@ def test_preflight_fails_loud_with_engine_and_url():
 
     with pytest.raises(PreflightError, match="broken.*http://localhost:9"):
         preflight(Broken(name="broken"))
+
+
+def test_preflight_never_quotes_a_credential_in_the_address():
+    class Leaky(FakeAdapter):
+        base_url = "http://operator:hunter2@localhost:9?api_key=zzz"
+
+        def retrieve(self, *a, **k):
+            raise RuntimeError("engine said no")
+
+    with pytest.raises(PreflightError) as caught:
+        preflight(Leaky(name="leaky"))
+
+    message = str(caught.value)
+    assert "localhost:9" in message
+    for leaked in ("operator", "hunter2", "api_key", "zzz"):
+        assert leaked not in message

@@ -20,6 +20,9 @@ misleading partial table. No silent fallback.
 
 from __future__ import annotations
 
+import httpx
+
+from memrank.adapters.errors import EngineUnreachable, safe_location, unreachable_remedy
 from memrank.core import Memory
 from memrank.errors import MemrankError
 
@@ -36,30 +39,22 @@ _NO_ADDRESS = "<in-process>"
 
 
 def _remedies(adapter: Memory) -> str:
-    """What to do about an engine that is not answering, in this installation's own terms.
-
-    Two remedies, named at the moment of failure: point memrank at the engine that IS running, or
-    have memrank start one. "No engine is running" is a fact about the machine, and the reader
-    should not have to already know how memrank is told where to look.
-
-    Every path named here exists in an installed copy. The message this replaced sent the reader
-    to a shell script in the maintainers' own checkout -- which the person who most needs this
-    message, an outsider whose engine memrank cannot reach, does not have (ATO-2125).
-    """
-    env = getattr(adapter, "base_url_env", None)
-    settings = (f"the {env} environment variable or the adapter's `base_url` argument"
-                if env else "the adapter's `base_url` argument")
-    return (f"memrank sent that request and nothing answered. Point it somewhere else with "
-            f"{settings}, or have memrank start a disposable engine of its own by re-running "
-            f"with `--on local`.")
+    """What to do about an engine that is not answering, via the adapter's own address variable."""
+    return unreachable_remedy(getattr(adapter, "base_url_env", None))
 
 
 def preflight(adapter: Memory) -> None:
     """Probe ``adapter`` with a trivial retrieve; raise PreflightError on failure."""
     url = getattr(adapter, "base_url", _NO_ADDRESS)
+    if url != _NO_ADDRESS:
+        # Operator-supplied, so it can carry userinfo or a query key; quote only where it points.
+        url = safe_location(httpx.URL(url))
     try:
         adapter.prepare(_PROBE_ISOLATION)
         adapter.retrieve("preflight", 1, _PROBE_ISOLATION, None)
+    except EngineUnreachable as exc:
+        # Already names the engine, the address and both remedies; wrapping it would say it twice.
+        raise PreflightError(str(exc)) from exc
     except Exception as exc:
         raise PreflightError(
             f"engine {adapter.name!r} is not answering at {url}: {exc}\n  {_remedies(adapter)}"

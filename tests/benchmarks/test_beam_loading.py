@@ -31,10 +31,14 @@ ability is counted rather than excluded to work around it.
 """
 
 import json
+import sys
+
+import pytest
 
 from memrank.adapters import transcript
 from memrank.benchmarks import beam
 from memrank.benchmarks.beam import BEAMBenchmark
+from memrank.errors import MissingOptionalDependency
 from memrank.judging.judge import JudgeConfig, calls_per_query
 
 #: Shaped like the published dataset: `chat` is a list of sessions, each a list of turns, with
@@ -177,3 +181,21 @@ def test_a_long_session_splits_and_every_chunk_stays_bare(tmp_path, monkeypatch)
     assert all(len(d.content) <= 200 for d in unit.documents)
     assert all(d.messages for d in unit.documents)
     assert all(d.context is None and d.timestamp is None for d in unit.documents)
+
+
+def test_an_uncached_tier_without_the_benchmarks_extra_names_the_install(tmp_path, monkeypatch):
+    """`datasets` is the `benchmarks` extra, not a base dependency, so a released install that
+    lacks it must be told the install that fixes it -- not that it is broken -- and must leave
+    no half-written cache file behind for the next load to trust."""
+    monkeypatch.delenv("BEAM_DATA_PATH", raising=False)
+    monkeypatch.setenv("MEMRANK_CACHE_DIR", str(tmp_path))
+    monkeypatch.setitem(sys.modules, "datasets", None)   # `import datasets` raises ImportError
+    monkeypatch.setattr("memrank.provenance.install._direct_url", lambda distribution: None)
+    monkeypatch.setattr("memrank.provenance.install._installed_as_uv_tool",
+                        lambda distribution: False)
+
+    with pytest.raises(MissingOptionalDependency) as excinfo:
+        BEAMBenchmark(tier="100k").load()
+
+    assert "pip install --upgrade 'memrank[benchmarks]'" in str(excinfo.value)
+    assert not (tmp_path / "beam" / "100k.json").exists()

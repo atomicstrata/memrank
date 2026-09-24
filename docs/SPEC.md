@@ -79,7 +79,7 @@ meets them:
 ### 2.2 What is under test
 
 The thing under test is a **system**: one object, of one of four kinds, that memrank drives
-directly (section 4). A memory engine is a system; so is a model, a retriever, an assistant, or
+directly (section 4). The client that drives a memory engine is a system; so is a model, a retriever, an assistant, or
 something written this morning around a private store. `evaluation.run(system=...)` takes the
 instance, so a system does not have to be registered, named, or known to memrank to be measured.
 
@@ -126,7 +126,7 @@ corpus whose answers cluster late disadvantages it, and `no-context` is only mea
 
 This section is normative. A consumer of memrank output that ignores it will misreport.
 
-**`composite` is not answer correctness.** It is whatever the benchmark declares in
+**`composite` is not answer correctness.** It is whatever the evaluation declares in
 `quality_metric`. `squad` computes full-passage retrieval recall (`passage_recall`), not
 answer-span or end-to-end answer correctness; `demo` computes a deterministic substring-recall
 proxy; `relation_graph` computes a structural graph score. LoCoMo, LongMemEval and BEAM declare
@@ -134,7 +134,7 @@ judged metrics and compute no proxy at all: their gold answers are derived or wr
 rubrics, so substring recall would be near zero for reasons that have nothing to do with the
 system, and without a judge they report latency and failures only.
 
-**Structurally invalid metrics are withheld, not caveated.** Each benchmark declares
+**Structurally invalid metrics are withheld, not caveated.** Each evaluation declares
 `substring_recall_supported` and `composite_rankable`. Where the composite is not rankable without
 a judge, the rankable surfaces refuse to show one and report `withheld (judge required)`. The
 flags are independent: `substring_recall_supported` describes the answer-substring proxy,
@@ -145,9 +145,9 @@ judged run.**
 
 **The context budget is declared and symmetric.** The default holds every arm to the same
 retrieval token budget, because without it "retrieved better" and "returned more text" are the
-same number. A benchmark whose own protocol hands the reader everything retrieval returned may
+same number. An evaluation whose own protocol hands the reader everything retrieval returned may
 declare `context_policy = "uncapped"`, and two do -- BEAM and LongMemEval -- because a capped run of
-those is not those benchmarks. What is enforced is that the policy applies to every arm alike and
+those is not those evaluations. What is enforced is that the policy applies to every arm alike and
 travels in the receipt, so a capped and an uncapped run cannot be mistaken for each other later.
 
 **Absent is not zero.** A system reporting no token usage records `null`. `0.0` is the claim that
@@ -312,7 +312,7 @@ named in-tree evaluation **must** additionally:
   and an impact estimate.
 - Declare its own judgeability. A category the judge gate has never heard of must raise, never
   silently shrink the denominator -- that failure ran undetected in this harness for months and
-  cost 60.8% of one benchmark's questions (section 7.4).
+  cost 60.8% of one evaluation's questions (section 7.4).
 - Declare its metric honestly through the flags section 3 names -- `substring_recall_supported`,
   `composite_rankable`, `quality_metric`, `context_policy`, `is_synthetic`, `requires_graph` --
   rather than letting a caller infer them.

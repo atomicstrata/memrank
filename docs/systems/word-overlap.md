@@ -6,7 +6,7 @@ from memrank.systems import WordOverlap
 system = WordOverlap()
 ```
 
-Keyword retrieval in about thirty lines: the floor a real memory engine has to beat.
+Keyword retrieval in about thirty lines: the floor a real memory system has to beat.
 
 ## How it works
 

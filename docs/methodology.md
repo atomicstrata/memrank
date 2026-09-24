@@ -93,9 +93,9 @@ that raises. Two conditions end a run whatever that flag says: an exhausted prov
 (an account-wide condition, so every remaining unit would spend the same deadline for the same
 nothing) and an operator interrupt.
 
-**One engine under two configurations is two rows on one board.** Row identity is the
-adapter, the transport, *and* the engine's configuration -- the extractor LLM, embedder,
-context budget and retrieval settings it ran with. So two arms of one engine that differ only
+**One system under two configurations is two rows on one board.** Row identity is the
+system, the transport, *and* the configuration it drives its engine with -- the extractor LLM, embedder,
+context budget and retrieval settings it ran with. So two arms of one system that differ only
 in their extractor -- a deterministic built-in versus a hosted model -- rank against each other
 rather than one replacing the
 other. Engine *version* is deliberately excluded: a rebuild of one configuration is a
@@ -192,17 +192,17 @@ Truncation is hard: the concatenated context is cut at the budget, mid-sentence 
 judged query records `context_tokens_sent` and `context_truncated`, so a context-starved run is
 visible in the artifact rather than silent.
 
-**One benchmark-scoped exception.** A benchmark whose own protocol hands the reader everything
+**One evaluation-scoped exception.** An evaluation whose own protocol hands the reader everything
 retrieval returned may declare it (`Benchmark.context_policy = "uncapped"`); **BEAM and
 LongMemEval both do.** BEAM, because every published BEAM harness -- including BEAM's own baselines
--- runs uncapped, and a capped run of it is not that benchmark. LongMemEval, because its harness
+-- runs uncapped, and a capped run of it is not that evaluation. LongMemEval, because its harness
 truncates only at the model window and never at a fairness budget: measured, the 5,000-token
 default bit on 8/8 queries and the evidence reached the reader on **0 of 5** scoreable questions
 while retrieval itself scored recall_all@10 = 1.0, so a judged run under that cap would have
 measured the truncation rather than the memory. The promotion applies to every target
-symmetrically, so rows within the benchmark stay comparable; what is given up is
-budget-normalization against other benchmarks' rows
-(a standing decision recorded with the benchmark).
+symmetrically, so rows within the evaluation stay comparable; what is given up is
+budget-normalization against other evaluations' rows
+(a standing decision recorded with the evaluation).
 
 ## Baseline arms
 
@@ -227,7 +227,7 @@ says which it is.
 
 `fixed-context` is the arm that belongs on every row, and it is the *token-matched* one by
 design: same context size as the system under test, so the only variable is selection.
-`full-context` is deliberately rare -- a benchmark whose knowledge base fits inside a current
+`full-context` is deliberately rare -- an evaluation whose knowledge base fits inside a current
 context window cannot hold headline status, which is why LoCoMo (16k-26k tokens) is runnable but
 labelled non-discriminative.
 
@@ -281,7 +281,7 @@ Recorded so the status of each reads as a decision rather than an oversight.
 **Oracle / gold-evidence retrieval** -- the ceiling that separates "retrieval is hard" from "reading
 is hard". [LongMemEval](https://arxiv.org/abs/2410.10813) ships it as a dataset variant and builds
 its headline claim on it: models decline 30-60% reading full history versus oracle evidence. We do
-not have it because it needs per-benchmark gold-evidence labels, which not every benchmark here
+not have it because it needs per-evaluation gold-evidence labels, which not every evaluation here
 carries.
 
 **Random retrieval** -- [MemDelta](https://arxiv.org/html/2606.29914)'s control, "random chunks...
@@ -295,7 +295,7 @@ grid's shipped settings a majority of a retrieval score was reachable by drawing
 and a retriever that ignores the query did not clear the floor at any setting. A level quoted without its random floor
 overstates what retrieval contributed.
 
-It is **not a shipped arm**: `memrank.catalog()` does not list it, no benchmark run adds
+It is **not a shipped arm**: `memrank.catalog()` does not list it, no evaluation run adds
 it, and it is not a registered adapter. It is a measurement arm, and what remains undone is
 promoting it to one -- which needs a decision about how a floor is reported beside a published
 score, not just an adapter.
@@ -308,8 +308,8 @@ Every tracked run -- one the command line submits -- writes a `Receipt` (see
 traces and the values, and `result.save(path)` keeps them. A receipt captures:
 
 - Memrank version + git SHA
-- Adapter name + version + engine version
-- Benchmark name + dataset version (HuggingFace id or file SHA)
+- System name and version (recorded as `adapter_name` and `adapter_version`) + engine version
+- Evaluation name (recorded as `benchmark_name`) + dataset version (HuggingFace id or file SHA)
 - Seed
 - Wall-clock timestamps + duration
 - Host fingerprint (hostname, platform, Python version)

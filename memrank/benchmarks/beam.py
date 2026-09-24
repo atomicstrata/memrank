@@ -176,18 +176,14 @@ class BEAMBenchmark(Benchmark):
             return json.load(f)
 
     def _download(self, dest: Path) -> None:
-        """Download the requested tier from HuggingFace hub.
-
-        Uses the ``datasets`` package when present (the canonical loader),
-        falling back to ``huggingface_hub`` for the parquet shards.
-        """
-        # `datasets` is a BASE dependency (pyproject.toml), not an extra, so this cannot fail on a
-        # correct install. It used to advise `pip install datasets`, which was wrong twice over:
-        # wrong idiom for this project, and wrong diagnosis -- if the import fails here the install
-        # is broken, not incomplete.
+        """Download the requested tier from HuggingFace hub with ``datasets``."""
+        # `datasets` is the `benchmarks` extra (pyproject.toml), not a base dependency: nothing
+        # but this download needs it, and a quick-start install should not carry pyarrow and
+        # pandas for an evaluation it never runs. Absent, this names the install that fixes it
+        # before anything is fetched; a cached tier never reaches this line.
         from memrank.errors import optional_import
 
-        load_dataset = optional_import("datasets", None).load_dataset
+        load_dataset = optional_import("datasets", "benchmarks").load_dataset
         hf_split = _HF_SPLIT_MAP[self.tier]
         ds = load_dataset(_HF_DATASET, split=hf_split)
         rows = [dict(row) for row in ds]

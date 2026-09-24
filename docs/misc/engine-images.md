@@ -31,7 +31,7 @@ Both anonymous pulls in the table were re-checked on 2026-09-02.
 ## hindsight
 
 The vendor's own published build, pulled by public reference and unmodified. Measuring what the
-vendor ships is what makes a neutral benchmark neutral, and it means a hindsight result is fully
+vendor ships is what makes a neutral evaluation neutral, and it means a hindsight result is fully
 reproducible: the manifest, the compose graph and the image are all obtainable, and the image is
 pinned to a released version rather than to `latest`.
 
@@ -66,7 +66,7 @@ The target's manifest says it is "mem0 as mem0 ships and evaluates it" -- transc
 the vendor's own retrieval depth. That is true of the *configuration* and not of the *binary*, and
 a `mem0` row should be read with that qualifier attached.
 
-**To benchmark mem0 yourself, run mem0 yourself.** memrank's mem0 adapter speaks to any mem0 OSS
+**To evaluate mem0 yourself, run mem0 yourself.** memrank's mem0 adapter speaks to any mem0 OSS
 server over HTTP:
 
 ```bash

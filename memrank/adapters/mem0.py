@@ -313,6 +313,7 @@ class Mem0(Memory):
         if self._client is None:
             self._client = adapter_errors.engine_client(
                 engine=self.name, timeout_s=self.timeout_s, env_var="MEM0_TIMEOUT_S",
+                base_url_env=self.base_url_env,
                 base_url=self.base_url)
         return self._client
 
