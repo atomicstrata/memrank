@@ -1,7 +1,8 @@
 # paired
 
 A **paired** reading puts two [results](result.md) of the same [evaluation](evaluation.md) side
-by side and says how often chance alone produces a gap that size. It never says "better".
+by side and reports differences and statistical summaries for common task-level values. It does
+not choose a winner. For a walkthrough, start with [Compare memory systems and their versions](../comparing.md).
 
 ```python
 import memrank
@@ -18,28 +19,48 @@ print(reading)
 
 ## What it is
 
-A paired reading is a lens above the seven words, not an eighth one: it reads two results and
-returns something that is not a result.
+`memrank.paired` reads two existing results and returns a `Paired` comparison object without
+rerunning either system.
 
-It **refuses** unless both results are of the same evaluation at the same version -- comparing
-values from different questions is the mistake it exists to prevent -- and then pairs by task
-id, per [measure](measure.md). What it reports:
+It **refuses** a refused run or results with different evaluation names or versions, then pairs
+non-null values by task ID and [measure](measure.md) name. Equal names and versions do not prove
+equal task content or experimental conditions; the caller must keep those consistent. It reports:
 
-- the mean of each side, and the gap between them;
-- the tasks whose value **flipped**, named;
-- how often chance alone produces a split that size: McNemar's exact test for a binary measure,
-  a cluster-resampled paired bootstrap for a continuous one;
-- a **caution** where too few tasks differ to characterise the gap at all.
+- the mean of each side and the gap between them;
+- the tasks whose values changed, named in `flips`;
+- an exact two-sided McNemar p-value when all paired values are 0 or 1, otherwise a 95%
+  cluster-resampled paired bootstrap interval for the mean difference;
+- a caution with fewer than ten discordant tasks.
 
-The closing caveat -- that a gap is a gap, and which system is better depends on what you are
-buying -- is printed by the reading itself rather than added by whoever formatted it, so it
-travels with the values.
+The printed comparison reminds readers to interpret the gap in the context of the measure
+and evaluation.
 
 ## Who supplies what
 
-You supply two results of the same evaluation at the same version, and what the comparison is
-*for*, which the reading does not know. Memrank supplies the refusal when the versions differ,
-the pairing by task, the statistics, the flipped tasks and the caution.
+You supply two results of the same evaluation at the same version, and the purpose and conditions
+of the comparison. Memrank supplies the compatibility check, task pairing, statistical summaries,
+changed task IDs and caution.
+
+## Coverage and interpretation
+
+Each measure's means use only task IDs with non-null values on both sides. Run-scope or
+group-only values without a task ID are omitted, including `squad-score`, latency summaries and
+`failure-rate`. Check errors and missing values in the original results. An empty `measures`
+tuple means no measure had eligible pairs, not that the systems tied.
+
+`gap` is `mean_b - mean_a`. A positive gap means a larger value under B, which is only an
+improvement when larger is preferable for that measure. `flips` holds all changed task values;
+the printed reading lists up to three.
+
+For binary values, McNemar's exact test evaluates the imbalance between A-only and B-only
+successes under equal marginal success rates. Its p-value is not the probability that either
+system is better. This implementation does not cluster the binary test by group; correlated
+tasks can undermine its independence assumption.
+
+For continuous values, the bootstrap resamples whole groups, or individual task pairs when
+there is no group. Its percentile interval describes the observed mean difference under that
+resampling scheme. Very few independent groups limit what it can establish. Neither statistic
+reports variation across repeated runs or repeated-run standard deviation.
 
 ## The Python names
 
@@ -61,14 +82,15 @@ print("only in A:", reading.only_in_a, "| only in B:", reading.only_in_b)
   make it deterministic.
 - `memrank.Paired` -- what comes back: `evaluation`, `version`, `system_a`, `system_b`,
   `only_in_a`, `only_in_b`, `measures`.
-- `only_in_a` / `only_in_b` -- tasks one side has and the other does not, named rather than
-  dropped.
+- `only_in_a` / `only_in_b` -- trace IDs present on one side only. These do not count missing
+  values within a measure.
+- Each entry in `measures` carries `measure`, `kind`, `tasks`, `mean_a`, `mean_b`, `gap`,
+  `discordant`, `flips` and `caution`. Binary entries also carry `both`, `neither`, `only_a`,
+  `only_b` and `p_value`; continuous entries carry `ci_low`, `ci_high`, `resamples` and `seed`.
 
 ## Going deeper
 
-- [result](result.md) -- the two things it reads.
-- [Methodology](../methodology.md) -- the control arms, the context-budget control, and why an
-  uncontrolled comparison is not one.
-- [`examples/05-against-a-baseline/`](../../examples/05-against-a-baseline/) and
-  [`examples/06-new-version-vs-old/`](../../examples/06-new-version-vs-old/) -- two comparisons
-  worth making.
+- [Understand results](../results.md) -- errors, missing measurements and stored traces.
+- [Methodology](../methodology.md) -- controls, budgets and limits on claims.
+- [Compare memory systems and their versions](../comparing.md) -- a complete example and links to version
+  and baseline comparison scripts.

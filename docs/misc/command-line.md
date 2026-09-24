@@ -1,22 +1,18 @@
 # The command line
 
-> **Not core.** memrank's interface is the Python package -- `import memrank`, described in
-> [the README](../../README.md) and [Installing memrank](../install.md). This page describes an
-> older surface that is kept working but not developed. You never need it to get a number.
+Use the command line to submit tracked runs, choose where they run, inspect their status and
+save reproducibility receipts. For direct Python evaluation, see [Start here](../getting-started.md).
 
-Reach for it when you want a run *tracked*: submitted and left to finish, listed later, placed
-somewhere other than this process, named rather than constructed, or run by someone who is not
-writing Python. It still drives the previous run loop, which produces the stored artifact the
-hosted platform reads.
+The command line uses a separate run pipeline and stored result format from
+`evaluation.run()` in Python.
 
 ## Its vocabulary
 
-The command line keeps its own older words, because they are on the wire, in the artifact keys and
-in the cloud, and moving them would break stored records.
+The command line uses these terms in commands and stored records:
 
 | Word here | What the Python interface calls it |
 |---|---|
-| **target** | a **system** that the catalog knows by name -- a named composition of a system plus the embedder and LLM it is configured with, so a row can never mean two different things |
+| **target** | a **system** that the catalog knows by name -- a named composition of a system plus the embedder and LLM it is configured with, identified by its configuration |
 | **eval** | an **evaluation** that the catalog knows by name (`squad`, `demo`, `locomo`, `beam`, `longmemeval`) |
 | **adapter** | the class a target's entry resolves to: the code that talks to that system |
 | **benchmark** | the class an eval's entry resolves to: the loader and scorer behind the name |
@@ -32,13 +28,14 @@ memrank --version      # the version, and where this install came from
 ```
 
 `memrank --version` prints where the install came from -- for a git install, the commit -- which is
-the thing to quote when something looks wrong. `uv tool upgrade memrank` upgrades it.
+useful information to include in an error report. `uv tool upgrade memrank` upgrades it.
 [Local development](../local-development.md) has the source and editable installs.
 
 ## The loop
 
-Nothing below needs a running engine, a network, or an API key -- `demo` is a synthetic evaluation
-that ships with memrank, and `word-overlap` is a trivial in-process retriever:
+`demo` and `word-overlap` can run locally without a service or API key. Select `--on none`
+explicitly for a local check: a configured cloud default can otherwise submit a paid run.
+The transcript below shows the tracked-run workflow; it omits that placement flag.
 
 ```console
 $ memrank submit word-overlap demo
@@ -51,7 +48,7 @@ ID                             TARGET        EVAL  PLACE  STATE  SYNCED   AGE  D
 ```
 
 `submit` always returns immediately with the run id(s); `watch <id>` blocks on them (its exit code
-is the outcome: 0 all done, 1 any failed, 2 still going at timeout), `runs ls` glances at them,
+is the outcome: 0 all done, 1 any failed, 2 still going at timeout), `runs ls` lists them,
 `runs show <id>` gives the full record -- state, where it ran, exit code, artifact location -- and
 `kill <id>` stops one.
 
@@ -106,12 +103,11 @@ Engine URL defaults, each overridable by its environment variable:
 
 Judged runs send evaluation content to Anthropic and need `ANTHROPIC_API_KEY`. They are on by
 default for `locomo`, `longmemeval` and `beam`, whose only quality metric is the judge's, and off
-where the evaluation scores itself. `--no-judge` measures latency and cost without paying for
-quality.
+where the evaluation scores itself. `--no-judge` measures latency and cost without a judged quality score.
 
 ## The hosted platform
 
-Everything above works logged out, against your own machine, and accumulates locally. Signing in is
+Local runs work without signing in and store their records on your machine. Signing in is
 needed only to submit runs to AtomicStrata's hosted platform and to share a run record with an
 organisation.
 
@@ -122,8 +118,7 @@ memrank config ls       # every setting, its value, and where that value came fr
 ```
 
 A browser opens; approve with GitHub. Login also configures the machine -- it writes your default
-org and points submissions at the platform, which is why nothing afterwards needs `--on` or
-`--org`. Only the *first* login writes those defaults, so a later sign-in never overrides one you
+org and points submissions at the platform, so later submissions can use those defaults. Use `--on none` explicitly for local checks. Only the *first* login writes those defaults, so a later sign-in never overrides one you
 chose since (change it with `memrank config set defaults.org <slug>`).
 
 > **"no default org"?** Membership is not self-served yet. Hosted runs are, for now, limited to
@@ -136,7 +131,7 @@ run-shape ceilings; a submission over either is refused naming the limit it cros
 <details>
 <summary>Signing in over SSH, or anywhere with no browser</summary>
 
-Nothing extra to do -- `auth login` notices there is no browser and prints a URL instead:
+When no browser is available, `auth login` prints a URL:
 
 ```console
 $ memrank auth login
@@ -153,8 +148,8 @@ picks it up within a few seconds; the link is good for ten minutes.
 Force this path with `--no-browser` when a browser exists but cannot actually open, such as an
 `ssh -X` display that will not come up.
 
-`MEMRANK_TOKEN` still overrides everything and is what CI should use -- but for a person on a
-remote box, the flow above is the answer, and it does not put a 30-day credential in a shell
+`MEMRANK_TOKEN` still overrides everything and is what CI should use -- but for interactive use on a
+remote machine, use the browser flow above, and it does not put a 30-day credential in a shell
 history or a second machine's dotfiles.
 </details>
 
@@ -165,7 +160,7 @@ history or a second machine's dotfiles.
 
 Not the OS keychain by default, deliberately. memrank runs as a Python entry point, so the macOS
 dialog names *python* rather than memrank, and it returns after every reinstall because the
-permission binds to the interpreter. A prompt people learn to click through protects nothing.
+permission binds to the interpreter. This can cause repeated permission prompts.
 
 Prefer the keychain anyway? `memrank config set auth.keyring true`, then `memrank auth login`
 again. `MEMRANK_TOKEN` overrides both, and is what CI should use.
@@ -184,8 +179,7 @@ uv tool install --force --refresh 'memrank[mcp] @ git+https://github.com/atomics
 
 ## Every command
 
-The whole surface, so nothing here is reachable only by guessing. Each line is the command's own
-`--help` summary; run `memrank <command> --help` for its flags.
+The table lists available commands. Run `memrank <command> --help` for options.
 
 | Command | What it does |
 |---|---|
@@ -197,7 +191,7 @@ The whole surface, so nothing here is reachable only by guessing. Each line is t
 | `memrank logs RUN_ID` | print, or with `-f` stream, a run's log, wherever it ran |
 | `memrank runs ls` | list runs -- yours wherever they ran, newest first |
 | `memrank runs show RUN_ID` | show one run in full: its state, and the results it recorded |
-| `memrank runs sync` | make this machine and your org agree: push finished local runs, pull finished cloud ones |
+| `memrank runs sync` | push finished local runs to your organization and pull finished cloud runs |
 | `memrank runs logs` / `watch` / `kill` | the same commands as the flat spellings above |
 | `memrank targets ls` | list every known target |
 | `memrank targets show REF [K=V...]` | a target's fully-resolved manifest and the secrets it needs |
@@ -235,7 +229,8 @@ and `--max-judge-calls`. Typing one tells you what to type instead.
 
 Local placements -- the ones this page leads with -- are not affected by any of the above.
 
-## Telling us something broke
+<a id="telling-us-something-broke"></a>
+## Report a problem
 
 `memrank --version` and the run id from `runs ls` make a report actionable. The version line says
 where the install came from as well as what it is -- a released version identifies itself, and a

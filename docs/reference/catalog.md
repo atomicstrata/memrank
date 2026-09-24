@@ -1,7 +1,7 @@
 # catalog
 
-`memrank.catalog()` prints every system and every evaluation that ships, so you do not have to
-know a name to find one. This page is about reading that table.
+`memrank.catalog()` lists the included systems and evaluations, their import names, string
+keys and requirements.
 
 ```python
 import memrank
@@ -45,27 +45,22 @@ evaluations -- `from memrank.evaluations import SQuAD`, or `memrank.evaluation("
 
 ## What it is
 
-Every row carries the **Python name** you can import and an editor can follow, the **string**
-the same thing answers to, and **what it needs from you** -- a running engine, a download, an
-environment variable, or nothing at all. That last column is the useful one: `TFIDF` and `SQuAD`
-need nothing, which is why they are what a first result is made of.
+Each row shows the **Python class**, **string key** and **requirements**. `TFIDF` and the default
+`SQuAD` subset need no service, API key or download after installation.
 
-A system row carries one more column, its role: `memory` for a system under test, `control` for
-a floor or a ceiling to read it against. It is not the system's [kind](system.md) -- every
-control is a `Memory`, and `result.system.kind` reports `memory` for one.
+System rows also show a role: `memory` for retrieval implementations and clients, or `control`
+for diagnostic comparisons. This differs from the system's [kind](system.md): every included
+control subclasses `Memory`, so its `result.system.kind` is `memory`.
 
-`catalog()` both prints and returns, because there are two readers. A person runs it for the
-table; a program reads `catalog().systems` and `catalog().evaluations` for the entries.
+`catalog()` prints a table and returns entries in `.systems` and `.evaluations`.
 
-The two forms reach the same things. `from memrank.systems import TFIDF` gives you the
-class -- use it to pass options, to subclass, or to have an editor follow the definition.
-`memrank.system("tfidf")` gives you an instance from the string -- use it when the name
-is data rather than code.
+Import a class, such as `from memrank.systems import TFIDF`, when writing Python code.
+Use `memrank.system("tfidf")` to construct an instance when the key comes from configuration.
 
 ## Who supplies what
 
-Memrank supplies eleven [systems](system.md) and six [evaluations](evaluation.md), with what
-each one needs stated, and both ways to reach each of them. You supply nothing.
+Memrank supplies eleven [systems](system.md) and six [evaluations](evaluation.md). Listing them
+needs no service or credentials; running a selected implementation may require both.
 
 ## The Python names
 
@@ -87,8 +82,8 @@ print(memrank.evaluation("squad").name)
 
 ## Going deeper
 
-- [Systems that ship](../systems/README.md) and [evaluations that ship](../evaluations/README.md)
-  -- one page each.
+- [Supported systems](../systems/README.md) and [available evaluations](../evaluations/README.md)
+  -- behavior and prerequisites.
 - [Adding a system](../systems.md) -- getting your own into the catalog.
 - [Engine images](../misc/engine-images.md) -- per shipped memory engine, whether you can obtain
   the container to run it.

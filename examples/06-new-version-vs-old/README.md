@@ -2,9 +2,9 @@
 
 `uv run python examples/06-new-version-vs-old/run.py`
 
-`TinyMemoryV2` is `TinyMemory` with one method changed: the words every question shares are
-dropped before the overlap is counted. Both run on the three-task evaluation written in the
-script, asked for their best two passages, because two is where ranking starts to matter.
+Compare `TinyMemory` with `TinyMemoryV2`, which removes words shared by every question before
+counting overlap. Both run on the same three tasks with a retrieval limit of two documents.
 
-**Prints** one paired reading. Read the **gap** in means; the **flips**, which tasks changed and
-which way -- fixing three and breaking two is a gap near zero; and the **caution** when thin.
+The script prints a paired comparison: mean difference (`gap`), changed tasks (`flips`) and a
+caution about limited evidence. Inspect individual changes as well as the mean, since gains and
+regressions can cancel out.

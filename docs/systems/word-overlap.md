@@ -6,37 +6,35 @@ from memrank.systems import WordOverlap
 system = WordOverlap()
 ```
 
-Keyword retrieval in about thirty lines: the floor a real memory system has to beat.
+A local retrieval baseline that ranks documents by the number of distinct words they share
+with the query.
 
 ## How it works
 
-It keeps every document it is told in a Python list, one list per group of
-[tasks](../reference/task.md). When asked a question it splits the question into words, counts
-how many of those words each stored document contains, drops the documents that share none, and
-returns the highest counts first.
+It stores documents in a Python list for each group of [tasks](../reference/task.md). It
+lowercases the query and document text, splits on whitespace, and counts shared distinct words.
+Documents with no shared words are excluded; the remaining documents are returned in descending
+score order, up to the requested limit.
 
-That is the whole mechanism. No weighting by how rare a word is, no sentence meaning, no model,
-no index. It is not BM25 and does not claim to be.
+It uses no term-frequency weighting, inverse document frequency, model or search index.
 
 ## Why it matters
 
-It is the dumb-memory floor. A system that does not beat plain word counting is not earning
-what it costs, so a row with `word-overlap` beside it says whether the system's retrieval is
-doing anything at all.
+Use it to compare a system with a simple keyword retrieval method. A higher score shows an
+improvement over this baseline on the selected evaluation and measure; it does not establish
+value on other workloads or justify the system's cost.
 
-It is also the baseline [TFIDF](tfidf.md) and [BM25](bm25.md) are read against: the same
-keyword idea with no weighting at all. Its latency is not comparable with an engine reached over
-HTTP -- it runs inside your own process, and it declares
-that, so [methodology](../methodology.md) can keep the two apart.
+[TFIDF](tfidf.md) and [BM25](bm25.md) provide more sophisticated keyword baselines. All three
+run in the Python process, so their latency should not be ranked directly against HTTP clients.
+See [methodology](../methodology.md) for transport comparison rules.
 
 ## What it needs
 
-Nothing. No service, no network, no key, no download.
+No service, API key, network access or data download. Evaluation and answer-writer requirements
+are separate.
 
 ## References
 
-- [system](../reference/system.md) -- what a system is.
-- [Methodology](../methodology.md) -- why this is a memory floor rather than a control arm, and
-  the published arm names it maps onto.
-- [BEIR](https://arxiv.org/abs/2104.08663) -- names the family above this one, *lexical*
-  retrieval, of which unweighted word overlap is the simplest member.
+- [System reference](../reference/system.md) -- system types and methods.
+- [Methodology](../methodology.md) -- retrieval baselines and diagnostic controls.
+- [BEIR](https://arxiv.org/abs/2104.08663) -- evaluation of lexical and other retrieval methods.

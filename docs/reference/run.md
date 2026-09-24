@@ -1,7 +1,7 @@
 # run
 
-A **run** is the act of putting an [evaluation](evaluation.md)'s questions to a
-[system](system.md) and recording what happened. It is one line.
+A **run** executes an [evaluation](evaluation.md) against a [system](system.md), records task
+attempts and applies the evaluation's measures.
 
 ```python
 from memrank.evaluations import Demo
@@ -18,32 +18,25 @@ no engine, no network and no key.
 
 ## What it is
 
-`evaluation.run(system=...)` is the entry point of the package. The evaluation is what you are
-holding and the system is what you are putting it to, so the run is a verb on the one and takes
-the other. `run(a, b)` gives a reader nothing to tell them which of the two arguments is the
-system, which is the question people actually asked.
+Call `evaluation.run(system=...)` with a system instance. No registration or configuration
+file is required.
 
-You compose the run at the call. There is no configuration file between you and it, and nothing
-is registered in advance.
+The run proceeds in this order:
 
-What it does, in order:
-
-1. **It refuses, or it does not.** Before touching the system, memrank checks the run can be set
-   up at all. It refuses -- with a stated reason and no traces -- when the system is not a kind
-   memrank knows, when it lacks a verb its kind requires, when a measure reads a name nothing in
-   the run produces, or when the evaluation carries documents to give and the system has no verb
-   to be told things with. A run that cannot produce what is asked of it costs you nothing.
-2. **It gives, asks and records.** Per group of tasks: clear, give the group's documents once,
-   then put each prompt. One trace per task per attempt, including when a task raises -- the run
-   never stops on a task's failure.
-3. **It measures.** The evaluation's measures read the traces and produce named values.
-4. **It returns a [result](result.md).**
+1. **Validate setup.** Refuse with a reason and no traces if the system type is unsupported,
+   a required method is missing, a measure's inputs are unavailable, or the system cannot
+   accept the evaluation's context. This check precedes run calls to the system.
+2. **Execute tasks.** Prepare and ingest context according to the clearing rule, call the
+   system for each task, and record one trace per attempt, including failures. A task failure
+   does not stop the remaining tasks. Cleanup is the system implementation's responsibility;
+   the result records whether cleanup returned and any failure it reported.
+3. **Measure traces.** Apply the evaluation's measures to produce named values.
+4. **Return a [result](result.md).**
 
 ## Who supplies what
 
 You supply the evaluation and the system, and optionally `k=`, `attempts=` and `answerer=`.
-Memrank supplies the refusal check, the run loop, the isolation, the clock, and one trace per
-task per attempt.
+Memrank supplies setup validation, lifecycle calls, timings and one trace per task attempt.
 
 ## The Python names
 
@@ -58,7 +51,7 @@ print(inspect.signature(Demo().run))
 - `evaluation.run(system=...)` -- the system is the only positional argument; the evaluation is
   the receiver. Every other argument is keyword-only.
 - `k=` -- how many documents to ask a memory or retriever for. Default 10.
-- `attempts=` -- how many times to put each task. Default 1.
+- `attempts=` -- how many times to attempt each task. Default 1.
 - `answerer=` -- a writer that turns what was recalled into an answer, needed when a measure
   reads `answered` and the system only recalls.
 - `result.refusal` -- the reason, when the run refused. `None` when it went ahead.

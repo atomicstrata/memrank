@@ -7,8 +7,8 @@ from memrank.evaluations import BEAM
 evaluation = BEAM()
 ```
 
-One continuous story per conversation, hundreds of thousands of tokens long, with questions
-aimed at ten distinct memory abilities.
+Long conversations with questions testing ten memory abilities, at supported sizes of 100K,
+500K and 1M tokens.
 
 ## How it works
 
@@ -21,25 +21,22 @@ The ten abilities include three that the other evaluations here do not test at a
 a later statement contradicts an earlier one, putting events in the order they happened, and
 following an instruction given long ago.
 
-Systems are handed nothing but who said what. No rendered dates, no machine timestamps -- which
-is what every published harness for it does, including the authors' own baselines, and is what
-makes a memrank number on it a number about the same task.
+Memrank supplies speaker labels and conversation text, without rendered dates or machine
+timestamps, following the dataset protocol.
 
 ## Why it matters
 
-It is the scale test. Where an evaluation whose corpus fits in a context window cannot separate
-memory from simply reading everything, these conversations cannot be read at all, so retrieval is
-doing real work and the result says something a smaller evaluation cannot.
+Use BEAM to assess memory over long conversations. When a conversation exceeds the selected
+reader's context window, retrieval must select a subset for answer generation.
 
 **Quality here requires a judge.** The authors grade an answer against a rubric of small atomic
 facts, one judgement each, averaged within the question -- and for the ordering ability, by how
 well the answer's order matches the rubric's, because averaging would score a reversed answer as
-highly as a correct one. Memrank grades it that way and no other. Without a judge this evaluation
-reports latency, failures and counts: an earlier retrieval proxy here was withdrawn because a
-number that is displayed gets quoted whatever label sits beside it.
+highly as a correct one. The tracked judging pipeline follows that protocol. Without a judge, this evaluation reports
+latency, failures and counts; its previous retrieval proxy was withdrawn.
 
-Its own protocol hands the reader everything retrieval returned, so memrank's token budget is
-lifted for it, symmetrically across every system.
+Its protocol gives the reader all retrieved context. Tracked runs therefore lift the shared
+retrieval token budget for every system on BEAM.
 
 ## What it needs
 

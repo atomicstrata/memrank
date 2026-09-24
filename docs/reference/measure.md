@@ -26,25 +26,24 @@ A measure declares three things **before** it runs:
 2. **`reads`** -- which trace fields and which other measures' values it needs;
 3. **`decider`** -- who is responsible for the value. `Decider.MEMRANK` is memrank's own clock
    and bookkeeping, `Decider.RULE` a fixed rule, `Decider.MODEL` a model that adjudicated, and
-   `Decider.SYSTEM` the system's own word.
+   `Decider.SYSTEM` a system declaration.
 
-A measure that reads a name nothing in the run produces is refused *before* the run, naming what
-is available, rather than raising halfway through one.
+Before calling the system, the run checks that each measure names available trace fields or
+measure outputs. An invalid dependency produces a refusal listing the available names.
 
-Measuring is not inside the run loop, so a measure you thought of afterwards runs over traces
-already stored: `memrank.measure(result, MyMeasure())` returns a new [result](result.md) with
-the extra values in it, and the system is never touched again.
+Measures run after task execution. To measure saved traces, `memrank.measure(result, MyMeasure())` returns a new [result](result.md) with
+the extra values in it, and the system is not called again.
 
 A measure that produces several values names each one -- `latency.retrieve.p50` and
 `latency.retrieve.p95` are told apart by name and never by position. Memrank invents no overall
 score across measures.
 
-A measure that could not decide returns `None` with the reason, never `0.0`.
+A measure should return `None` with a reason when it cannot produce a value, rather than
+reporting a measured zero.
 
 ## Who supplies what
 
-Memrank supplies the five measures above, the traces to run a measure over, and the refusal when `reads`
-names something nothing produces. You supply a measure of your own when the shipped ones do not
+Memrank supplies the five measures above, recorded traces and dependency validation. You supply a measure of your own when the shipped ones do not
 answer your question: its `name`, `scope`, `reads`, `decider`, and a `measure()` method taking
 traces and values and returning values.
 
@@ -83,13 +82,12 @@ print(measured.values_of("recalled-count")[0].value)
 - `memrank.Value` -- what a measure produces: `measure`, `decider`, `task_id`, `group`,
   `value`, `why`.
 - `memrank.WordMatch`, `memrank.Latency`, `memrank.FailureRate`, `memrank.Judge` -- four of the
-  five that ship, the ones you construct yourself. They are ordinary measures and nothing more.
-- `memrank.BenchmarkScore` -- the fifth. A shipped evaluation builds it for you around its own
-  scoring, which is why it is importable but not among the names `memrank` lists first.
+  five included measure classes, which you can instantiate directly.
+- `memrank.BenchmarkScore` -- the fifth. Included evaluations construct it around their benchmark scorer.
 - `memrank.measure(result, *measures)` -- applying measures to a result already stored.
 
 ## Going deeper
 
 - [The measures memrank ships](../measures.md) -- each one in full.
-- [Methodology](../methodology.md) -- what a value licenses you to say.
+- [Methodology](../methodology.md) -- measurement rules and interpretation limits.
 - [`examples/04-your-own-measure/`](../../examples/04-your-own-measure/) -- a working one.

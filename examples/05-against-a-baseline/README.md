@@ -2,14 +2,13 @@
 
 `uv run python examples/05-against-a-baseline/run.py`
 
-A score alone says nothing about whether the memory helped. `memrank.system("no-context")` is
-told nothing and answers anyway -- the floor. `memrank.system("full-context")` is handed every
-document with no retrieval -- the ceiling. `word-overlap` stands in for your system here.
+Compare `WordOverlap` with two diagnostic controls on the same tasks. `NoContext` returns no
+documents; `FullContext` returns every stored document. This example measures retrieval proxies,
+not generated-answer quality, and the controls are not guaranteed score bounds.
 
-**Prints** `memrank.catalog()` first -- everything memrank ships, so the names below are ones
-you have already seen rather than ones you had to know -- then a paired reading against each
-control: means, gap, the tasks whose value flipped, and a caution when there is too little to
-characterise either. A pairing never says "better".
+The script prints the catalog and a paired comparison against each control: means, difference,
+changed tasks and statistical cautions. Use these controls to understand what the measure
+rewards before interpreting a system's score.
 
 ## Two ways to name a system, and when to use which
 
@@ -23,7 +22,3 @@ Both forms reach the same class, and `memrank.catalog()` prints them side by sid
   when the name arrives as data: from a config file, from a command-line argument, from a loop
   over several systems, as here. `memrank.system("atomicmemory", base_url=...)` is also how a
   client for a running service is given its address.
-
-The string form is what the command line and the cloud have, so it is not going anywhere. It
-is only the wrong default for the first Python a person writes, because a string is where the
-trail stops.

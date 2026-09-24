@@ -2,9 +2,9 @@
 
 `uv run python examples/02-your-own-system/run.py`
 
-The evaluation from 01, against a memory written in the script itself. The kind is the base
-class: subclass `memrank.Memory` and implement `prepare`, `ingest`, `retrieve`, `cleanup`.
-Nothing is registered and no file is written inside memrank. `declared_version` is optional,
-like every declaration -- `None` is recorded as "did not state", never as zero.
+Run the SQuAD evaluation from example 01 against a memory implemented in this script.
+Subclass `memrank.Memory` and implement `prepare`, `ingest`, `retrieve` and `cleanup`.
+No registration or changes to the Memrank package are required.
 
-**Prints** the result of that run, so the only thing that changed from 01 is the system.
+The script prints the result. Only the system differs from example 01. Optional declarations
+such as `declared_version` return `None` when information is unavailable.

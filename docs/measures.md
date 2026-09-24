@@ -1,12 +1,10 @@
 # Measures
 
-A [measure](reference/measure.md) is a named rule from traces to values. It declares what it
-reads and who decides before it runs, and it never returns a bare number. This page is that
-contract, and the five measures memrank ships.
+A [measure](reference/measure.md) produces named values from recorded traces. This guide covers
+the measure contract, the five included measures and how to measure saved results.
 
-Scoring is not inside memrank's run loop: a run puts the tasks and records what happened, and
-the measures turn those records into values afterwards. That is what lets a measure you think of
-a week later run over traces already stored, with the system never touched again.
+Measures run after task execution, so you can apply a new measure to saved traces without
+calling the system again.
 
 [`docs/evaluations.md`](evaluations.md) shows a measure bundled into an evaluation, and
 [`docs/methodology.md`](methodology.md) says what memrank claims the shipped values mean. The
@@ -14,15 +12,14 @@ source is `memrank/instrument/measure.py` and `memrank/instrument/measures.py`.
 
 ## What a measure declares
 
-Four class attributes and one method. Everything memrank checks before a run, it checks against
-these.
+Implement `measure(traces, values)` and declare these four class attributes:
 
 | Declares | Attribute | What it means |
 |---|---|---|
 | its name | `name` | The name every value of this measure carries, and the name another measure reads it by. |
 | its scope | `scope` | `Scope.TASK` -- one value per trace. `Scope.RUN` -- one value (or one per group) for the whole run. |
 | what it reads | `reads` | Trace fields, value names, or both. A trace field must be one of `given`, `recalled`, `answered`, `timings_ms`, `declared`, `error` (`memrank.instrument.trace.TRACE_FIELDS`). A value name must be the `name` of a measure the run produces. |
-| who decides | `decider` | `Decider.MEMRANK` (memrank's own clock and bookkeeping), `Decider.RULE` (a fixed rule -- string matching, a structural check), `Decider.MODEL` (a model adjudicated it), `Decider.SYSTEM` (the system's own word, recorded as its word). |
+| who decides | `decider` | `Decider.MEMRANK` (memrank's own clock and bookkeeping), `Decider.RULE` (a fixed rule -- string matching, a structural check), `Decider.MODEL` (a model adjudicated it), `Decider.SYSTEM` (a system declaration). |
 
 ```python
 from collections.abc import Sequence
@@ -44,8 +41,8 @@ class AnswerLength(Measure):
                 for trace in traces]
 ```
 
-`values` is what the measures before this one produced in the same pass, in order, so a measure
-that declares it reads another's name is handed that measure's values. It is never mutated.
+`values` contains outputs from earlier measures in the same pass. A measure can declare those
+names in `reads` and use their values without modifying them.
 
 A measure that produces more than one number gives each value its own name, with a dotted
 suffix under the measure's own: `Latency` declares `name = "latency"` and produces
@@ -92,9 +89,8 @@ REFUSED before the system was touched: measure 'answer-length' reads anwsered, w
 
 A refusal is a result: no traces, a stated reason, and `result.refused` is `True`.
 
-Measures cause a second refusal. When a measure reads `answered`, the system only recalls, and
-no answer writer was given, the run refuses and names what to pass -- memrank ships no reader
-that runs in-process without a model key, so it will not invent one:
+A measure reading `answered` requires a system that generates answers or an `answerer=`
+supplied to the run. Otherwise setup is refused:
 
 ```console
 REFUSED before the system was touched: judge reads `answered`, a memory system only recalls, and no answer writer was given; pass answerer=<your writer> to evaluation.run (memrank ships no reader that runs in-process without a model key)
@@ -145,15 +141,13 @@ for value in (result.values_of("word-match")[0], *result.values_of("demo-score")
     print(f"{value.measure:<13} {value.value!r:<6} {value.why}")
 ```
 
-`word-match` and `demo-score` both come back `None`, each saying the task broke at retrieve. A
-zero would have read as a system that recalled nothing relevant; this one recalled nothing at
-all, because it was never reached. `failure-rate` is `1.0`, a real value, because how much of a
-run broke is a question the run can answer.
+`word-match` and `demo-score` are `None` because retrieval failed. `failure-rate` is `1.0`: every
+task attempt recorded an error. A failed request must not be treated as successful retrieval
+with no relevant documents.
 
 ## The measures memrank ships
 
-Five, in `memrank/instrument/measures.py`. None of them is a special case: a judge is a measure
-whose decider is a model, and latency is one whose decider is memrank's own clock.
+Five measures ship with the package, implemented in `memrank/instrument/measures.py`:
 
 | Measure | `name` | Scope | Reads | Decider |
 |---|---|---|---|---|
@@ -169,11 +163,9 @@ the arithmetic of `memrank.SpanRecall`, per task instead of per unit. `1.0` is a
 correctness**, and says so in the `why` of every value, so the caveat travels with the value.
 
 **`Judge`** has a model adjudicate the answer against what was expected; `value` is a bool and
-`why` the model's rationale. It is constructible without a key, because constructing it is a
-declaration and the run refuses on the declaration before anything is spent. Running it without
-one raises and names how to set it: there is no mode in which this measure decides something
-with nobody having judged it. Which model, at what cost and under which egress rules is
-[`docs/methodology.md`](methodology.md)'s.
+`why` the model's rationale. Construction needs no key, but measurement requires
+`ANTHROPIC_API_KEY` and raises if it is missing. Setup validation separately checks whether
+answers will be available. See [methodology](methodology.md) for judging and data disclosure.
 
 **`Latency`** reports p50 and p95 per step, over the timings memrank took at its own call
 boundary -- never a figure a system reported about itself. Each value carries the sample count
@@ -181,7 +173,7 @@ it was taken over, because a percentile over three samples is a different object
 three hundred. It is reported, never ranked and never asserted on.
 
 **`FailureRate`** is the share of traces carrying an error, from memrank's own bookkeeping.
-`why` names the steps things broke at. With no traces at all it is `None`, not `0.0`.
+`why` names the failed steps. With no traces at all it is `None`, not `0.0`.
 
 **`BenchmarkScore`** applies an in-tree benchmark's own `score()` over the traces that benchmark
 produced. Its name is the benchmark's, suffixed `-score` (`demo-score`), and its scope is the
@@ -191,8 +183,7 @@ every task failed, and a benchmark that refuses to score what it was handed, bot
 `None` with the reason.
 
 The shipped evaluations bundle `BenchmarkScore`, `Latency` and `FailureRate`, plus `WordMatch`
-where a substring proxy means anything for that dataset. `Judge` is never bundled: that would
-put a key and a bill on the path of a first run.
+where a substring proxy means anything for that dataset. `Judge` is not bundled; add it explicitly when you need model-based scoring.
 
 ## Writing your own, over a run that already happened
 
@@ -241,11 +232,9 @@ for value in measured.values_of("word-match-rate"):
     print(value.value, "--", value.why)
 ```
 
-Three things that example does on purpose. It drops the undecided tasks out of the denominator
-rather than scoring them zero, and says in `why` how many it dropped. It states `None` when
-there was nothing to decide from. And it names its decider `RULE`, because the rule is
-arithmetic over values a rule produced -- had it asked a model, the value would have to say
-`MODEL`.
+The example excludes missing values from the denominator and reports that count in `why`.
+It returns `None` if no values are available. Its `decider` is `RULE` because it computes a
+fixed arithmetic rule; model-based scoring would declare `MODEL` instead.
 
 To bundle it into a run instead, put it in an evaluation's `measures` alongside `WordMatch`;
 order matters, because a measure only sees what the measures before it produced. Bundled that

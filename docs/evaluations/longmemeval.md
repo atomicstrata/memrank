@@ -7,24 +7,24 @@ from memrank.evaluations import LongMemEval
 evaluation = LongMemEval()
 ```
 
-Five hundred questions, each one buried in its own separately built pile of chat sessions.
+Five hundred questions, each paired with its own collection of dated chat sessions.
 
 ## How it works
 
-Every question comes with its own haystack: dated user-and-assistant sessions, most of them
-irrelevant, a few holding the answer. Memrank gives one question's haystack to the
+Each question has a separate collection of user-and-assistant sessions, called a *haystack*.
+Only some sessions contain relevant evidence. Memrank gives one question's haystack to the
 [system](../reference/system.md) in the order the data lists it, one session at a time, and asks
-the question only after all of them have gone in -- which is the task the authors define. Each
+the question after ingesting all sessions, following the authors' task definition. Each
 question is its own group, so its haystack is cleared before the next.
 
 The dates travel inside the text of each session, because memrank cannot reorder what a system
 returns: a system hands back its own documents, not memrank's, so ordering by timestamp would
 only be possible for the controls and would make context order depend on which system was under
-test. That divergence from the authors' own harness is declared rather than half-fixed.
+test. This differs from the authors' context-ordering procedure.
 
 ## Why it matters
 
-It isolates the thing memory is for. The same 500 questions ship at several haystack sizes, so
+The same 500 questions are available at several context sizes, so
 what changes between runs is how much irrelevant material the system had to hold -- not the
 questions. The authors' headline is that assistants and long-context models lose about a third of
 their accuracy when the questions move from a clean context into a large haystack.
@@ -37,7 +37,7 @@ judge this evaluation reports latency, failures and counts.
 
 It is also one of two evaluations whose own protocol caps context at the model's window rather
 than at a fairness budget, so memrank's token budget is lifted for it, symmetrically across every
-system. Rows within it stay comparable; rows against other evaluations lose budget normalization.
+system. This applies equally to all systems, but removes budget normalization against other evaluations.
 
 ## What it needs
 
@@ -47,7 +47,7 @@ A one-time download of the dataset, cached after the first run, or a local copy 
 Quality also needs a judge, which means a model key and sending question text to that model.
 
 The questions and code are MIT licensed; the haystack filler is drawn from other corpora whose
-licenses are not. Caching it to evaluate is one thing, redistributing it another.
+licenses are not. Check the source-corpus licenses before redistributing the data.
 
 ## References
 

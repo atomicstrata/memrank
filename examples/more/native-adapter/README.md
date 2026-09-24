@@ -1,14 +1,14 @@
 # Reference translator
 
-A working implementation of the [memrank system contract](../../../docs/system-contract.md), in
-about 150 lines of standard-library Python.
+A working implementation of the [memrank system contract](../../../docs/system-contract.md), using
+standard-library Python.
 
 Write one of these and memrank can measure your memory system without a fork, a pull request, or
 any change to memrank itself. memrank launches your program, drives it over HTTP, and never
 imports your code -- so it can be in any language.
 
-**This is a template, not a memory system.** It stores documents in a dict and ranks them by word
-overlap. Benchmark it and you are benchmarking a dict.
+This template stores documents in a dictionary and ranks them by word overlap. Replace that
+logic with calls to your engine before evaluating its behavior.
 
 ## Try it
 
@@ -22,12 +22,12 @@ Then, from another shell:
 curl -s http://127.0.0.1:8099/memrank/v1/describe | python -m json.tool
 ```
 
-## Not core: point memrank at it by name
+<a id="not-core-point-memrank-at-it-by-name"></a>
+## Register the translator as a target
 
-> The five endpoints above are the whole contract, and a translator that serves them can be
-> measured from Python like any other [`Memory`](../../02-your-own-system/README.md). What
-> follows names it instead, so [the command line](../../../docs/misc/command-line.md) can drive
-> it -- an older surface kept working but not developed. *Target* is its word for a named system.
+Use a target descriptor to launch the translator through
+[the command line](../../../docs/misc/command-line.md). You can also connect to an already-running
+translator from Python with [`Native`](../../../docs/systems/native.md).
 
 Make a folder you own -- anywhere, git or not -- and put a descriptor beside the translator:
 
@@ -79,16 +79,14 @@ Keep the five handlers and replace their bodies:
 | `_retrieve` | Search, and return documents **ranked best-first**. Put relevance in `metadata.score`. Return fewer than `k` rather than padding. |
 | `_cleanup` | Drop the namespace. Must be safe to call twice and before any `prepare`. |
 
-Three rules the reference implementation demonstrates and that are easy to get wrong:
+Follow these requirements:
 
-1. **Omit `usage` if you do not measure tokens.** `{"total_tokens": 0}` claims your engine spent
-   nothing. Absence says nobody counted, and memrank keeps them distinct all the way to the
-   leaderboard.
+1. **Omit `usage` if you do not measure tokens.** `{"total_tokens": 0}` claims zero usage. Omit the field when usage is unavailable.
 2. **Never return an empty result on failure.** Raise, so memrank fails the run and shows your
    message. An empty list is a valid answer meaning "nothing matched", so a disguised failure
    scores exactly like the no-memory control arm and reads as a real result.
 3. **Do not answer `describe` until your engine can serve traffic.** memrank uses it as the
-   readiness probe, so answering early turns an engine start-up failure into a benchmark number.
+   readiness probe, so respond only when the engine can handle evaluation requests.
 
 ## Evidence
 

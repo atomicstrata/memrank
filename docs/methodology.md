@@ -11,14 +11,13 @@ it reads from a [trace](reference/trace.md) and who decided the number it produc
 | Quality | `judge` | task | `answered` | a model |
 | Latency | `latency` | run | `timings_ms` | memrank's own clock |
 | Completeness | `failure-rate` | run | `error` | memrank's own bookkeeping |
-| Tokens | a declaration, not a measure | -- | `declared` | the system, recorded as its word |
+| Tokens | a declaration, not a measure | -- | `declared` | the system, recorded as a declaration |
 | Cost | an estimate, not a measure | -- | context tokens and a pinned price table | memrank, from a versioned table |
 
 The last two rows say what they are rather than implying a measure that does not exist. Token
 usage is what a system says a provider billed it; cost is derived arithmetic over a price table.
 
-[`docs/measures.md`](measures.md) is the contract behind those columns. This page says what the
-values licence you to claim.
+[`docs/measures.md`](measures.md) is the contract behind those columns. This page explains how to interpret the values and their limitations.
 
 ## Quality
 
@@ -30,9 +29,8 @@ value is invented on an evaluation's behalf.
 **`word-match`** is **retrieval correctness and never answer correctness**, and says so in the
 `why` of every value it produces, so the caveat travels with the value.
 
-**`judge`** is the only one whose decider can say an answer was right, because a model
-adjudicated it. It is never bundled into a shipped evaluation -- that would put a key and a bill
-on the path of a first run -- and running it without a key raises rather than deciding anything.
+**`judge`** scores generated-answer correctness using a model. The Python API requires callers
+to add it explicitly. Applying it without the required API key raises an error.
 
 **Metric applicability.** `substring_recall_supported` says whether the answer-substring proxy
 applies. `composite_rankable` independently says whether the evaluation's own composite may be
@@ -49,12 +47,12 @@ for ranking, and `quality_metric` to say what it measures.**
 ### SQuAD, the quick-start evaluation
 
 `squad-score` is full-passage retrieval recall over a fixed subset of SQuAD v1.1's development
-set: 32 passages told to the system in one pool, then 64 questions, two per passage in source
+set: 32 passages supplied to the system in one pool, then 64 questions, two per passage in source
 order. A question is a hit when its entire source passage comes back inside a returned document
 (whitespace collapsed, case kept), from at most 10 documents per question by default. Its
 `quality_metric` is `passage_recall`, and every value says what it measures.
 
-What it does not license anyone to say:
+Interpretation limits:
 
 - **That an answer was right.** The scorer never reads an answer. This is not SQuAD's native
   exact-match or answer-token F1.
@@ -90,8 +88,7 @@ as everywhere else: a score a system did not earn is not zero. The `failure-rate
 same fact stated as a value, and [`docs/measures.md`](measures.md) has the whole of the rule.
 `memrank submit --fail-fast` restores the older behaviour of ending the cell at the first unit
 that raises. Two conditions end a run whatever that flag says: an exhausted provider rate limit
-(an account-wide condition, so every remaining unit would spend the same deadline for the same
-nothing) and an operator interrupt.
+(an account-wide condition, so remaining units would encounter the same exhausted limit) and an operator interrupt.
 
 **One system under two configurations is two rows on one board.** Row identity is the
 system, the transport, *and* the configuration it drives its engine with -- the extractor LLM, embedder,
@@ -99,10 +96,10 @@ context budget and retrieval settings it ran with. So two arms of one system tha
 in their extractor -- a deterministic built-in versus a hosted model -- rank against each other
 rather than one replacing the
 other. Engine *version* is deliberately excluded: a rebuild of one configuration is a
-newer run of the same thing under test and replaces its row. Both rows currently publish
+newer run of the same system configuration and replaces its row. Both rows currently publish
 under the adapter's name, and are told apart by `config_hash` in their provenance.
 
-**Slice evaluations are plumbing, not measurements.** A `smoke`/`mini` slice
+**Slices are for debugging, not full-dataset performance claims.** A `smoke`/`mini` slice
 (`beam:100k-smoke`, `locomo:mini`) exists to debug ingest, retrieval, judging and cloud dispatch
 cheaply. It selects the *first* N units of the dataset, and the first units are not a fair
 sample: measured on the first full judged BEAM 100k tier (run
@@ -231,27 +228,26 @@ design: same context size as the system under test, so the only variable is sele
 context window cannot hold headline status, which is why LoCoMo (16k-26k tokens) is runnable but
 labelled non-discriminative.
 
-Two honest limits. **Ingest order is not neutral**: `fixed-context` reads from the start, so a
+Two limitations affect interpretation. **Ingest order is not neutral**: `fixed-context` reads from the start, so a
 corpus whose answers cluster late is disadvantaged in a way ranked retrieval is not. And
-**`no-context` is only meaningful judged** -- unjudged it is scored on retrieval alone, and since
-it retrieves nothing it can only score on *negative* queries, which says nothing about memory.
+**`no-context` needs answer scoring to assess answer quality.** With retrieval-only scoring,
+it can receive credit for negative queries requiring a forbidden span to remain absent.
 The runner emits a notice when that happens.
 
-`word-overlap` is a separate thing: naive token-overlap retrieval, a dumb-*memory* floor rather than a
-no-retrieval or in-prompt control.
+`word-overlap` uses naive token-overlap retrieval, a simple retrieval baseline, distinct from the
+empty-context and unranked-context controls.
 
-`tfidf` and `bm25` are floors of the same kind, one and two steps up. `tfidf` weights each shared
+`tfidf` and `bm25` are weighted keyword retrieval baselines. `tfidf` weights each shared
 word by how rare it is and scores the cosine between query and document; `bm25` also saturates
 repeated words and normalises by document length, at `k1 = 1.5` and `b = 0.75`. The two share a
 tokeniser, so the gap between their rows is the weighting and nothing else. None of the three is
-a control: each is a `Memory` that retrieves by the query, so beating them says a system's
-retrieval is worth more than keyword matching -- not that memory is needed at all, which is what
-the three controls answer. All three run in your own process, so their latency is not comparable
+a control: each is a `Memory` that retrieves by the query, so a higher score shows an improvement over that keyword method on the selected evaluation.
+Use diagnostic controls to assess the contribution of retrieved context. All three run in your own process, so their latency is not comparable
 with a system reached over HTTP.
 
 ### What each arm is called in the literature
 
-So a reader can map these rows onto other people's tables. The arms were `none`, `baseline` and
+Use this mapping when comparing control names across publications. The arms were `none`, `baseline` and
 `icl` until 2026-08-19; two were renamed again on 2026-08-20.
 
 **Two of these names are ours, not the field's**, and the table says which. Where our name differs

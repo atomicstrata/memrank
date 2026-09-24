@@ -2,9 +2,10 @@
 
 An [**evaluation**](reference/evaluation.md) bundles its [tasks](reference/task.md), the
 [measures](reference/measure.md) that read them, and the rule for when the system's state is
-cleared. This page is the long version of that reference page.
+cleared. This guide shows how to express tasks and success criteria you have chosen. You decide
+whether those cases represent your use case; Memrank does not certify their relevance.
 
-No scoring lives in the evaluation: it lives in the measures, which an evaluation only bundles.
+Scoring is implemented by the measures bundled in an evaluation.
 Writing your own questions and writing your own measure are separate choices.
 
 memrank's own evaluations and yours are the same kind of object. You do not have to put yours
@@ -12,7 +13,7 @@ inside this package, register it anywhere, or give it a name anyone else can res
 
 ## 1. Write the evaluation directly
 
-Tasks are plain data, and a measure memrank ships does the deciding:
+Define tasks as data and select a scoring measure:
 
 ```python
 import memrank
@@ -33,22 +34,19 @@ result = tickets.run(system=memrank.system("word-overlap"))
 print(result.values_of("word-match")[0].value)
 ```
 
-Nothing above touches a registry, a configuration file, a name the command line can resolve, or
-a file inside `memrank/`.
+This example requires no registration, configuration file or change to Memrank.
 
-A [**task**](reference/task.md) describes a correct outcome in `Expected` and decides nothing
-about it. `polarity="negative"` is the case worth knowing here: the correct outcome is that the
-wrong memory is *not* surfaced.
+A [**task**](reference/task.md) describes its expected outcome in `Expected`. The measure
+applies the scoring rule. With `WordMatch`, `polarity="negative"` tests that forbidden spans
+are absent from retrieval.
 
-Tasks that share state carry the same `group`. A [run](reference/run.md) gives a group's
-documents once, in first-seen order and deduplicated by id, and clears between groups -- never
-inside one. `Clearing.PER_TASK` and `Clearing.AT_END` are the other two rules, and the
-[result](reference/result.md) records which one was in force and whether the system could be
-observed to have cleared.
+With `Clearing.PER_GROUP`, tasks with the same `group` share state. The [run](reference/run.md)
+ingests each group's documents once, in first-seen order and deduplicated by ID, then calls cleanup
+after the group. `Clearing.PER_TASK` and `Clearing.AT_END` are the other two rules, and the
+[result](reference/result.md) records which one was in force and whether cleanup returned successfully.
 
-`version` is the version of what this evaluation asks. Two results can be laid side by side only
-when they share the evaluation *and* its version, so changing the tasks under a name that stays
-the same is what makes a comparison quietly wrong. Where what the evaluation asks cannot be
+Use `version` to identify the task and scoring definition. `memrank.paired` requires matching
+evaluation names and versions; change the version when the definition changes. Where what the evaluation asks cannot be
 frozen, `memrank.instrument.evaluation.UNFREEZABLE` says so and is recorded in every result,
 rather than a version being invented.
 
@@ -70,9 +68,8 @@ A [measure](reference/measure.md) is a named rule from traces to values. It decl
 [`docs/measures.md`](measures.md) is that contract in full, and it is the page to read before
 writing one.
 
-`measures=` is what a person who runs your evaluation gets without asking. Measuring is not
-inside the run loop, so one you think of afterwards runs over [traces](reference/trace.md)
-already stored -- `memrank.measure(result, MyMeasure())`, with the system never touched again. A
+`measures=` selects the measures applied after task execution. Apply another measure to saved
+[traces](reference/trace.md) with `memrank.measure(result, MyMeasure())`, without rerunning the system. A
 measure that reads a name nothing in the run produces is refused before the run.
 
 [`examples/04-your-own-measure/`](../examples/04-your-own-measure/README.md) is a worked one,
@@ -80,12 +77,11 @@ applied to a result loaded back off disk.
 
 ---
 
-## Not core: named evaluations, and what the command line resolves
+<a id="not-core-named-evaluations-and-what-the-command-line-resolves"></a>
+## Register an evaluation for the command line
 
-**memrank's interface is the Python package, and everything above is it.** What follows is an
-older surface, kept working but not developed: the catalog of evaluations reachable **by name**,
-from [the command line](misc/command-line.md), in the cloud, in a sweep, or by other people. Read
-on only if yours should have a name others can type.
+Everything above uses the Python interface. What follows is the catalog of evaluations reachable **by name**,
+from [the command line](misc/command-line.md), in the cloud, in a sweep, or by other people. Use this route when an evaluation needs a catalog reference.
 
 That surface keeps its own older words, listed in full under
 [its vocabulary](misc/command-line.md#its-vocabulary): an *eval* is its word for a named
@@ -96,7 +92,7 @@ inside a benchmark, which becomes a task group when the benchmark is converted.
 
 A named evaluation is built from a `Benchmark`: a **loader** that produces the data, and a
 **scorer** that says what a good answer is. `memrank.evaluation(MyBenchmark())` converts one
-into the `Evaluation` the seven words use: each unit becomes a task group, its documents the
+into an `Evaluation`: each unit becomes a task group, its documents the
 group's context, its queries the tasks, and its own `score()` one measure beside the ones that
 need no answer writer.
 
@@ -129,8 +125,7 @@ result = memrank.evaluation(TicketsBenchmark()).run(
 print(result.values_of("tickets-score")[0].value, result.evaluation.name)
 ```
 
-Those three methods are the whole third-party contract. `Benchmark` stays importable and keeps
-its name; it is no longer part of the vocabulary the Python interface teaches.
+Implement `load()`, `score()` and `report_template()` to supply a benchmark.
 
 ### Implement `load()`
 
@@ -158,8 +153,8 @@ Take a single unit plus the system's responses for that unit and return a dict w
 }
 ```
 
-If your gold is span-shaped, you do not have to write `score()` at all: `memrank.SpanRecall` is
-the scorer the shipped demo benchmark uses, and it returns exactly the dict above.
+For reference answers expressed as literal spans, delegate scoring to
+`memrank.SpanRecall`, the scorer used by Demo. It returns the dictionary shown above.
 
 ```python
 from memrank import Benchmark, SpanRecall
@@ -186,14 +181,12 @@ graded differently, override `judge_shape()` and return a `JudgeShape`
 cache-shared control half and the per-system context half -- and what it **yields**, a
 `JudgedQuery` whose `score` is a float in [0, 1].
 
-Do **not** reach for a `judge` callable in the constructor -- an earlier version of this document
-told you to, and nothing ever implemented it.
+The constructor does not accept a `judge` callable; use `judge_shape()` for judge configuration.
 
 #### Declare what your score is
 
-The runner infers none of these, and getting one wrong is how a value comes to mean something
-other than it appears to. Each is a class attribute, defaulted for a benchmark whose gold answers
-are verbatim spans, and each applies to an instance exactly as to a registered benchmark:
+Declare these class attributes to describe the score and its requirements. Defaults suit
+benchmarks with literal reference spans; they apply to both instances and registered benchmarks:
 
 | | Default | Set it when |
 |---|---|---|
@@ -201,19 +194,20 @@ are verbatim spans, and each applies to an instance exactly as to a registered b
 | `composite_rankable` | `True` | your raw `composite` is not a score to rank as-is without a judge |
 | `quality_metric` | `"substring_recall"` | your composite is something else (`"graph_score"`, ...); it names the displayed column |
 | `context_policy` | `"matched"` | your benchmark's own protocol hands the reader everything retrieval returned -- `"uncapped"` |
-| `is_synthetic` | `False` | the data is synthetic and safe to send to a judge without egress consent |
+| `is_synthetic` | `False` | the data is synthetic; this informs the judging disclosure |
 | `requires_graph` | `False` | scoring needs an adapter's graph snapshot; cells with a non-graph adapter are then skipped as `not_applicable` |
 
 `substring_recall_supported` and `composite_rankable` are decoupled on purpose: a graph benchmark
 sets the first `False` (substring recall is not applicable) and the second `True` (its composite
 *is* a real score).
 
-`composite_rankable` is also what the previous run's `judge=None` asks: a benchmark whose composite
+The tracked-run pipeline uses `composite_rankable` when `judge=None`: a benchmark whose composite
 is not rankable gets a judge by default, because an unjudged run of it measures latency and cost
 and nothing else. `substring_recall_supported` also decides the conversion: a benchmark whose span
-proxy is meaningless ships no `WordMatch` measure rather than a number that means nothing.
+proxy is meaningless ships no `WordMatch` measure rather than an inapplicable score.
 
-### Bring one half: `ComposedEvaluation`
+<a id="bring-one-half-composedevaluation"></a>
+### Combine tasks and a scorer with `ComposedEvaluation`
 
 `ComposedEvaluation` composes a `Benchmark`, its units and a `Scorer`. It is the named route's
 answer to the question the Python route answers with `measures=`, and the two pieces do not have
@@ -256,13 +250,12 @@ changes what is measured and nothing else. The scorer decides the *kind* of numb
 (`quality_metric`) and is named in the receipt, because two scorers are not one reproducible run.
 
 **Both halves declare, and a disagreement is refused before any task runs.** A scorer names the
-scored keys it produces (`criterion_names`); a question source names the ones its own aggregation
-expects. Where both speak and they disagree, composition raises `CriteriaMismatch` naming both
+score keys it produces (`criterion_names`); a question source names the ones its own aggregation
+expects. When both declare criteria and they disagree, composition raises `CriteriaMismatch` naming both
 lists, rather than failing late on a `KeyError` or reducing over whichever criterion happened to
 be there. The same check runs on the judge side: a scorer whose `judge_shape()` defines per-type
-grading prompts is compared against the prompt keys the questions carry, because grading a query
-under a prompt written for a different question type is how 12% of a benchmark was graded against
-the wrong object for months (`memrank/judging/shape.py`, `BinaryJudgeShape._prompt_for`).
+grading prompts is compared against the prompt keys the questions carry, to prevent applying the wrong grading prompt (`memrank/judging/shape.py`,
+`BinaryJudgeShape._prompt_for`).
 
 Declaring nothing is the default and is not a disagreement: all six registered benchmarks
 declare no criteria, which is what keeps somebody else's scorer acceptable over their questions.
@@ -274,7 +267,7 @@ giving it a name, which is [registration](#register-the-benchmark) below.
 ### Where the data comes from
 
 `load()` may read whatever you like -- a file beside your script, a database, an API. For a
-dataset you want cached rather than carried, drop it into the cache root
+dataset that should be downloaded and cached, use the cache root
 ``memrank.benchmarks.cache_root()`` returns, or fetch it from HuggingFace lazily on first call,
 and honor a `<NAME>_DATA_PATH` env var so a reader can point at a local copy.
 
@@ -322,5 +315,4 @@ through public proposal and comment before it merges, and does not merge without
 documentation.
 
 A shared evaluation needs a section in [`methodology.md`](methodology.md): what it scores, how it
-is built, what its labels mean, and -- the part readers rely on -- what its values do *not*
-license anyone to say. Add the axis there too when it introduces one.
+is built, what its labels mean, and -- the part readers rely on -- the limits on interpreting its values. Add the axis there too when it introduces one.

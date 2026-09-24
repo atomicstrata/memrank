@@ -6,14 +6,14 @@ from memrank.evaluations import RelationGraph
 evaluation = RelationGraph()
 ```
 
-Four situations that are easy to store and hard to store *correctly*, scored on what the system's
-memory graph did with them.
+Four scenarios testing whether a memory graph represents updates, entity identity and
+inferred relations correctly.
 
 ## How it works
 
-Each of the four fixtures sets a trap that ordinary retrieval scoring cannot see:
+The four fixtures test structural properties that retrieval recall does not capture:
 
-- a preference is stated, then changed in wording close enough that a careless system keeps both;
+- a preference update that should supersede an earlier statement;
 - two different people share a name, and a fact about one must not attach to the other;
 - something is implied rather than said, alongside a distractor that would support the wrong
   inference;
@@ -26,18 +26,15 @@ separate, was the inference drawn and the distractor left alone.
 
 ## Why it matters
 
-It measures a different thing from every other evaluation here. The others ask whether the right
-thing came back; this one asks whether what the system *believes* is right. A system can retrieve
-the correct document and still hold two contradictory facts about the same person, which is the
-failure that shows up later as a confidently wrong answer.
+A system can retrieve the correct document while retaining contradictory facts or merging two
+people's identities. This evaluation checks the reported graph for those structural errors.
 
-Its score is **structural and decided by a fixed rule** -- no judge, no model, no proxy for
-something else. Like `squad`'s and `demo`'s it needs no judge; unlike theirs, it scores what the
+Its score is **structural and decided by a fixed rule**. Like `squad`'s and `demo`'s it needs no judge; unlike theirs, it scores what the
 system holds rather than what it retrieved.
 
 ## What it needs
 
-Nothing to download. It does need a system that reports its memory graph in the normalized shape.
+No dataset download. It requires a system that reports its memory graph in the normalized format.
 A system that does not is still run -- memrank cannot know before it asks -- and its
 `relation_graph-score` values are `None`, each carrying the reason: no graph snapshot in the
 system's responses. It is never scored as though it had reported an empty graph. (The command

@@ -5,49 +5,39 @@ last_reviewed: 2026-09-02
 
 # Engine images: what you can obtain
 
-> **Not core.** This page is about the targets [the command line](command-line.md) knows by
-> name in its catalog, each of which is a container. A system you pass to an evaluation from
-> Python -- the interface [the README](../../README.md) describes -- needs none of it.
-
-A target names an engine, and an engine is a container. This page answers the question that decides
-whether a published number is evidence to you or a claim about us: **can you get that container,
-and if not, what do you run instead?**
-
-It is stated per target because the answer differs per target, and two of the four are not "yes".
+This page lists the container images used by command-line targets and the alternatives when
+an image is unavailable. Local retrieval implementations need no engine container. HTTP clients
+still require a running service, whether called from Python or the command line.
 
 | Target | Image | Can you obtain it | What you run |
 |---|---|---|---|
-| `hindsight`, `hindsight:matched` | `ghcr.io/vectorize-io/hindsight:0.6.2` | **Yes** -- the vendor's own published image, anonymous pull | the same bytes we measured |
-| `atomicmemory` | `ghcr.io/atomicstrata/atomicmemory-core:latest` | **Yes** -- public package, anonymous pull | the same bytes we measured |
+| `hindsight`, `hindsight:matched` | `ghcr.io/vectorize-io/hindsight:0.6.2` | **Yes** -- the vendor's own published image, anonymous pull | public image; match the recorded digest when reproducing a run |
+| `atomicmemory` | `ghcr.io/atomicstrata/atomicmemory-core:latest` | **Yes** -- public package, anonymous pull | public image; match the recorded digest when reproducing a run |
 | `supermemory` | built from a recipe; no registry serves it | **You build it** -- [`examples/more/supermemory-image/`](../../examples/more/supermemory-image/README.md) | the same recipe, your own build |
 | `mem0` | a patched fork, built privately | **No** | mem0's own server, run by you |
 
 The control arms -- `no-context`, `fixed-context`, `full-context` -- and the in-process memory
-floors `tfidf`, `bm25` and `word-overlap` carry no image and no credential. They run in-process on a fresh machine with nothing
-installed, which is why every comparison here can be reproduced at least in part by anyone.
+baselines `tfidf`, `bm25` and `word-overlap` need no image or API key. They run in-process
+after Memrank is installed.
 
 Both anonymous pulls in the table were re-checked on 2026-09-02.
 
 ## hindsight
 
-The vendor's own published build, pulled by public reference and unmodified. Measuring what the
-vendor ships is what makes a neutral evaluation neutral, and it means a hindsight result is fully
-reproducible: the manifest, the compose graph and the image are all obtainable, and the image is
-pinned to a released version rather than to `latest`.
+The target uses the vendor's published image without modification. The manifest, compose graph
+and image are public. Reproduction also requires matching the recorded image digest,
+configuration, dataset and other receipt fields.
 
 ## atomicmemory
 
-Our engine, published to `ghcr.io` as a public package and named by its public reference like any
-other vendor's. Whose engine it is does not change how a target says what it runs, and it does not
-change what you can pull: the anonymous pull succeeds with no credential.
+AtomicStrata publishes this engine image as a public `ghcr.io` package. It supports anonymous
+pulls, like the other public image in the table.
 
-The engine's *source* is not public. The image is, which is what reproducing a run requires.
+The engine source is private. The public image supplies the executable needed for reproduction.
 
 ## mem0
 
-**The `mem0` target runs a private fork, and you cannot obtain its image.** This is the one place
-where the catalog's shape and its reproducibility diverge, so it is stated flatly rather than
-implied.
+**The `mem0` target runs a private fork, and you cannot obtain its image.** Use your own Mem0 server to evaluate a publicly available implementation.
 
 The image is built from a fork of `mem0ai/mem0` at upstream `v2.0.1` carrying **ten unofficial
 patches**. That lineage is not hidden: every receipt records it as CycloneDX pedigree -- the
@@ -58,8 +48,7 @@ published.
 What the patches do, from what this repository can establish: they add a **native Voyage embedder**
 that upstream has no registry entry for, **pgvector dimension handling** so an embedder swap does
 not corrupt the store, and **extraction fallbacks** that change what is retained when fact
-extraction returns nothing. Those three are load-bearing for the configurations the fork exists to
-serve. The itemised list of all ten lives in the fork's own repository and is not derivable from
+extraction returns nothing. These changes affect the fork's supported configurations and behavior. The itemised list of all ten lives in the fork's own repository and is not derivable from
 this one; this page will not guess at the remainder.
 
 The target's manifest says it is "mem0 as mem0 ships and evaluates it" -- transcribed components,
@@ -77,8 +66,7 @@ export MEM0_HTTP_URL=http://localhost:8888
 Then either drive the system directly (see
 [`examples/02-your-own-system/`](../../examples/02-your-own-system/README.md) for the shape) or write a target manifest of your own and point `targets.path` at it, exactly as
 [`examples/more/custom-target/`](../../examples/more/custom-target/README.md) does. What you will be measuring
-is upstream mem0, which is not the same system as our fork -- and that difference is the honest
-reason this page exists rather than a caveat at the bottom of a leaderboard.
+is upstream mem0, which differs from the private fork.
 
 Publishing the fork is a decision about the fork, not a documentation change, and it has not been
 taken.
@@ -103,12 +91,7 @@ Two limits, stated because they bound what "the same container" means:
   a working-version pin, not a preference.
 - **The installer is mutable.** The vendor serves it from an unversioned URL with no published
   digest, so two builds of `0.0.3` on two days are not guaranteed to be the same bytes. Pin the
-  image you build by digest and record it; `0.0.3` alone does not identify a build. This is a real
-  ceiling on reproducing a supermemory number and it is not one we can raise from here.
-
-A previous version of the `supermemory` compose file claimed the opposite of all this -- that
-nothing about the image had to stay private because it was "their open source, built by us". That
-was wrong, and correcting it is what produced this page.
+  image you build by digest and record it; `0.0.3` alone does not identify a build. Version strings alone are insufficient to reproduce the executable.
 
 ## What the published package ships
 
@@ -118,5 +101,4 @@ would name a host that resolves for nobody, which is worse than not offering it 
 `supermemory` are described here rather than shipped as runnable refs, and the sections above say
 what to run in their place.
 
-The adapters for both are public, and so is everything the run loop does with them. What is
-withheld is an address, not a capability.
+The adapters for both are public, and so is everything the run loop does with them. Use your own service address or target descriptor to run those integrations.

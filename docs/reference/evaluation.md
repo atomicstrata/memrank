@@ -19,14 +19,14 @@ benchmarks memrank can download. `tickets` below is one you write yourself.
 
 ## What it is
 
-An evaluation is a named, versioned bundle of three things:
+An evaluation has a name, version and three components:
 
-1. its **[tasks](task.md)** -- one per thing to put to the system;
-2. the **[measures](measure.md)** it ships with. No scoring lives in the evaluation itself;
-3. its **clearing rule** -- when the system's state is wiped. Tasks that share state carry the
-   same `group`: memrank gives a group's documents once and clears between groups, never inside
-   one. `Clearing.PER_GROUP` is that; `Clearing.PER_TASK` and `Clearing.AT_END` are the other
-   two.
+1. its **[tasks](task.md)** -- the cases to execute;
+2. the **[measures](measure.md)** that score the recorded traces;
+3. its **clearing rule** -- when Memrank calls the system's cleanup method. With
+   `Clearing.PER_GROUP`, tasks with the same `group` share context and cleanup follows each
+   group. `Clearing.PER_TASK` isolates each task; `Clearing.AT_END` shares state across the run.
+   The system implementation must enforce isolation and cleanup.
 
 The version is part of the identity. Two results are comparable only when they are of the same
 evaluation at the same version, and [paired](paired.md) refuses when they are not.
@@ -70,7 +70,7 @@ result = tickets.run(system=WordOverlap())
 
 ## Going deeper
 
-- [Adding an evaluation](../evaluations.md) -- writing one, and writing only half of one.
-- [Evaluations that ship](../evaluations/README.md) -- one page each.
+- [Adding an evaluation](../evaluations.md) -- supply tasks, measures or both.
+- [Available evaluations](../evaluations/README.md) -- task sets and requirements.
 - [Methodology](../methodology.md) -- what the shipped evaluations measure.
 - [`examples/03-your-own-evaluation/`](../../examples/03-your-own-evaluation/) -- a working one.

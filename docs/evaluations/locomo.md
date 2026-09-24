@@ -7,7 +7,7 @@ from memrank.evaluations import LoCoMo
 evaluation = LoCoMo()
 ```
 
-Ten very long dated conversations, with about 1,500 scored questions about what was said in them.
+Ten dated conversations with about 1,500 scored questions about their content.
 
 ## How it works
 
@@ -24,26 +24,25 @@ almost none of them with an answer to grade against.
 
 ## Why it matters
 
-It is the public evaluation most memory vendors quote, so it is the one where a neutral, budget-
-matched number is most worth having. It is also the one to be most careful with: its conversations
-fit inside a current model's context window, so [full-context](../systems/full-context.md) can
-reach the ceiling on it, and a strong score does not establish that memory was needed.
+LoCoMo supports comparisons on multi-session conversation recall. Its conversations may fit
+within the reader's context window, so include a [full-context](../systems/full-context.md)
+comparison when assessing the benefit of retrieval. A high score alone does not establish that
+retrieval was necessary.
 
 **Quality here requires a judge.** The published protocol grades the generated answer against a
-reference, which no fixed rule can do: the reference answers are derived -- *"three times"*,
-*"2022"* -- rather than quotes, so looking for them in retrieved text measures how literally a
-system stored things. Without a judge this evaluation reports latency, failures and question
+reference. The reference answers can be derived -- *"three times"*,
+*"2022"* -- rather than quotes, so literal retrieval matching can miss correct evidence. Without a judge this evaluation reports latency, failures and question
 counts, and no quality number at all.
 
 ## What it needs
 
 A one-time download of the dataset, cached after the first run, or a local copy pointed at with
 `LOCOMO_DATA_PATH`. The cached file is checked against a pinned checksum on every load, so a
-drifted or revised copy fails loudly rather than quietly scoring.
+changed copy raises a checksum error before scoring.
 
 Quality also needs a judge, which means a model key and sending question text to that model.
 
-The data is licensed for non-commercial use. Check that before you build on a number from it.
+The data is licensed for non-commercial use. Check its terms before using or redistributing it.
 
 ## References
 
@@ -51,5 +50,5 @@ The data is licensed for non-commercial use. Check that before you build on a nu
   own harness.
 - [arXiv:2402.17753](https://arxiv.org/abs/2402.17753) -- *Evaluating Very Long-Term
   Conversational Memory of LLM Agents*, ACL 2024.
-- [Methodology](../methodology.md) -- why quality needs a judge, and what a non-discriminative
-  evaluation licenses you to say.
+- [Methodology](../methodology.md) -- why quality needs a judge, and limits on interpreting
+  conversation-recall scores.

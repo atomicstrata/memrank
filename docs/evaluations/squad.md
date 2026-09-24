@@ -11,8 +11,8 @@ A fixed subset of SQuAD v1.1's development set, used to retrieve passages that a
 
 ## How it works
 
-SQuAD natively supplies a passage alongside questions about it. Memrank instead tells the
-[system](../reference/system.md) all 32 passages as documents in one isolated pool, then asks
+SQuAD natively supplies a passage alongside questions about it. Memrank instead supplies the
+[system](../reference/system.md) with all 32 passages as documents in one isolated pool, then asks
 64 questions. The subset is the first 32 paragraphs in article/paragraph array order, with
 the first two questions from each paragraph's question array. There is no sampling.
 The JSON records this rule, source checksum and attribution in its provenance field. A tracked
@@ -33,13 +33,10 @@ score. It tests whether the system can retrieve the passage known to answer a qu
 not test whether the system can produce the answer. Returning more passages can increase recall;
 this measure does not penalize irrelevant returned passages. Keep retrieval limits comparable.
 
-The pool is also small: 32 passages, where open-domain question answering retrieves over
-millions. Finding the right passage among 32 is nearly trivial, which is why the quick start's
-TFIDF recalls almost every one -- the score reflects the pool, not an excellent retriever, and is
-not comparable to published retrieval results on a full corpus.
+The 32-passage pool is an installation check, not evidence of performance over a full corpus.
+Its scores are not directly comparable with published open-domain retrieval results.
 
-Sparse retrieval on this task is a standard setup rather than a toy one: TF-IDF and BM25 are the
-long-standing baseline for passage retrieval in open-domain question answering
+TF-IDF and BM25 are standard passage-retrieval baselines in open-domain question answering
 ([Karpukhin et al., 2020](https://arxiv.org/abs/2004.04906) calls them "the de facto method").
 
 ## What it needs

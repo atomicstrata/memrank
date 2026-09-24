@@ -1,7 +1,7 @@
 # Local development
 
-Working **on** memrank, rather than with it. If you only want to run evaluations, install the
-package instead -- see [installing memrank](install.md).
+Set up a checkout to contribute to Memrank and run its checks. To use the released package,
+follow [Installing Memrank](install.md).
 
 memrank uses Python 3.12 locally and [uv](https://docs.astral.sh/uv/) for interpreter, environment
 and dependency management. Run every command from the repository root.
@@ -11,7 +11,7 @@ and dependency management. Run every command from the repository root.
 ```bash
 git clone https://github.com/atomicstrata/memrank
 cd memrank
-uv sync --extra dev
+env -u UV_PROJECT_ENVIRONMENT uv sync --extra dev
 ```
 
 The repository is public, so cloning needs no credential. To use this checkout from a project of
@@ -24,8 +24,7 @@ reproducing a published result, or bisecting a failure that may be a dependency'
 
 `.python-version` pins the local interpreter to 3.12 and uv installs it if the machine has none.
 **Python 3.10 is the supported floor** -- `pyproject.toml` declares `requires-python = ">=3.10"`
-and mypy targets 3.10 -- so a change that needs a newer language feature is a change to that floor,
-not a local decision.
+and mypy targets 3.10 -- so using a newer language feature requires an explicit compatibility change.
 
 Optional extras, each added to the same environment:
 
@@ -55,11 +54,11 @@ one line per value with the measure that produced it and who decided it, and the
 every machine and every run; nothing else in the output does.
 [result](reference/result.md) is what to read out of `result.values` and `result.traces`.
 
-## Not core: the command line
+<a id="not-core-the-command-line"></a>
+## Command-line development
 
-memrank's interface is the Python package. The command line is an older surface, kept working
-but not developed, and nothing above needs it. [The command line](misc/command-line.md) is its
-page; what is particular to a checkout is here.
+The examples above use Python. The [command line](misc/command-line.md) provides tracked and
+placed runs; what is particular to a checkout is here.
 
 ### Run it from the checkout
 
@@ -88,8 +87,11 @@ is where the command line's own older words apply, `target` for the system and `
 evaluation:
 
 ```bash
-uv run python -m memrank.runner submit word-overlap demo
+uv run python -m memrank.runner submit word-overlap demo --on none
 ```
+
+Always choose placement explicitly for a local check. A bare submission can use a configured
+cloud default and start a paid run. The Python check above has no placement or submission step.
 
 For live engine runs, start the target backend first and set its URL if it differs from the
 default:
@@ -111,7 +113,7 @@ Judged runs send evaluation content to Anthropic:
 
 ```bash
 export ANTHROPIC_API_KEY=...
-uv run memrank submit atomicmemory beam:100k-smoke --judge
+uv run memrank submit atomicmemory beam:100k-smoke --judge --on none
 ```
 
 Datasets download on first use and cache under `MEMRANK_CACHE_DIR`. Each loader also honours a
@@ -122,12 +124,12 @@ Run output lands under `results/`, which is gitignored.
 
 ## Tests and checks
 
-Three commands gate a change. Run them before you hand anything off:
+For runtime changes, run the repository's applicable quality checks:
 
 ```bash
-uv run pytest
-uv run ruff check .
-uv run mypy memrank
+env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest
+env -u UV_PROJECT_ENVIRONMENT uv run ruff check .
+env -u UV_PROJECT_ENVIRONMENT uv run mypy memrank
 ```
 
 Tests that need a live memory engine skip when none is running; the static contract suite still
@@ -135,15 +137,20 @@ has to pass. During iteration, run the focused suite for what you touched:
 
 | You changed | Run |
 |---|---|
-| anything under `memrank/adapters/`, or its `REGISTRY` | `uv run pytest tests/live/conformance/test_adapter_contract.py` |
-| latency or token collection | `uv run pytest tests/instrumentation/` |
-| the CLI or the runner | `uv run pytest tests/cli/test_runner_help.py`, plus the command by hand |
-| judging | `uv run pytest tests/judging/` |
-| documentation | `uv run pytest tests/repo/` |
+| anything under `memrank/adapters/`, or its `REGISTRY` | `env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest tests/live/conformance/test_adapter_contract.py` |
+| latency or token collection | `env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest tests/instrumentation/` |
+| the CLI or the runner | `env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest tests/cli/test_runner_help.py`, plus a read-only command by hand |
+| judging | `env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest tests/judging/` |
+| documentation only | the relevant documentation guards below, plus link, diff and snippet verification |
 | a core contract in `memrank/core.py` | everything |
 
-The documentation guards in `tests/repo/` check two things, and are worth knowing about before
-they fail on you.
+Use the worktree's own environment: `UV_PROJECT_ENVIRONMENT` can otherwise redirect uv to a
+shared environment. After running checks, confirm the import points inside your checkout with
+`env -u UV_PROJECT_ENVIRONMENT uv run python -c "import memrank; print(memrank.__file__)"`.
+Invoke pytest as `python -m pytest` so a missing development dependency cannot silently select
+a different pytest executable from PATH.
+
+The documentation guards in `tests/repo/` check syntax, examples and factual claims:
 
 - **Form.** Every relative link and anchor resolves (`test_doc_links.py`,
   `test_doc_anchors_resolve.py`, `test_readme_links_are_absolute.py`); every Python block runs
@@ -162,7 +169,8 @@ The claim guards read fixed shapes of sentence, so they do not replace reading. 
 demotes a name, changes what ships or changes a method, search the published tree for the old
 fact and read every hit -- not only the pages the change is about.
 
-## Where things live
+<a id="where-things-live"></a>
+## Repository layout
 
 ```
 memrank/
@@ -191,10 +199,10 @@ module.
 `tests/live/conformance/test_adapter_contract.py` is the suite every entry in
 `memrank/adapters/`'s `REGISTRY` must satisfy.
 `publish.toml` classifies every path public or internal, and `tests/repo/test_public_boundary.py`
-checks that classification holds -- which is why this repository can verify its own boundary rather
-than asking you to trust that someone did.
+checks that the published tree respects that classification.
 
-## Adding something
+<a id="adding-something"></a>
+## Add an integration
 
 - **A system of your own** -- [adding a system](systems.md): pass the instance as
   `evaluation.run(system=...)`, and register it only when it needs a name.
@@ -204,14 +212,12 @@ than asking you to trust that someone did.
   [`examples/more/native-adapter/`](../examples/more/native-adapter/README.md) is a working one.
 
 A change that affects how anything is scored needs a matching change to
-[methodology.md](methodology.md). A scoring change nobody can see in the documentation is the
-failure mode this instrument exists to rule out.
+[methodology.md](methodology.md). Document the scoring rule so readers can interpret and reproduce the measurement.
 
 ## Why this repository carries the program that produces it
 
-`tools/` is the projector. `publish.toml` classifies every path in the source repository as
+`tools/` contains the public-tree projection utility. `publish.toml` classifies every path in the source repository as
 public or internal, and `python -m tools.project --out <dir> --rev <sha>` writes the public tree
-from a committed revision. Both ship deliberately, in the manner of Google's Copybara: the
-boundary is data a reader can inspect rather than a claim they have to take on faith, and
-`tests/repo/test_public_boundary.py` and `tests/repo/test_projection.py` re-check it here, in
-the published tree, against the same rules.
+from a committed revision. The rules and projection utility are public, so readers can inspect how the tree is produced.
+`tests/repo/test_public_boundary.py` and `tests/repo/test_projection.py` check those rules in
+the published tree.
