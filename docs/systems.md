@@ -1,45 +1,43 @@
 # Adding a system
 
-A **[system](reference/system.md)** is the thing under test, and its kind is the class you
-subclass, so a kind cannot be declared wrong. This page is the long version of that reference
-page.
+A **[system](reference/system.md)** is the implementation you put under test. First check the
+[shipped systems](systems/README.md): a client may already support your engine. Otherwise,
+implement the appropriate kind below, then pass an instance to the evaluation.
 
-You do not have to put your system inside this package to run it, and you do not have to give it
-a name. Pass the instance.
+Pass an instance from your own project; no package contribution or catalog registration is required.
 
-Memrank supplies everything around it: the run loop, isolation between groups of tasks, latency
-and token instrumentation, cost accounting, the [measures](reference/measure.md) that turn what
-was observed into named values, and the receipt that records what actually ran.
+Memrank calls the lifecycle at the evaluation's boundaries, records traces, times calls and
+applies [measures](reference/measure.md). Your implementation must honor isolation and clear its
+own state. System-declared information, such as token usage, remains a declaration; Memrank
+cannot infer it from an HTTP response time.
 
-**One note on names.** The memory contract is defined as `Memory`, and `MemoryAdapter` and
+**Compatibility aliases.** The memory contract is defined as `Memory`, and `MemoryAdapter` and
 `MemoryEngine` are deprecated aliases of that same class object, so every memory class already
-written is a `Memory` and needs no edit. Write `memrank.Memory` in anything new. The nine shipped
-systems dropped their `Adapter` suffix the same way, keeping the old spelling as an alias;
+written is a `Memory` and needs no edit. Write `memrank.Memory` in anything new. Existing system classes retain their old `Adapter` names as aliases;
 `memrank/adapters/__init__.py` lists them.
 
 ## The four kinds, and the verbs each one requires
 
-The kind **is** the base class. `KIND_NAMES` and `REQUIRED_VERBS` in `memrank.instrument.system`
+The base class determines the system kind. `KIND_NAMES` and `REQUIRED_VERBS` in `memrank.instrument.system`
 are where this table is stated; the memory contract itself lives in `memrank.instrument.kinds`,
 because it is the one kind that needs the value types in `memrank.contract`.
 
 | Kind | Subclass | What it is for | Verbs it must supply |
 |---|---|---|---|
-| memory | `memrank.Memory` | told things, asked later for what is relevant, cleared on request | `prepare`, `ingest`, `retrieve`, `cleanup` |
+| memory | `memrank.Memory` | stores documents, retrieves relevant ones and clears state on request | `prepare`, `ingest`, `retrieve`, `cleanup` |
 | model | `memrank.Model` | completes a prompt | `complete` |
-| retriever | `memrank.Retriever` | ranks over a corpus it already holds; nothing is told to it | `rank` |
+| retriever | `memrank.Retriever` | ranks an existing corpus without ingesting task context | `rank` |
 | assistant | `memrank.Assistant` | responds to a list of messages in the usual `role`/`content` shape | `respond` |
 
 `kind_of` finds the kind by walking your class's MRO for one of those four, so you declare a kind
-by subclassing and in no other way. A run works the consequences out **before it touches your
-system** (`memrank/instrument/refusal.py`) and returns a refusal -- a result with no traces and a
+by subclassing and in no other way. A run validates this **before calling your system** (`memrank/instrument/refusal.py`) and returns a refusal -- a result with no traces and a
 stated reason -- rather than failing somewhere inside the loop. It refuses when the object is not
 a `System` at all, when it subclasses `System` but none of the four kinds, and when it is a kind
 whose required verb it does not supply.
 
 Two refusals are about the fit between the system and the evaluation rather than about the class:
 
-- an evaluation whose tasks carry **context** needs a kind that can be told things, which today
+- an evaluation whose tasks carry **context** needs a kind that supports ingestion, which today
   is memory alone;
 - a measure that reads `answered` needs a kind that answers -- model or assistant -- or an
   `answerer=` passed to the run, because a memory only recalls.
@@ -60,9 +58,9 @@ print(result.refused)
 print(result.refusal)
 ```
 
-Everything a system may say about **itself** is optional: `declared_version`, `declared_tokens`,
+System declarations are optional: `declared_version`, `declared_tokens`,
 `declared_timings` and `declared_state` are plain methods on `System` that return `None` until
-you write one, and declaring nothing is recorded as nothing, never as zero. The memory contract
+you write one, and missing information is recorded as `None`, not zero. The memory contract
 keeps its own older spellings of the last three -- `token_metrics`, `declared_latency` and
 `state_fingerprint` -- and memrank reads both, so an existing class needs no edit.
 
@@ -102,41 +100,58 @@ result = memrank.evaluation("demo").run(system=MyMemory())
 print(result.values_of("demo-score")[0].value, result.system.name, result.system.kind)
 ```
 
+### Why a memory has four methods
+
+Each method separates a part of the experiment that would otherwise be hidden inside your
+application. For each isolation unit selected by the evaluation's clearing rule:
+
+1. `prepare(isolation_unit)` starts an isolated store. The toy resets its list; a client can
+   select a fresh namespace so documents from another unit do not influence this one.
+2. `ingest(documents)` receives the context before questions arrive. Your system may build an
+   index or send the documents to an engine. Memrank times this call separately from retrieval.
+3. `retrieve(query, k, user_id, query_timestamp)` returns a `Recall` for each question. Preserve
+   ranking order and honor the supported user and time boundaries. The toy ranks shared words;
+   it does not implement a multi-user service or temporal retrieval.
+4. `cleanup()` removes the state created for that isolation unit. For a remote engine, delete
+   only the namespace reserved for this evaluation, never shared application data.
+
+The evaluation decides when to clear: per task, per group or at the end. That lets tasks which
+belong to one conversation share context while independent cases start separately. See
+[clearing rules](reference/evaluation.md) and [run behavior](reference/run.md). Observing that
+cleanup returned does not prove that an external service erased state; test that contract in
+your implementation.
+
 Those four verbs are the whole third-party contract for the memory kind, and they are abstract:
 a run refuses before touching anything when one is missing. [The translator
 contract](system-contract.md) states each one in full.
 
-`retrieve` returns a `Recall`: the documents in the order your system ranked them -- the order
-**is** the measurement, so return at most `k` and never pad -- and `declared`, whatever your
+`retrieve` returns a `Recall`: the documents in the order your system ranked them -- ranking affects retrieval metrics, so return at most `k` and never pad -- and `declared`, whatever your
 system wants to say about the call, recorded untouched. Both halves land on the
 [trace](reference/trace.md).
 
-Nothing in those four verbs reports a measurement memrank takes itself: memrank times every
-ingest and retrieve at its own call boundary, so latency is neither your job nor something your
-system could flatter.
+Memrank times ingest and retrieve at its call boundary. Do not report those timings from your
+system; use optional declarations for internal timing information.
 
-Nothing here touches the registry, the command line, a configuration setting or a file inside
-`memrank/`. The evaluation the verb is called on is reached the same way:
+No registry or package changes are needed. Construct the evaluation with
 `memrank.evaluation("demo")`, `memrank.evaluations.Demo()`, or an `Evaluation` of your own (see
 [adding an evaluation](evaluations.md)).
 
-The runnable version of exactly this, offline and in about a second, is
+An offline example of this pattern is
 [`examples/02-your-own-system/`](../examples/02-your-own-system/README.md):
 
 ```bash
 uv run python examples/02-your-own-system/run.py
 ```
 
-**What the instance route does not reach.** A system passed as an object has no catalog ref, so
-there is no address, no variant digest and no provenance for the build. `memrank submit`, cloud
-placement and `workers > 1` all need a ref, and the run's evidence class is
-`development_observation`, `publishable: false`. Reaching those means giving the system a name,
-which is [not core](#not-core-registration-targets-and-the-command-line).
+Next, [compare this system with another](comparing.md) and [inspect its results](results.md).
+The Python result records the observed system and evaluation; it does not package your engine's
+build or environment. For tracked and placed runs through the command line, see
+[registration and targets](#register-a-system-for-the-command-line). Those use a
+separate result and provenance format.
 
 ## 2. Declare what only your system knows
 
-Latency is memrank's, taken at its own call boundary. What memrank cannot see, your system may
-declare, and both declarations below are optional.
+Memrank measures call latency. Your system can optionally report token usage and internal timings.
 
 **Token usage** is the one measurement only a system can make, because only it is told what a
 provider billed it. Record into a `TokenCollector` and return `self.tokens.as_metrics()` from
@@ -166,8 +181,7 @@ print(system.token_metrics()["tokens_per_query_mean"])
 ```
 
 **Hold the collector as `self.tokens`, under that name**, even though the run never looks for it.
-A tracked run at `workers > 1` builds one system per worker and pools the *collectors*, because a
-statistic of rendered statistics is not a statistic of the population -- and it finds them by
+A tracked run at `workers > 1` builds one system per worker and pools the *collectors*, to calculate statistics over the combined samples -- and it finds them by
 that attribute (`memrank/evaluation/measurement.py`). A class that overrides `token_metrics`
 while keeping no collector is refused there with that reason stated.
 
@@ -182,8 +196,7 @@ percentiles: the run puts them on the [trace](reference/trace.md) at
 tracked run pools them across the systems a `workers > 1` run builds and renders
 `<bucket>_p50_ms` / `<bucket>_p95_ms` itself, so a run at any width reports the same statistic of
 the same population. The conventional buckets are `ingest_engine` and `retrieve_engine`. A bucket
-that would render one of memrank's own six measured keys is refused: a system does not report the
-figure the reader reads.
+that would render one of memrank's own six measured keys is refused: system declarations cannot replace Memrank's measured latency.
 
 A `memrank.instrumentation.LatencyCollector` is the shape those samples come from, and it is
 yours: wrap your own calls with `collector.track("ingest_engine")`, then hand the samples back
@@ -209,15 +222,15 @@ and both are first-class.
 - **Record the engine's internal config** -- the LLM or embedder it uses -- where you can, so
   what was actually compared is explicit rather than implied.
 
-## Not core: registration, targets and the command line
+<a id="not-core-registration-targets-and-the-command-line"></a>
+## Register a system for the command line
 
-**Memrank's interface is the Python package, and everything above is the whole of it.** The rest
-of this document is the command line's own surface -- a catalog of named systems, kept working
-but not developed -- and its older vocabulary: a **target** is its word for a named system, and
+The examples above use the Python interface. The rest of this document describes the command
+line's catalog of named systems and its vocabulary: a **target** is its word for a named system, and
 an **adapter** its word for the class that drives one. [The command line](misc/command-line.md)
 is where that surface is documented.
 
-Do the rest of this document when the system should be runnable **by name**: from the command
+Continue when the system should be runnable **by name**: from the command
 line, at `workers > 1`, in the cloud, or by other people. Registration decides where the code
 lives and what may address it; it never changes what the four verbs do, and it never changes what
 may be claimed about a measurement.
@@ -233,8 +246,7 @@ There are three ways to take that step.
 | Evidence class | derives from how the artifact was bound | artifact-backed, publishable | `development_observation`, `publishable: false` |
 | Verify with | `memrank targets verify <ref>` | `pytest tests/live/conformance/test_adapter_contract.py` | `memrank targets verify <ref>` |
 
-[`examples/more/custom-target/`](../examples/more/custom-target/README.md) wires a twenty-line
-system all three ways and runs offline.
+[`examples/more/custom-target/`](../examples/more/custom-target/README.md) demonstrates these integration options with a small local implementation.
 
 Which one to pick:
 
@@ -262,13 +274,13 @@ REGISTRY["myengine"] = MyAdapter
 ### 4. Make it a target (stack engines)
 
 A registered class alone is reachable from Python -- `memrank.system("myengine")` -- against a
-backend you stood up yourself. For `memrank submit myengine ... --on local|cloud` to launch the engine, every
-chokepoint below needs an entry -- each fails loudly, or is covered by an enumeration test, when
+backend you started yourself. For `memrank submit myengine ... --on local|cloud` to launch the engine, every
+configuration table below needs an entry -- each fails loudly, or is covered by an enumeration test, when
 missing. `hindsight` is the worked example to mirror: its image is the vendor's own
 (`ghcr.io/vectorize-io/hindsight`, anonymous pull), so every file below is one you can read and
 run without credentials.
 
-| Chokepoint | File | What to add |
+| Configuration | File | What to add |
 | --- | --- | --- |
 | Target manifest | `memrank/targets/builtin/myengine.yaml` | name/kind/adapter/transport, `engine: {artifact, port}`, declared `components`, `compose`, `service` |
 | Compose graph | `memrank/targets/builtin/myengine.compose.yaml` | the engine's containers, image pinned by public reference |
@@ -278,8 +290,8 @@ run without credentials.
 | Provenance | `memrank/provenance/engine.py` | `PROVENANCE["myengine"]` (purl identity, manufacturer/supplier, pedigree). `source_repo` is for a repository a reader of the receipt can actually fetch; a source that is not public sets `source_repo: None` plus `source_visibility: "private"` and a public `source_name`, and the commit is pinned by a locationless `pkg:generic/<name>@<commit>` purl instead of by a name nobody can resolve. |
 | Enumerating tests | `tests/targets/test_catalog.py` (`EXPECTED`), `tests/live/conformance/test_adapter_contract.py` (`_backend_url`), `tests/placement/test_taskdef_render.py`, `tests/placement/test_local_placement.py`, `tests/provenance/test_engine_provenance.py`, `tests/secrets/test_requirements.py` | add the new name to each pinned list |
 
-A component knob the engine exposes but the manifest leaves unstated fails the render
-(`component_env`): declare every knob explicitly, even "the built-in default" -- an engine whose
+An engine setting omitted from the manifest fails rendering
+(`component_env`): declare every supported setting explicitly, even "the built-in default" -- an engine whose
 deterministic fallback extractor is the default still has to say so, or the receipt cannot report
 what ran.
 
@@ -301,9 +313,8 @@ secrets:
 secrets: [MYENGINE_USER, MYENGINE_PASSWORD, MYENGINE_TENANT]
 ```
 
-Each name is resolved through the one credential chokepoint -- process environment, then org
-secrets, then the encrypted wallet -- and injected under the variable the target names. memrank
-learns nothing about what any of them mean, which is the point: an engine authenticating with a
+Each credential is resolved in priority order -- process environment, then org
+secrets, then the encrypted wallet -- and injected under the variable the target names. Memrank does not interpret the credential names: an engine authenticating with a
 user and a password, a client id and a tenant, or a token under a name nobody anticipated needs
 no change to memrank at all.
 
@@ -342,7 +353,7 @@ target's declared `network.port`. The optional `requires` paths give an early wr
 error. The developer then runs:
 
 ```bash
-memrank submit myengine:dev demo
+memrank submit myengine:dev demo --on none
 ```
 
 Endpoint operations still belong in the named adapter. The target owns launch and readiness, and
@@ -357,7 +368,7 @@ point `launch.command` at a translator instead; see
 ### 5. Run the conformance suite
 
 ```bash
-pytest tests/live/conformance/test_adapter_contract.py -k myengine
+env -u UV_PROJECT_ENVIRONMENT uv run python -m pytest tests/live/conformance/test_adapter_contract.py -k myengine
 ```
 
 Static checks -- class attributes, abstract method coverage, metric key shape -- run
@@ -380,7 +391,7 @@ what it is about. [`tests/README.md`](../tests/README.md) states the rule for ev
 
 Per the vendor-neutral charter, AtomicStrata commits to reviewing valid PRs within 7 days.
 Include the class under `memrank/adapters/<name>.py`, its registry entry, tests under
-`tests/adapters/`, documentation for any new env vars, and a brief note on how to stand up the
+`tests/adapters/`, documentation for any new env vars, and instructions for starting the
 backend locally.
 
 ### Registering a system from outside
@@ -417,12 +428,10 @@ memrank config set targets.path /abs/path/to/your/targets
 
 Both settings persist, and both are read on every command: a module named in `adapters.plugins`
 that is not importable fails every command until the path is restored or the setting is cleared
-(`memrank config set adapters.plugins ""`). That is the price of a name, and it is why the
-instance route asks for neither.
+(`memrank config set adapters.plugins ""`). Direct instance use does not require these settings.
 
-An in-process system has nothing to launch and nothing to reach, so it uses
-`AdapterRegistration.in_process(...)` instead, which asks only what launching it costs in
-credentials and what the receipt should say about it.
+For an in-process system, use `AdapterRegistration.in_process(...)` and declare its credential
+requirements and provenance.
 
 The first seven fields of `AdapterRegistration` have no defaults on purpose. Each is read where
 absence is either a loud failure far from its cause or -- for `provenance` -- a silent one:

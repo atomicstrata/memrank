@@ -6,14 +6,13 @@ from memrank.systems import Supermemory
 system = Supermemory(base_url="http://localhost:6767")
 ```
 
-Supermemory AI's memory API, driven over HTTP against the self-hosted server.
+An HTTP client for Supermemory AI's self-hosted memory server.
 
 ## How it works
 
 The engine runs as a service. Memrank clears the namespace for a group of
-[tasks](../reference/task.md), stores each document it is given as memories -- splitting a long
-one, because the engine caps how much a single memory holds -- and searches that namespace at
-question time.
+[tasks](../reference/task.md), stores the supplied documents as memories, splitting long documents to meet the engine's
+size limit, and searches that namespace for each question.
 
 Supermemory's own design, as its authors describe it: memories are atomic and linked to each
 other by exactly three relations -- one memory *updates* another, *extends* it, or is *derived*
@@ -22,10 +21,9 @@ normalized shape the [relation-graph evaluation](../evaluations/relation-graph.m
 
 ## Why it matters
 
-It is one of the engines memrank exists to measure neutrally, and one where the distinction
-between what is published and what you can run yourself is sharp: the vendor's headline numbers
-were taken on their hosted platform, and this system drives the self-hosted binary, whose memory
-engine is not open source. A row here describes what you can actually run.
+This client evaluates the self-hosted binary, whose memory engine is not open source. The
+vendor's published scores use its hosted platform. Treat those as different configurations
+when interpreting results.
 
 ## What it needs
 

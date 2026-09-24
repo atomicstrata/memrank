@@ -1,7 +1,7 @@
 # result
 
-A **result** is what a [run](run.md) returns: the records of what happened, and the values read
-off them. This page is about reading one.
+A **result** contains a [run](run.md)'s recorded traces and measured values. Use it to inspect
+responses and failures, interpret scores, and save evidence for later analysis.
 
 ```python
 from memrank.evaluations import Demo
@@ -28,30 +28,26 @@ q_allergy_neg  1.0  decided by rule
 
 ## What it is
 
-A result holds two things and refuses to collapse them:
+A result contains:
 
-- **`traces`** -- one [trace](trace.md) per task per attempt: what was given, what came back,
-  what each step timed, and the error with the step it broke at when it broke.
-- **`values`** -- what the [measures](measure.md) produced. Every value carries the measure's
-  name and its decider, and most carry a `why`. There is no bare number anywhere in a result,
-  and no overall score across measures.
+- **`traces`** -- one [trace](trace.md) per task attempt, recording context document IDs,
+  responses, timings and any error.
+- **`values`** -- the outputs of [measures](measure.md), each identified by measure name and
+  `decider`, with an optional explanation in `why`. There is no overall score across measures.
 
-It is a record, not a verdict. Nothing in a result says which system is better -- that depends
-on what you are buying, and the values do not know what that is.
+Interpret these values against your evaluation's criteria and the comparison's purpose.
 
-Three rules it enforces:
+- **Missing values:** `None` means unavailable or undeclared. It does not mean zero.
+- **Failed tasks:** the trace records the failure and `failure-rate` counts it. Built-in
+  task measures return `None` when the evidence they need is unavailable. Custom measures
+  must define their own failure handling.
+- **Refused runs:** `result.refusal` gives the reason and the result has no traces. The run
+  has not called the system lifecycle.
 
-- **Absent is not zero.** A system that declared no token usage records `None`; a measure that
-  could not decide records `None` with the reason. Conflating the two fabricates a win for every
-  system that stayed quiet.
-- **A failed task is a row, not a gap.** Its trace is there, `failure-rate` counts it, and every
-  task-scope measure records `None` for it.
-- **A refused run has no traces and a reason.** `result.refusal` says why, and nothing was
-  touched.
 
-`result.save(path)` writes a result; `memrank.Result.load(path)` reads it back in another
-process, days later, with the traces intact. That is what lets `memrank.measure` apply a new
-measure without rerunning anything.
+
+`result.save(path)` writes a result; `memrank.Result.load(path)` loads it with its traces intact. Use `memrank.measure` to apply a new measure without
+rerunning the system.
 
 ## Who supplies what
 
@@ -75,8 +71,8 @@ print(sorted({value.measure for value in reloaded.values}))
 - `memrank.Result` -- fields `schema_version`, `system`, `evaluation`, `refusal`, `traces`,
   `values`, `started`, `finished`.
 - `result.values_of("<measure name>")` -- one measure's values, picked out of the rest.
-- `result.traces_of("<task id>")` -- the traces of one task. Where you dig when a value is low.
-- `result.save(path)` and `Result.load(path)` -- to disk and back, typed.
+- `result.traces_of("<task id>")` -- the recorded attempts for one task.
+- `result.save(path)` and `Result.load(path)` -- save and load a typed result.
 - `memrank.measure(result, MyMeasure())` -- a new measure over traces already stored.
 - `memrank.paired(a, b)` -- [two results side by side](paired.md).
 
@@ -84,4 +80,4 @@ print(sorted({value.measure for value in reloaded.values}))
 
 - [trace](trace.md) and [measure](measure.md) -- the two halves a result holds.
 - [paired](paired.md) -- comparing two of them.
-- [Methodology](../methodology.md) -- what a value does and does not license you to say.
+- [Methodology](../methodology.md) -- measurement rules and interpretation limits.

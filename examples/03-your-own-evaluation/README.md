@@ -2,9 +2,8 @@
 
 `uv run python examples/03-your-own-evaluation/run.py`
 
-Your questions, your context. An evaluation is tasks, the measures it ships with, and the rule
-for when state is cleared -- the same kind of object `memrank.evaluation("demo")` returns. The
-one here is four notes and three tasks, written in the script.
+Define an evaluation with four context notes, three tasks, scoring measures and a clearing
+rule. It uses the same `Evaluation` type as Memrank's included evaluations.
 
-**Prints** values for the three tasks measured by `WordMatch`, then one task's trace: what was
-given, what came back, in what order. A trace is where you go when a number surprises you.
+The script prints `WordMatch` values for the tasks and one task's trace. Inspect the trace to
+see the supplied context IDs and returned documents behind the score.

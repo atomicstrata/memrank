@@ -6,26 +6,24 @@ from memrank.systems import Hindsight
 system = Hindsight(base_url="http://localhost:8888", api_key="...")
 ```
 
-Vectorize.io's open-source agent memory, driven over its HTTP API.
+An HTTP client for Vectorize.io's Hindsight agent memory service.
 
 ## How it works
 
 The engine runs as a service. Memrank gives each group of [tasks](../reference/task.md) its own
-bank, retains each document into that bank as the [evaluation](../reference/evaluation.md) hands
-it over, and recalls against the bank at question time.
+bank, stores each document supplied by the [evaluation](../reference/evaluation.md), and searches
+that bank for each question.
 
 Hindsight's own design, as its authors describe it: retaining splits a document into facts;
 recall runs several strategies at once -- meaning-based, keyword, graph expansion and temporal --
-fuses their orderings, reranks the survivors, and packs them to a token budget. It answers with a
-token budget rather than a fixed number of results, which is why memrank's own budget is the
-thing holding the arms level.
+combines their rankings, reranks candidates and selects results within a token budget.
+It limits tokens rather than result count; apply the context-budget rules in
+[methodology](../methodology.md) when comparing it with other systems.
 
 ## Why it matters
 
-It is one of the engines memrank exists to measure neutrally. Its authors publish strong numbers
-on public evaluations, obtained at their own retrieval depth and with their own reader and judge;
-a memrank row is a different measurement, taken under one budget with controls beside it, so the
-two are not interchangeable.
+Use this client to evaluate Hindsight under Memrank's protocol. Vendor-published scores may use
+different retrieval limits, readers or judges; compare configurations before comparing scores.
 
 ## What it needs
 

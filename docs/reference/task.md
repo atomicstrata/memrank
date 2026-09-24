@@ -15,21 +15,18 @@ print("expected answers:", task.expected.answers)
 
 ## What it is
 
-A task carries four things that matter:
+The main task fields are:
 
-- **`prompt`** -- what is put to the system.
-- **`context`** -- the documents to give it *before* the prompt. Tasks in the same `group` share
-  them: memrank gives them once and clears between groups, never inside one. A task with no
-  context is asked against whatever the group already established.
-- **`group`** -- the state it belongs to, which is what the [evaluation](evaluation.md)'s
-  clearing rule acts on.
+- **`prompt`** -- the question or instruction sent to the system.
+- **`context`** -- the documents to give it *before* the prompt. Under `Clearing.PER_GROUP`, Memrank ingests a group's documents once and calls cleanup
+  between groups. Other clearing rules change that boundary; see [evaluation](evaluation.md).
+- **`group`** -- the identifier used to group tasks that share state.
 - **`expected`** -- `answers` are acceptable answers, `required_spans` must appear,
   `forbidden_spans` must not, `evidence_doc_ids` names the documents that hold the answer, and
   `rubric` is prose for a judge to apply.
 
-`expected` is what a task hopes for, not what it scores. Nothing in the task decides anything: a
-[measure](measure.md) reads `expected` and decides, and which measure did so is recorded on
-every value.
+`expected` describes the desired outcome. A [measure](measure.md) applies a scoring rule to
+that expectation and the recorded response; every value identifies the measure that produced it.
 
 A task with `polarity="negative"` is one whose right answer is a refusal. `q_allergy_neg` asks
 whether Alex is allergic to peanuts, and "allergic to peanuts" is its forbidden span.
@@ -38,7 +35,7 @@ whether Alex is allergic to peanuts, and "allergic to peanuts" is its forbidden 
 
 Memrank supplies the tasks of every evaluation that ships, gives the context, puts the prompt,
 and records exactly one [trace](trace.md) per task per attempt, including when the task fails.
-You supply tasks when you write your own evaluation, and nothing about scoring.
+You supply task data for your own evaluation and choose its scoring measures separately.
 
 ## The Python names
 

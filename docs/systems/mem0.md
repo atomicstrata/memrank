@@ -7,8 +7,7 @@ system = Mem0(base_url="http://localhost:8888")   # mode="http", the default
 in_process = Mem0(mode="sdk")                     # needs the mem0 extra
 ```
 
-mem0's open-source memory layer, driven either as a Python library in your own process or over
-HTTP against a local server.
+A client for Mem0's memory layer, using its Python SDK or a local HTTP server.
 
 ## How it works
 
@@ -25,14 +24,12 @@ never changes how a run behaves.
 
 ## Why it matters
 
-It is one of the engines memrank exists to measure neutrally, and the one where extraction is
-most visible in the numbers: because facts are paraphrased rather than stored verbatim, a
-[measure](../reference/measure.md) that looks for the expected words in what was recalled
-penalizes it for working as designed. That is the reason quality on the larger evaluations is a
-judged measure and not a word match.
+Mem0 can paraphrase facts during extraction. A word-matching [measure](../reference/measure.md)
+can therefore miss correct information; use the evaluation's judged protocol when assessing
+answer quality.
 
-Its published headline was taken on the hosted platform at a far deeper retrieval setting than a
-budget-matched memrank row allows, so the two are not interchangeable.
+Published hosted-platform scores use their own retrieval settings and infrastructure. They are
+not directly comparable with a local Memrank run unless those conditions match.
 
 ## What it needs
 

@@ -6,33 +6,33 @@ from memrank.systems import NoContext
 system = NoContext()
 ```
 
-A control that retrieves nothing, so the reader has to answer from what it already knows.
+A diagnostic control that returns no documents. With an answer writer, it tests responses
+without retrieved context.
 
 ## How it works
 
-It accepts every document it is told, stores it, and then returns an empty list to every
-question. The [run](../reference/run.md) proceeds normally: the reader is handed no context and
-answers closed-book.
+It accepts and stores the supplied documents, but returns an empty list for every query.
+The [run](../reference/run.md) proceeds normally. If an answer writer is configured, it receives
+no retrieved context and must answer using the information already available to it.
 
 ## Why it matters
 
-It bounds the question from below. If a model answers as well with no memory at all, the
-[result](../reference/result.md) for a system on that [evaluation](../reference/evaluation.md)
-says nothing about memory -- the questions were answerable without it.
+Compare answers with and without retrieved context to investigate whether retrieval
+helps on the selected tasks. Similar scores can indicate that the reader can answer those
+tasks without retrieved evidence; they do not establish that memory has no value elsewhere.
 
-One honest limit: it is only meaningful on a judged [measure](../reference/measure.md). Measured
-on retrieval alone it can only score on questions a system is supposed to decline, since it
-retrieves nothing by construction.
+Without an answer writer and answer-scoring [measure](../reference/measure.md), the control tests
+retrieval scoring only. It can receive credit for a negative task that requires a forbidden
+span to remain absent, but it cannot retrieve evidence for a positive task.
 
 ## What it needs
 
-Nothing. No service, no network, no key, no download.
+No service, API key, network access or download for the control itself. Answer-quality
+comparisons need an answer writer and scoring measure. A model-based judge needs credentials.
 
 ## References
 
-- [Methodology](../methodology.md) -- the three controls, why each belongs beside a system, and
-  the published names for this condition.
-- [Roberts et al., EMNLP 2020](https://aclanthology.org/2020.emnlp-main.437/) -- the same
-  condition under the field's older name, *closed-book*.
-- [fixed-context](fixed-context.md) and [full-context](full-context.md) -- the other two
-  controls.
+- [Methodology](../methodology.md) -- diagnostic controls and their limits.
+- [Roberts et al., EMNLP 2020](https://aclanthology.org/2020.emnlp-main.437/) -- answering
+  without retrieved context, described as *closed-book* question answering.
+- [FixedContext](fixed-context.md) and [FullContext](full-context.md) -- the other controls.

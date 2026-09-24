@@ -1,7 +1,7 @@
 # system
 
-A **system** is the thing under test: a memory backend you run as a service, a class you wrote
-around your own store, or one of the systems that ship with the package.
+A **system** is the implementation evaluated by Memrank: a local retrieval method, a client
+connected to a memory service, a model or an assistant.
 
 ```python
 from memrank.systems import TFIDF
@@ -15,35 +15,29 @@ by how rare each word is. It needs no engine, no network and no key.
 
 ## System and engine
 
-A **system** is the object memrank drives and measures. An **engine** is the external service or
-library a system talks to: the vendor's running product, not the system itself.
+A **system** is the object Memrank calls and measures. An **engine** is an external service or
+library used by that object.
 
-- `TFIDF` has no engine. It is pure Python running in your own process, so the system is all
-  there is.
-- AtomicMemory is an engine: a service AtomicStrata runs, with its own HTTP API. The system is
-  [`memrank.systems.AtomicMemory`](../systems/atomicmemory.md), the class that drives that
-  service -- sends it documents, asks it for what is relevant, and clears it.
+- `TFIDF` implements retrieval locally and needs no external engine.
+- [`memrank.systems.AtomicMemory`](../systems/atomicmemory.md) is a client for the AtomicMemory
+  engine. It sends documents to the service, retrieves memories and clears evaluation state.
 
-So a result names a system, and an engine appears only as what a system reports about the
-service behind it -- its engine version, what a provider billed it. A system you write may wrap
-an engine or be the whole of the thing, and memrank measures it the same way either way.
+A result identifies the system. Engine versions and usage appear as system declarations.
 
 ## The four kinds
 
-A system's **kind** is the class you subclass, so a kind cannot be declared wrong.
+A system's **kind** is determined by its base class.
 
 | Kind | The verb it is for | What it must implement |
 |---|---|---|
-| `memrank.Memory` | told things, asked later for what is relevant | `prepare`, `ingest`, `retrieve`, `cleanup` |
+| `memrank.Memory` | stores supplied documents and retrieves relevant ones | `prepare`, `ingest`, `retrieve`, `cleanup` |
 | `memrank.Model` | given a prompt, returns text | `complete` |
-| `memrank.Retriever` | given a query, returns the top `k` of a corpus it already holds; nothing is told to it | `rank` |
-| `memrank.Assistant` | given a list of `role`/`content` messages, replies however it likes | `respond` |
+| `memrank.Retriever` | ranks an existing corpus for a query; does not ingest task context | `rank` |
+| `memrank.Assistant` | responds to a list of `role`/`content` messages | `respond` |
 
-Those verbs are the whole of what a kind requires. Memrank times every ingest and retrieve at
-its own call boundary, so latency is neither your job nor something your system could flatter.
-What only your system knows -- its engine version, what a provider billed it, time only it can
-see -- it declares through optional methods that return `None` until you say otherwise, and
-`None` is recorded as "did not state", never as zero.
+These methods are required. Memrank measures latency at its call boundary. Systems may also
+declare engine versions, token usage and internal timings through optional methods. The default
+`None` records missing information, not zero.
 
 A [run](run.md) refuses before touching the system when it is not a kind memrank knows, or when
 it lacks a verb its kind requires.
@@ -51,8 +45,9 @@ it lacks a verb its kind requires.
 ## Who supplies what
 
 You supply the system and its configuration -- `base_url=`, `api_key=`, whatever it needs.
-Memrank supplies the run loop, isolation between groups of [tasks](task.md), and the latency and
-token instrumentation.
+Memrank supplies the run loop, calls your lifecycle between groups of [tasks](task.md), and
+records timings and declarations. Your implementation must isolate and clear its state. See
+[why a memory has four methods](../systems.md#why-a-memory-has-four-methods).
 
 ## The Python names
 
@@ -71,7 +66,7 @@ print(isinstance(TFIDF(), memrank.Memory))   # its kind, which the class decides
 - `memrank.systems` -- the module holding what ships: `TFIDF`, `BM25`, `WordOverlap`,
   `NoContext`, `FixedContext`, `FullContext`, `AtomicMemory`, `Hindsight`, `Supermemory`,
   `Mem0`, `Native`.
-- `memrank.system("<name>")` -- the same things by string, which is the form a config file has.
+- `memrank.system("<name>")` -- construct a system from a string key, for example from configuration.
 - `memrank.Document` and `memrank.Recall` -- what `ingest` is given and what `retrieve` returns.
 
 ## Going deeper
@@ -80,5 +75,5 @@ print(isinstance(TFIDF(), memrank.Memory))   # its kind, which the class decides
   in full.
 - [The translator contract](../system-contract.md) -- a system memrank drives over HTTP rather
   than imports.
-- [Systems that ship](../systems/README.md) -- one page each.
+- [Supported systems](../systems/README.md) -- implementations and requirements.
 - [`examples/02-your-own-system/`](../../examples/02-your-own-system/) -- a working one.

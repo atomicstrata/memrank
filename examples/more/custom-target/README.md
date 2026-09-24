@@ -1,28 +1,23 @@
-# A target memrank does not ship
+<a id="a-target-memrank-does-not-ship"></a>
+# Register a custom target
 
-> **Not core.** memrank's interface is the Python package -- `import memrank`, a
-> [`Memory`](../../02-your-own-system/README.md) subclass handed to `memrank.run`, and that is
-> all it takes to measure a system of your own. This directory is about the *catalog*: naming
-> that system so [the command line](../../../docs/misc/command-line.md) can drive it. *Target* is
-> the command line's word for a named system and *adapter* its word for the class behind one;
-> both are that older surface's vocabulary, kept working but not developed.
+Use this example to make a custom implementation available to the
+[command line](../../../docs/misc/command-line.md). For direct Python evaluation, pass a
+[`Memory`](../../02-your-own-system/README.md) instance to `evaluation.run(system=...)`.
 
-`recency` is an engine that returns the *k* most recently ingested documents and never reads the
-question. About twenty lines of Python. This directory wires it into memrank three different ways,
-in ascending order of what each one buys, and everything here runs offline in under a second -- no
-server, no key, no image, no dataset to download.
+The example `Recency` implementation returns the `k` most recently ingested documents and ignores
+the query. It demonstrates integration mechanics and runs offline without a service or API key.
 
-**This is a template, not a memory system.** Benchmark it and you are benchmarking a list.
+<a id="the-three-doors"></a>
+## Integration options
 
-## The three doors
-
-| Door | You write | You get | Shown in |
+| Option | You write | You get | Shown in |
 |---|---|---|---|
 | **Instance** | a `Memory` subclass | a score, from a script | [`run.py`](run.py) |
 | **Registration** | the same class, plus one `register_adapter` call | a catalog ref: `memrank submit`, receipts, sweeps | [`recency_plugin.py`](recency_plugin.py) |
 | **Translator** | a program serving five HTTP endpoints, in any language | the same, without writing Python at all | [`../native-adapter/`](../native-adapter/README.md) |
 
-The first two are the same engine reached two ways. Pick the third when your engine is not Python,
+The first two use the same local implementation. Pick the third when your engine is not Python,
 or when you would rather memrank never imported your code.
 
 ## Door 1 -- an instance, no setup
@@ -31,17 +26,15 @@ or when you would rather memrank never imported your code.
 python examples/more/custom-target/run.py
 ```
 
-The run takes any `Memory` instance, so nothing has to be configured, registered or named. What
-it prints, and the line worth reading twice:
+The run takes any `Memory` instance, so nothing has to be configured, registered or named. The script prints:
 
 ```
 composite: 0.800  (recency × demo)
 engine ref:  None <- None by design: no ref was given, so none is invented
 ```
 
-That `None` is the whole difference between the doors. Without a ref there is no address, so there
-is no variant digest and no provenance for the build -- the number is real, and it is a sanity
-check rather than evidence.
+Without a catalog ref, this run has no variant digest or build provenance. Use it as a local
+check, not as a reproducible published comparison.
 
 ## Door 2 -- registration, so the CLI knows it
 
@@ -58,7 +51,7 @@ runs its `register_adapter(...)` call. `targets.path` is where memrank looks for
 besides its own. `PYTHONPATH` is the one that is not a memrank setting, so it does not persist --
 put it in your shell profile.
 
-Now the engine is an ordinary catalog citizen:
+The target is now available in the catalog:
 
 ```bash
 memrank targets ls | grep recency
@@ -66,18 +59,16 @@ memrank submit recency demo --on local
 memrank runs show <id>
 ```
 
-Pass `--on local` explicitly: `defaults.on` may be `cloud`, and a cloud submission of an engine
-that exists only on your laptop is not a thing that can work.
+Pass `--on local` explicitly: `defaults.on` may be `cloud`, and the hosted platform cannot load an implementation that exists only on your machine.
 
 ### What registration actually asks for
 
-`AdapterRegistration` takes the class **and the table rows that drive it**, together, with no
-defaults on the ones that are load-bearing -- so a registration that forgets one is a `TypeError`
+`AdapterRegistration` takes the class and its configuration records, with required
+fields -- so a registration that forgets one is a `TypeError`
 at the call rather than a `KeyError` at planning time, or, for `provenance`, nothing at all.
 
-An in-process engine has nothing to launch and nothing to reach, so it uses
-`AdapterRegistration.in_process(...)`, which needs only two things: what launching it costs in
-credentials, and what the receipt should say about it. An engine memrank has to *start* -- a
+An in-process implementation uses
+`AdapterRegistration.in_process(...)`, which requires its credential requirements and provenance. An engine memrank has to *start* -- a
 container, or a checkout it launches -- states more, because those rows are what start it. See
 [`../../../docs/systems.md`](../../../docs/systems.md).
 
@@ -93,7 +84,7 @@ Both score **0.800**, and that is not a bug in either engine. The `demo` scenari
 sessions, so at the default `k=10` *every* document is retrieved -- an engine that ranks perfectly
 and one that ignores the question entirely return the same set, and no metric can separate them.
 
-Tighten the budget and they come apart:
+Reducing the retrieval limit changes the comparison:
 
 ```bash
 memrank submit recency,word-overlap demo --on local --k 1
@@ -106,17 +97,16 @@ memrank submit recency,word-overlap demo --on local --k 1
 | 3 | 0.800 | 0.800 |
 | 10 | 0.800 | 0.800 |
 
-This is the most useful thing in the directory, and it is about evaluation rather than about
-either engine: **a slice can be too small to answer the question you are asking of it.** A result
-that holds at `k=10` on two documents says nothing about retrieval, and reporting it as though it
-did is how benchmarks mislead. Real numbers want `locomo` or `beam`.
+A small corpus with a large retrieval limit can hide ranking differences. Choose a corpus size
+and retrieval limit that test the behavior you care about; this example does not establish
+performance on a larger workload.
 
 ## Writing your own
 
 Copy [`recency_plugin.py`](recency_plugin.py) -- a `Memory` subclass called `Recency` -- and
 replace the four method bodies.
 
-| Method | Yours does | The trap |
+| Method | Responsibility | Important constraint |
 |---|---|---|
 | `prepare` | drop everything for this unit | leaked state does not raise -- it inflates every score after the first |
 | `ingest` | store the documents | -- |
@@ -125,8 +115,7 @@ replace the four method bodies.
 | `token_metrics` *(optional)* | the four required keys, where the engine is told what it spent | `None` is not `0.0` -- absent is the absence of a measurement |
 
 Latency is not in the table because it is not asked of an engine: memrank times every ingest and
-retrieve at its own call boundary. A translator that can see its engine's own spend inside that
-hop declares it through `declared_latency()`, as samples, under its own bucket name.
+retrieve at its own call boundary. A translator that can see time spent inside its engine declares it through `declared_latency()`, as samples, under its own bucket name.
 
 Then swap the descriptor in [`targets/`](targets/) for one naming your adapter, and point
 `adapters.plugins` at your module. Nothing in memrank changes.
@@ -150,11 +139,9 @@ registration itself supplied -- `provenance.type: "application"`, which is the h
 an in-process engine -- and because a receipt with no dynamic pin defaults to the *strongest* claim
 rather than the weakest.
 
-Two defects compose to produce it: silence reads as the strongest claim (a receipt with no evidence
+Two defects cause this: missing evidence assessment defaults to the strongest claim (a receipt with no evidence
 assessment defaults to publishable), and identity is asserted by the adapter rather than derived
-from what executed. Neither was introduced by the plugin mechanism -- but the mechanism is what
-makes them reachable by someone who is not us, which is why they are worth fixing before outside
-adapters are common.
+from what executed. These defects also affect externally registered adapters.
 
 Until they are: **do not read `publishable: true` on a plugin-backed run as a fact about the
 engine.** A run of an engine that lives on one laptop is a development observation whatever the

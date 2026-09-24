@@ -1,54 +1,68 @@
 ---
 status: active
-last_reviewed: 2026-09-21
+last_reviewed: 2026-09-24
 ---
 
 # Documentation
 
-Memrank is a Python package: you put an **evaluation** to a **system** -- `evaluation.run(system=...)`
--- and get back a **result** whose values each name the **measure** that produced them and who
-decided them. Everything below is in reading order.
+Memrank is a tool for reproducible, auditable evaluation of memory systems.
 
-## The entry path
+Memrank focuses on memory systems: it runs evaluation tasks and reports scores and timings, with
+recorded responses and errors to inspect. Use these results to understand how your memory system
+performs, compare it with another memory system and investigate differences on individual tasks.
 
-Read in this order. Every page here leads with Python, and none of them needs the command line to
-reach a result.
+<a id="the-entry-path"></a>
+## Start a task
 
-The [README](../README.md) links absolutely into the public repository because PyPI renders it as
-the package description and resolves a relative link against `pypi.org`; every page below links
-relatively, because they are read on GitHub.
-
-| | |
+| I want to... | Start here |
 |---|---|
-| [README](../README.md) | what memrank is, and a first result in a few lines of Python |
-| [Reference](reference/README.md) | one page per word -- system, evaluation, task, trace, measure, run, result -- each a definition, a snippet and the Python names |
-| [Installing memrank](install.md) | add the package to a project, import it, and print a result; upgrading |
-| [The systems that ship](systems/README.md) | one page per shipped system: what it is, how it works, why it matters, what it needs |
-| [The evaluations that ship](evaluations/README.md) | one page per shipped evaluation, to the same standard, including whether its quality value needs a judge |
-| [Adding a system](systems.md) | the four kinds, the verbs each requires, and running your own without naming it |
-| [The system contract](system-contract.md) | the wire contract for a system memrank drives as a process rather than imports, in any language |
-| [Adding an evaluation](evaluations.md) | your own tasks, and the rule for when the system's state is cleared |
-| [Measures](measures.md) | the measure contract: what a measure reads, who decides, and measuring stored traces afterwards |
-| [Runnable examples](../examples/README.md) | one folder per thing a person does, from a first result to two systems read as a pair |
-| [Methodology](methodology.md) | what each shipped measure actually measures, the context budget, the control arms, and what a value licenses you to say |
-| [SPEC.md](SPEC.md) | the specification: what memrank measures, what it refuses to claim, and the governance the maintainer commits to |
+| Try Memrank and understand the output | [Start here](getting-started.md): installation check, result interpretation and next steps |
+| Install or upgrade the package | [Installing Memrank](install.md): project-local setup and an offline check |
+| Compare memory systems and their versions | [Memory systems comparison guide](comparing.md): conditions, task-level pairing, differences and limitations |
+| Connect my implementation | [Adding a system](systems.md): use a shipped client or implement the lifecycle |
+| Use my own tasks and success criteria | [Adding an evaluation](evaluations.md): express your evaluation without registering it |
+| Read, inspect or save a result | [Understand results](results.md): meanings, errors, missing values and stored traces |
+| Run a complete script | [Runnable examples](../examples/README.md): small offline examples by task |
 
-## Not core: the command line and the catalog
+These guides use the Python interface. A **system** is the implementation you test; an **evaluation** supplies
+tasks and measurement rules. The detailed definitions are available when you need them in the
+[reference](reference/README.md).
 
-Memrank's interface is the Python package. The pages below describe an older surface, kept
-working but not developed, which keeps its own vocabulary -- *target*, *eval*, *adapter*,
-*benchmark* -- because those names are on the wire and in stored artifacts. Reach for it only
-when you want a run tracked, placed or named.
+## Understand the measurements
 
-| | |
+- [Understand results](results.md) explains what a value says, where it came from and what it
+  cannot establish.
+- [Methodology](methodology.md) describes scoring, context budgets, controls and evidence classes.
+- [Measures](measures.md) explains how to implement a scoring rule or apply one to saved traces.
+- [System lifecycle](systems.md#why-a-memory-has-four-methods) explains why Memrank separates
+  preparation, ingestion, retrieval and cleanup.
+
+## Reference
+
+| Look up | Page |
 |---|---|
-| [The command line](misc/command-line.md) | the whole command surface: submitting a run, watching it, listing runs, targets, evals, secrets, config |
-| [Engine images](misc/engine-images.md) | per catalog target: whether you can obtain the container, and what to run when you cannot |
-| [Wiring in a custom target](../examples/more/custom-target/README.md) | registering a system in the catalog so the command line can drive it by name |
+| Exact Python types and methods | [Python reference](reference/README.md) |
+| Supported systems and their requirements | [Systems catalog](systems/README.md) |
+| Available evaluations and what each measures | [Evaluations catalog](evaluations/README.md) |
+| How two results are paired | [Paired reference](reference/paired.md) |
+| The HTTP protocol for a memory system in any language | [System contract](system-contract.md) |
+| Measurement and governance commitments | [Specification](SPEC.md) |
+
+<a id="not-core-the-command-line-and-the-catalog"></a>
+## Command-line workflows
+
+The command line provides tracked, named and placed runs. It uses its own vocabulary and result
+format; follow its guide when using that interface rather than mixing its examples with the
+Python result API.
+
+| Task | Page |
+|---|---|
+| Submit, watch and inspect a tracked run | [The command line](misc/command-line.md) |
+| Check container availability and prerequisites | [Engine images](misc/engine-images.md) |
+| Register a system for command-line use | [Custom targets](../examples/more/custom-target/README.md) |
 
 ## Working on memrank itself
 
-| | |
-|---|---|
-| [Local development](local-development.md) | environment, the smoke run, the suites, the checks a change has to pass |
-| [The test tree](../tests/README.md) | where a new test file goes, by subsystem |
+[Contributing and getting help](contributing.md) is the contributor entry point.
+[Local development](local-development.md) covers checkout setup and checks;
+[the test tree](../tests/README.md) explains where tests belong.

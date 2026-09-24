@@ -10,9 +10,9 @@ maintainer: AtomicStrata (vendor-neutral charter)
 
 # Memrank -- Public Specification
 
-**One line:** Memrank is a tool for reproducible, auditable evaluation of memory systems. It puts
-a system you supply to standard evaluations, measures quality, latency, cost and token efficiency,
-and attaches to each number everything needed to re-run it.
+**One line:** Memrank is a tool for reproducible, auditable evaluation of memory systems. It runs
+evaluations against supplied systems and records measurements with their supporting evidence.
+Tracked runs additionally record reproducibility receipts.
 
 This document is the canonical statement of what memrank measures, what it refuses to claim, the
 contracts a contribution must satisfy, and the governance the maintainer commits to. It is the
@@ -28,12 +28,10 @@ Each vendor publishes through its own harness, at its own retrieval budget, unde
 against its own dataset snapshot. Latency, ingestion cost and token efficiency are frequently not
 measured at all.
 
-Shared harnesses do exist -- the honest statement of the gap is narrower and more uncomfortable
-than "there is no comparison." **Every shared harness we could find is operated by a company that
+Shared harnesses also need transparent methods and configurations. **Every shared harness we could find is operated by a company that
 appears in its own results**, memrank included. What memrank offers instead of a claim of
 neutrality is a method that can be checked: the configuration is declared, the protocol is
-documented, and the result carries what is needed to re-run it. A number that cannot be re-run is
-not a result.
+documented, and the result carries what is needed to re-run it. Published results must include the information needed to reproduce them.
 
 ## 2. Scope
 
@@ -42,8 +40,7 @@ not a result.
 A run records a **trace** per task -- everything observed while that task ran, including on
 failure -- and **measures** turn those traces into **values**. Every value carries the name of the
 measure that produced it and its **decider**: memrank's own clock and bookkeeping, a fixed rule, a
-model that adjudicated, or the system's own word. No number memrank reports is anonymous, and none
-of them is bare.
+model that adjudicated, or a system declaration. Each value identifies its source.
 
 Five measures ship (`memrank/instrument/measures.py`). The contract they satisfy, and how to write
 one of your own, is [`docs/measures.md`](measures.md).
@@ -78,13 +75,12 @@ meets them:
 
 ### 2.2 What is under test
 
-The thing under test is a **system**: one object, of one of four kinds, that memrank drives
-directly (section 4). The client that drives a memory engine is a system; so is a model, a retriever, an assistant, or
-something written this morning around a private store. `evaluation.run(system=...)` takes the
+A **system** is an implementation of one of four supported interfaces (section 4). The client that drives a memory engine is a system; so is a model, a retriever, an assistant, or
+a custom implementation around a private store. `evaluation.run(system=...)` takes the
 instance, so a system does not have to be registered, named, or known to memrank to be measured.
 
 What a *published* row names is never the engine alone. A memory engine's result is dominated by
-the embedder and the LLM it is wired to, so a row naming only the engine names two different
+its configured embedder and LLM, so a row naming only the engine names two different
 systems at two different times. A system that is named rather than constructed -- in a config file,
 on the wire, in a stored artifact -- therefore has to carry that configuration in its name, and the
 word for a named composition of an engine with its embedder and LLM is a **target**: the command
@@ -94,7 +90,7 @@ line's vocabulary, is [`docs/misc/command-line.md`](misc/command-line.md).
 
 Systems ship for the services `atomicmemory`, `mem0`, `hindsight` and `supermemory`, for any
 translator of the system contract through `native`, and in-process for `tfidf`, `bm25` and the
-`word-overlap` memory floor, beside the control arms `no-context`, `fixed-context` and
+`word-overlap` retrieval baseline, beside the control arms `no-context`, `fixed-context` and
 `full-context`; `memrank.catalog()` prints them and `memrank.systems` holds them as classes. Not
 every engine image is obtainable, and the ones that are not are named as such: see
 [engine images](misc/engine-images.md). Evaluations ship for `squad`, the synthetic `demo`,
@@ -102,7 +98,7 @@ every engine image is obtainable, and the ones that are not are named as such: s
 
 ### 2.3 Control arms are part of the measurement
 
-Three, not one, and a run that omits them is not a comparison:
+A comparison must include these three diagnostic controls:
 
 - `NoContext` (`no-context`) retrieves nothing -- does the reader already know the answer?
 - `FixedContext` (`fixed-context`) reads the corpus unranked, token-matched to the system under
@@ -111,7 +107,7 @@ Three, not one, and a run that omits them is not a comparison:
   corpus fits?
 
 Their known limits are recorded rather than hidden: `fixed-context` reads from the start, so a
-corpus whose answers cluster late disadvantages it, and `no-context` is only meaningful judged.
+corpus whose answers cluster late disadvantages it, and `no-context` needs an answer writer and answer-scoring measure to test answer quality.
 
 ### 2.4 Out of scope
 
@@ -166,7 +162,7 @@ this project accepts (section 7.3).
 
 ## 4. The system contract
 
-A system's **kind** is the class it subclasses, so a kind cannot be declared wrong: a run refuses,
+A system's **kind** is determined by its base class. A run refuses,
 **before touching the system**, when it is not a kind memrank knows or lacks a verb its kind
 requires. The kinds are `memrank/instrument/system.py` and `memrank/instrument/kinds.py`; the
 shortest statement of them is [`docs/reference/system.md`](reference/system.md), and the full
@@ -175,10 +171,10 @@ contract, including the metadata and engine-description surfaces, is
 
 | Kind | What it is for | The verbs it must implement |
 |---|---|---|
-| `memrank.Memory` | told things, asked later for what is relevant | `prepare`, `ingest`, `retrieve`, `cleanup` |
+| `memrank.Memory` | stores supplied documents and retrieves relevant ones | `prepare`, `ingest`, `retrieve`, `cleanup` |
 | `memrank.Model` | given a prompt, returns text | `complete` |
 | `memrank.Retriever` | given a query, orders its own corpus | `rank` |
-| `memrank.Assistant` | given messages, answers however it likes | `respond` |
+| `memrank.Assistant` | responds to supplied messages | `respond` |
 
 `Memory` is the kind a memory system implements, and these four verbs are the whole of it:
 
@@ -220,9 +216,8 @@ result = memrank.evaluation("demo").run(system=Notebook())
 print(result.values_of("failure-rate")[0].value, len(result.traces))
 ```
 
-`Recall` (`memrank/contract.py`) is the pair named: `documents`, the ranked list, and `declared`,
-the provider payload untouched. It replaces the bare tuple `retrieve` returned until 2026-09-21,
-whose halves only the source said apart.
+`Recall` (`memrank/contract.py`) contains `documents`, the ranked list, and `declared`, the
+provider payload preserved as returned.
 
 A system **must**:
 
@@ -235,9 +230,8 @@ A system **must**:
 - Pass `tests/live/conformance/test_adapter_contract.py`.
 
 Nothing a kind requires reports a measurement memrank takes itself. Latency is timed at memrank's
-own call boundary, so a system neither has to report it nor can flatter it. What only a system can
-know it **declares**, through optional methods that return nothing until it says otherwise, and a
-declaration is recorded as the system's word rather than as memrank's finding:
+own call boundary, so a system does not report that measurement. Optional methods **declare** information
+only the system can provide:
 
 - `token_metrics()` -- what a provider billed it, as the four keys `tokens_per_query_mean`,
   `tokens_per_query_p95`, `tokens_per_ingest_mean` and `tokens_per_ingest_p95`, rendered by
@@ -262,8 +256,7 @@ speaks the same contract over HTTP; memrank launches it, drives it, and never im
 
 An **evaluation** is a named, versioned bundle: its **tasks**, the **measures** it ships with, and
 the rule for when the system's state is cleared (`memrank/instrument/evaluation.py`). A **task** is
-one thing to put to the system -- the context to give it, the prompt, and what a correct outcome
-looks like. `memrank.evaluation("demo")` builds one of the shipped evaluations by name, and this is
+one evaluation case: context, prompt and expected outcome. `memrank.evaluation("demo")` builds one of the shipped evaluations by name, and this is
 the same object written by hand:
 
 <!-- runnable: no -- an interface sketch: the ABC, its imports and its `...` bodies are the contract this section states, not a script -->
@@ -321,14 +314,10 @@ named in-tree evaluation **must** additionally:
 
 `Judge` is a measure whose decider is a model (section 2.1). It requires `ANTHROPIC_API_KEY` and
 nothing else: `anthropic` is a required dependency of the package, not an optional group, because
-the evaluations whose only quality metric is a judge's judge by default and an install that could
-not judge failed the documented first command every time. Constructing `Judge` without a key is a
-declaration and the run refuses on the declaration before anything is spent; running it without one
-raises and names how to set it. There is no mode in which this measure decides something with
-nobody having judged.
+the evaluations whose only quality metric is a judge's are judged by default in the command line. Constructing `Judge` needs no key;
+applying it requires the key and raises if it is missing.
 
-`Judge` is never bundled into a shipped evaluation, because that would put a key and a bill on the
-path of a first result. On the command line, an eval whose only quality metric is a judge's is
+The Python API does not bundle `Judge` into evaluations; callers add it explicitly. On the command line, an eval whose only quality metric is a judge's is
 judged by default, and `--no-judge` leaves it measuring latency and cost with no quality score.
 
 Two controls this specification published are retired, and are named here because they were
@@ -370,7 +359,7 @@ If any of these differ between two runs, they are two rows, not one number measu
 
 ### 6.1 Evidence classes
 
-Not every run is evidence, and memrank says which is which rather than leaving it to be assumed:
+Tracked runs classify their evidence by how the executable was identified:
 
 | Class | What produced it | Publishable |
 |---|---|---|

@@ -6,30 +6,32 @@ from memrank.systems import FullContext
 system = FullContext()
 ```
 
-A control that hands over the whole corpus with no cap: the ceiling retrieval is aiming at.
+A diagnostic control that returns all stored documents in ingestion order and declares an
+uncapped context budget.
 
 ## How it works
 
-The same as [fixed-context](fixed-context.md) -- store everything, return everything unranked --
-except that no token budget cuts it. The reader is given the corpus.
+Like [FixedContext](fixed-context.md), it stores the supplied documents and returns all of them
+for every query, without ranking or applying `k`. It sets `context_budget = "uncapped"`, which
+the tracked-run pipeline uses to bypass the shared retrieval token budget.
+
+The Python `evaluation.run()` interface returns the documents to any supplied `answerer`;
+that writer is responsible for fitting them into its model's context window.
 
 ## Why it matters
 
-It answers whether memory is needed here at all. Where the corpus fits in a model's context
-window, this arm is what a system with no retrieval problem to solve would score, so a system
-that matches it has matched the ceiling and an [evaluation](../reference/evaluation.md) whose
-corpus is that small cannot tell systems apart.
-
-It is deliberately rare for that reason: it belongs on small corpora, as a ceiling, not on every
-row.
+Use this control on small corpora to compare retrieval with supplying the entire corpus.
+A full-context score is an observed comparison point, not a guaranteed upper bound: answer
+quality still depends on the reader, the task and how it handles relevant and irrelevant text.
+A matching score alone does not establish that an evaluation cannot distinguish systems.
 
 ## What it needs
 
-Nothing. No service, no network, no key, no download. It does need a corpus that fits, which is
-a property of the evaluation rather than of this system.
+No service, API key, network access or download for the control itself. Answer generation may
+require a model and credentials. The corpus must fit the reader's context window for a
+full-context comparison.
 
 ## References
 
-- [Methodology](../methodology.md) -- why an uncapped arm is rare, and what an uncapped budget
-  does to comparability.
-- [no-context](no-context.md) and [fixed-context](fixed-context.md) -- the other two controls.
+- [Methodology](../methodology.md) -- context budgets and comparison limits.
+- [NoContext](no-context.md) and [FixedContext](fixed-context.md) -- the other controls.

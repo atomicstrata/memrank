@@ -6,31 +6,27 @@ from memrank.systems import Native
 system = Native(base_url="http://localhost:8099")
 ```
 
-A client for any engine that speaks memrank's own contract -- so an engine memrank has never seen
-can be measured without a line of it living here.
+An HTTP client for a translator implementing Memrank's system contract. Use it to evaluate
+an external memory implementation without adding its integration code to Memrank.
 
 ## How it works
 
-Every other system here wraps one engine's API. This one wraps none. You run a small service --
-a *translator* -- that answers memrank's contract on one side and calls your engine however you
-like on the other, in whatever language your engine is written in. Memrank asks it to describe
-itself, then drives the ordinary lifecycle over HTTP: prepare a group of
-[tasks](../reference/task.md), hand over documents, ask for what is relevant, clean up.
+You run a translator service that accepts Memrank's requests and calls your engine. The
+translator can be written in any language. Memrank requests its description, then calls the
+lifecycle endpoints to prepare an isolated group of [tasks](../reference/task.md), ingest
+documents, retrieve relevant documents and clean up.
 
-Two things are inverted, deliberately. Memrank cannot configure an engine it does not know, so
-the translator *states* its own configuration when it describes itself, and memrank records that
-statement rather than asserting it. And a translator is an extra process and an extra hop, so it
-is declared as its own transport class and its wall-clock latency is not comparable with an
-engine memrank drives directly.
+The translator reports its engine configuration because Memrank cannot infer how an external
+implementation is configured. Memrank records that report as a declaration. It also records
+`translator` as the transport class: measured latency includes the additional service call
+and cannot be compared directly with a client that calls an engine without a translator.
 
-A translator announcing a contract version memrank does not implement is refused outright rather
-than probed for compatibility.
+Memrank refuses a translator that reports an unsupported contract version.
 
 ## Why it matters
 
-It is what makes the instrument vendor-neutral in practice rather than in principle. Adding an
-engine does not need a fork, a pull request, or the maintainer's attention, and the
-vendor-specific code stays in the vendor's process where they can fix it.
+A translator lets you evaluate an engine from your own repository, without a Memrank fork or
+pull request. You maintain the engine-specific integration alongside your implementation.
 
 ## What it needs
 
@@ -39,8 +35,7 @@ A running translator that implements the contract. Its address comes from `base_
 
 ## References
 
-- [The system contract](../system-contract.md) -- the endpoints, the shapes, and the conformance
-  suite a translator has to pass.
-- [system](../reference/system.md) -- what a system is, and what memrank measures itself rather
-  than asking for.
-- [Methodology](../methodology.md) -- why a translator is its own transport class.
+- [System contract](../system-contract.md) -- endpoints, request and response formats, and
+  conformance checks.
+- [System reference](../reference/system.md) -- measurements and system declarations.
+- [Methodology](../methodology.md) -- transport comparison rules.

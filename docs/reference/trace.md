@@ -1,8 +1,7 @@
 # trace
 
-A **trace** is the record of one [task](task.md) being put to the system: what was given, what
-came back, how long each step took, and what broke if anything did. It is what lets a value be
-traced to the thing it is a value about.
+A **trace** records one [task](task.md) attempt: the context document IDs, response, timings
+and any error. Inspect it to understand the evidence behind a measured value.
 
 ```python
 from memrank.evaluations import Demo
@@ -20,39 +19,38 @@ print("error:   ", trace.error)
 
 ## What it is
 
-Exactly one trace is recorded per task per attempt, **including on failure**. A task that raised
-does not vanish and does not become a gap: its trace carries the step it broke at and the
-message, and every task-scope [measure](measure.md) records `None` with that as the reason.
+Memrank records one trace per task attempt, including failed attempts. The `error` field names
+the failed step and message. Built-in task measures return `None` when required evidence is
+missing; custom measures define their own handling.
 
 | Field | What it holds |
 |---|---|
-| `task` | the task that was put, in full |
-| `group` | the group whose state was in force |
-| `attempt` | which attempt this was, when a run asks more than once |
+| `task` | the task definition, with `context` omitted; supplied context IDs are in `given` |
+| `group` | the task's group identifier |
+| `attempt` | the attempt number |
 | `given` | what memrank gave the system before the prompt: the document ids and how many |
 | `recalled` | what a memory or retriever returned -- the passages, ranked best first |
 | `answered` | what a model or assistant wrote, when the system is one that answers |
 | `timings_ms` | memrank's own clock, per step, at memrank's own call boundary |
 | `declared` | what only the system knew and chose to state: its version, tokens a provider billed, time only it can see, a fingerprint of its state. `None` means "did not state", never zero |
-| `error` | the step it broke at and the message, or `None` |
-| `started`, `finished` | when |
+| `error` | the failed step and message, or `None` |
+| `started`, `finished` | attempt timestamps |
 
-The order of `recalled.documents` **is** the measurement: a system returns its best guess first,
-and nothing re-ranks it afterwards.
+Memrank preserves the order of `recalled.documents`. Retrieval systems should return their
+highest-ranked documents first; diagnostic controls may deliberately return ingestion order.
 
-Traces are the durable part. Scoring does not happen inside the run loop, so a measure you think
-of a week later runs over traces already stored and the system is never touched again.
+Saved traces can be measured again without rerunning the system. A new measure can use only
+evidence the traces contain; original context content is not stored in `trace.task`.
 
 ## Who supplies what
 
-You write nothing: memrank records every field above as the task ran, and your system optionally
-declares what only it knew.
+Memrank records traces during execution. Your system may supply optional declarations.
 
 ## The Python names
 
 - `memrank.Trace` -- the class. Fields as above.
 - `result.traces` -- every trace of a run, in order.
-- `result.traces_of("<task id>")` -- the traces of one task. Where you dig when a value is low.
+- `result.traces_of("<task id>")` -- the recorded attempts for one task.
 - `trace.recalled` is a `memrank.Recall`: `documents`, and whatever the system chose to
   `declare` about the call.
 - `result.save(path)` and `memrank.Result.load(path)` -- traces written to disk and read back,
