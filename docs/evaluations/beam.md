@@ -44,7 +44,10 @@ lifted for it, symmetrically across every system.
 ## What it needs
 
 A one-time download of the dataset, cached after the first run, or a local copy pointed at with
-`BEAM_DATA_PATH`. The largest tier lives in a separate dataset and is not covered here.
+`BEAM_DATA_PATH`. The download goes through Hugging Face's `datasets` package, which is the
+`benchmarks` extra rather than part of the base install: `pip install 'memrank[benchmarks]'`, or
+`uv add 'memrank[benchmarks]'`. Without it, an uncached tier is refused with that instruction
+before anything is fetched. The largest tier lives in a separate dataset and is not covered here.
 
 Quality also needs a judge, which means a model key and sending question text to that model.
 

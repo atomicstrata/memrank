@@ -39,7 +39,7 @@ evaluations -- `from memrank.evaluations import SQuAD`, or `memrank.evaluation("
                                      measures latency and failures; quality needs a judge
   LongMemEval()    'longmemeval'     a one-time download, or LONGMEMEVAL_DATA_PATH
                                      measures latency and failures; quality needs a judge
-  BEAM()           'beam'            a one-time download, or BEAM_DATA_PATH
+  BEAM()           'beam'            a one-time download (the benchmarks extra), or BEAM_DATA_PATH
                                      measures latency and failures; quality needs a judge
 ```
 

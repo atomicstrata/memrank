@@ -234,7 +234,7 @@ There are three ways to take that step.
 | Verify with | `memrank targets verify <ref>` | `pytest tests/live/conformance/test_adapter_contract.py` | `memrank targets verify <ref>` |
 
 [`examples/more/custom-target/`](../examples/more/custom-target/README.md) wires a twenty-line
-engine all three ways and runs offline.
+system all three ways and runs offline.
 
 Which one to pick:
 

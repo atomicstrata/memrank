@@ -31,7 +31,7 @@ Demo()            nothing -- a bundled synthetic scenario
 RelationGraph()   nothing -- in-repo fixtures
 LoCoMo()          a one-time download, or LOCOMO_DATA_PATH; judging for any quality
 LongMemEval()     a one-time download, or LONGMEMEVAL_DATA_PATH; judging likewise
-BEAM()            a one-time download, or BEAM_DATA_PATH; judging likewise
+BEAM()            the benchmarks extra's download, or BEAM_DATA_PATH; judging too
 ================  ==================================================================
 
 Each benchmark class is imported INSIDE its constructor. `import memrank` reaches this module,
@@ -147,7 +147,8 @@ class LongMemEval(_Shipped):
 class BEAM(_Shipped):
     """20 conversations / 400 questions at 100k, 35 / 700 at 500k and 1m; 2 questions per ability.
 
-    Needs a one-time download from HuggingFace (or BEAM_DATA_PATH), and a judge for any quality
+    Needs a one-time download from HuggingFace, through the `benchmarks` extra
+    (`pip install 'memrank[benchmarks]'`), or BEAM_DATA_PATH; and a judge for any quality
     number: BEAM's gold answers are prose rubrics rather than verbatim spans, so no substring
     proxy is computed and the raw composite is withheld from ranking until judged. Unjudged,
     this measures latency and failure rate. `tier` is "100k", "500k" or "1m", and an unknown one
@@ -176,7 +177,7 @@ SHIPPED: tuple[ShippedEvaluation, ...] = (
     ShippedEvaluation("LongMemEval", "longmemeval", "latency and failures; quality needs a judge",
                       "a one-time download, or LONGMEMEVAL_DATA_PATH"),
     ShippedEvaluation("BEAM", "beam", "latency and failures; quality needs a judge",
-                      "a one-time download, or BEAM_DATA_PATH"),
+                      "a one-time download (the benchmarks extra), or BEAM_DATA_PATH"),
 )
 
 __all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph", "SQuAD"]

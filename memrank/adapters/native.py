@@ -203,6 +203,7 @@ class Native(Memory):
         if self._client is None:
             self._client = adapter_errors.engine_client(
                 engine=self.name, timeout_s=self.timeout_s, env_var="NATIVE_TIMEOUT_S",
+                base_url_env=self.base_url_env,
                 base_url=self.base_url,
                 headers={"Content-Type": "application/json"},
             )

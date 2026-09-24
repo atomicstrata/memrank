@@ -130,8 +130,64 @@ class EngineTimedOut(MemrankError):
         return False
 
 
+def unreachable_remedy(base_url_env: str | None) -> str:
+    """What to do about an engine that is not answering, in this installation's own terms.
+
+    Two remedies, named at the moment of failure: point memrank at the engine that IS running, or
+    have memrank start one. "No engine is running" is a fact about the machine, and the reader
+    should not have to already know how memrank is told where to look.
+
+    Every path named here exists in an installed copy. The message this replaced sent the reader
+    to a shell script in the maintainers' own checkout -- which the person who most needs this
+    message, an outsider whose engine memrank cannot reach, does not have (ATO-2125).
+    """
+    settings = (f"the {base_url_env} environment variable or the adapter's `base_url` argument"
+                if base_url_env else "the adapter's `base_url` argument")
+    return (f"memrank sent that request and nothing answered. Point it somewhere else with "
+            f"{settings}, or have memrank start a disposable engine of its own by re-running "
+            f"with `--on local`.")
+
+
+def safe_location(url: httpx.URL) -> str:
+    """``url`` as scheme, host, port and path -- never its userinfo or query.
+
+    A base URL is operator-supplied and can carry a credential in either place
+    (``http://user:token@host`` or ``?api_key=...``); an error message is printed, logged and
+    pasted into tickets, so it quotes only the part that says where memrank looked.
+    """
+    # httpx rebuilds the URL itself, so an IPv6 host keeps its brackets (http://[::1]:8888).
+    return str(url.copy_with(username=None, password=None, query=None, fragment=None))
+
+
+class EngineUnreachable(MemrankError):
+    """Nothing answered at the address memrank was given for an engine.
+
+    A bare ``httpx.ConnectError`` reached ``runner._exit_with``'s last branch and printed
+    "internal error: ConnectError: [Errno 61] Connection refused / this is a bug in memrank" for
+    ``memrank submit mem0 locomo --on none`` with no mem0 running -- telling the reader to file a
+    bug against the harness for a service they had not started. A refused connection is a fact
+    about the machine, and the harness knows everything needed to say which one: the engine, the
+    address it tried, and the variable that moves it.
+    """
+
+    def __init__(self, engine: str, request: httpx.Request, base_url_env: str | None,
+                 reason: str) -> None:
+        location = safe_location(request.url)
+        super().__init__(
+            f"engine {engine!r} is not answering at {location}: {reason}\n"
+            f"  {unreachable_remedy(base_url_env)}")
+        self.engine = engine
+        self.url = location
+        self.base_url_env = base_url_env
+
+
 class TimeoutTranslatingTransport(httpx.BaseTransport):
     """The one place an engine's timeout becomes a sentence naming its knob.
+
+    It is also where a refused connection becomes :class:`EngineUnreachable`, for the same reason:
+    one chokepoint every engine client already passes through. Only ``httpx.ConnectError`` is
+    translated -- nothing was sent, so there is nothing else it can mean. Any other exception,
+    including a programmer error in an adapter, passes through untouched.
 
     A transport rather than a try/except at each call site: there are ~15 request calls across five
     adapters, and a guard that must be repeated is a guard one sibling will be missing. Wrapping
@@ -146,35 +202,41 @@ class TimeoutTranslatingTransport(httpx.BaseTransport):
     """
 
     def __init__(self, inner: httpx.BaseTransport, *, engine: str, timeout_s: float,
-                 env_var: str) -> None:
+                 env_var: str, base_url_env: str | None = None) -> None:
         self._inner = inner
         self._engine = engine
         self._timeout_s = timeout_s
         self._env_var = env_var
+        self._base_url_env = base_url_env
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         try:
             return self._inner.handle_request(request)
         except httpx.TimeoutException as exc:
             raise EngineTimedOut(self._engine, self._timeout_s, self._env_var, request) from exc
+        except httpx.ConnectError as exc:
+            raise EngineUnreachable(self._engine, request, self._base_url_env, str(exc)) from exc
 
     def close(self) -> None:
         self._inner.close()
 
 
 def engine_client(*, engine: str, timeout_s: float, env_var: str,
+                  base_url_env: str | None = None,
                   transport: httpx.BaseTransport | None = None, **kwargs: Any) -> httpx.Client:
-    """An ``httpx.Client`` for talking to a vendor engine, whose timeouts explain themselves.
+    """An ``httpx.Client`` for talking to a vendor engine, whose failures explain themselves.
 
     Every adapter that speaks HTTP to an engine builds its client here. ``kwargs`` are httpx's own
     (``base_url``, ``headers``, ...); ``timeout`` is set from ``timeout_s`` so the limit the message
-    quotes cannot drift from the limit that fires. ``transport`` exists for tests to supply a
+    quotes cannot drift from the limit that fires. ``base_url_env`` is the variable that moves the
+    engine's address, named when nothing answers there. ``transport`` exists for tests to supply a
     socket layer that fails on demand.
     """
     return httpx.Client(
         timeout=timeout_s,
         transport=TimeoutTranslatingTransport(transport or httpx.HTTPTransport(), engine=engine,
-                                              timeout_s=timeout_s, env_var=env_var),
+                                              timeout_s=timeout_s, env_var=env_var,
+                                              base_url_env=base_url_env),
         **kwargs)
 
 

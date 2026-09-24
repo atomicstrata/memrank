@@ -129,6 +129,7 @@ class Hindsight(Memory):
                 headers["Authorization"] = f"Bearer {self.api_key}"
             self._client = adapter_errors.engine_client(
                 engine=self.name, timeout_s=self.timeout_s, env_var="HINDSIGHT_TIMEOUT_S",
+                base_url_env=self.base_url_env,
                 base_url=self.base_url, headers=headers)
         return self._client
 

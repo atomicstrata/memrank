@@ -222,6 +222,79 @@ def test_a_timeout_is_a_clean_error_not_an_internal_one():
         client.post("/v1/memories/", json={})
 
 
+# ---------------------------------------------------------------------------- #
+# A refused connection: nothing is listening -- a fact about the machine
+# ---------------------------------------------------------------------------- #
+
+class _RefusingSocket(httpx.BaseTransport):
+    """The socket layer refusing deterministically. No port is opened or probed."""
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("[Errno 61] Connection refused", request=request)
+
+
+def _refused_client(base_url: str, base_url_env: str | None = "MEM0_HTTP_URL") -> httpx.Client:
+    """A real client through the REAL wrapper, with only the socket layer replaced."""
+    return adapter_errors.engine_client(
+        engine="mem0", timeout_s=60.0, env_var="MEM0_TIMEOUT_S", base_url_env=base_url_env,
+        transport=_RefusingSocket(), base_url=base_url)
+
+
+def test_a_refused_connection_names_the_engine_the_address_and_the_variable():
+    """The failure this exists for: `internal error: ConnectError ... this is a bug in memrank`
+    for a mem0 nobody had started."""
+    from memrank.errors import MemrankError
+
+    with pytest.raises(adapter_errors.EngineUnreachable) as caught:
+        _refused_client("http://localhost:8888").get("/configure")
+
+    message = str(caught.value)
+    assert isinstance(caught.value, MemrankError)
+    assert "'mem0'" in message
+    assert "http://localhost:8888/configure" in message
+    assert "MEM0_HTTP_URL" in message
+    assert "--on local" in message
+
+
+def test_a_refused_connection_never_quotes_a_credential_in_the_address():
+    """A base URL can carry userinfo or a query key; the message says where, never with what."""
+    client = _refused_client("http://alice:s3cret@engine.internal:8888?api_key=zzz")
+
+    with pytest.raises(adapter_errors.EngineUnreachable) as caught:
+        client.get("/configure")
+
+    message = str(caught.value)
+    assert "engine.internal:8888" in message
+    for leaked in ("alice", "s3cret", "api_key", "zzz"):
+        assert leaked not in message
+
+
+def test_an_ipv6_address_is_quoted_as_a_usable_url():
+    with pytest.raises(adapter_errors.EngineUnreachable) as caught:
+        _refused_client("http://u:p@[::1]:8888").get("/configure")
+
+    assert "http://[::1]:8888/configure" in str(caught.value)
+
+
+def test_an_adapter_without_an_address_variable_names_its_argument():
+    with pytest.raises(adapter_errors.EngineUnreachable, match="`base_url` argument"):
+        _refused_client("http://localhost:8888", base_url_env=None).get("/configure")
+
+
+def test_a_programmer_error_in_the_socket_layer_is_not_translated():
+    """Only a refused connection means 'nothing is listening'; anything else stays a bug."""
+    class _Broken(httpx.BaseTransport):
+        def handle_request(self, request: httpx.Request) -> httpx.Response:
+            raise TypeError("an adapter bug")
+
+    client = adapter_errors.engine_client(
+        engine="mem0", timeout_s=60.0, env_var="MEM0_TIMEOUT_S", transport=_Broken(),
+        base_url="http://localhost:8888")
+
+    with pytest.raises(TypeError, match="an adapter bug"):
+        client.get("/configure")
+
+
 def test_every_engine_facing_adapter_builds_its_client_through_the_helper():
     """The chokepoint, enumerated rather than trusted.
 

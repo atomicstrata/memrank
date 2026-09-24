@@ -8,11 +8,14 @@ no engine for, no waiting unless asked, and a run record `ps` reads as running, 
 """
 from __future__ import annotations
 
+import json
+import sys
 import time
 
 import pytest
 from typer.testing import CliRunner
 
+from memrank.errors import MissingOptionalDependency
 from memrank.orchestration import cloud as cloud_mod
 from memrank.orchestration import sweep as sweep_mod
 from memrank.placement import run_api_client
@@ -62,6 +65,30 @@ def api(tmp_path, monkeypatch):
 
 def _run(*args):
     return runner.invoke(app, ["submit", *args])
+
+
+@pytest.fixture
+def uncached_beam(tmp_path, monkeypatch):
+    """Neither an operator's cache nor the optional downloader can supply test data."""
+    monkeypatch.setenv("MEMRANK_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.delenv("BEAM_DATA_PATH", raising=False)
+    monkeypatch.setitem(sys.modules, "datasets", None)
+
+
+@pytest.fixture
+def beam_data(uncached_beam, tmp_path, monkeypatch):
+    """Exercise the real loader and pre-submit gates with one judgeable query."""
+    path = tmp_path / "beam.json"
+    path.write_text(json.dumps([{
+        "conversation_id": "c1",
+        "chat": [[{"role": "user", "content": "My favorite color is blue."}]],
+        "probing_questions": {"information_extraction": [{
+            "question": "What is my favorite color?", "answer": "blue",
+            "rubric": ["The favorite color is blue."],
+        }]},
+    }]), encoding="utf-8")
+    monkeypatch.setenv("BEAM_DATA_PATH", str(path))
+    return path
 
 
 def test_submitting_returns_immediately_and_reports_the_task(api):
@@ -196,7 +223,7 @@ def test_a_submission_names_no_image_and_negotiates_no_contract(api):
     assert "cli_contract" not in payload
 
 
-def test_the_config_carries_the_variant_parsed_rather_than_in_the_ref(api):
+def test_the_config_carries_the_variant_parsed_rather_than_in_the_ref(api, beam_data):
     """The server mints run ids and rows from the eval it resolves, and a raw ref there put a
     `:` into a string that becomes a shell token and an S3 key -- refused as an unsafe run id on
     2026-08-13, after the eval-refs migration started sending `beam:100k-smoke` as `benchmark`.
@@ -205,20 +232,48 @@ def test_the_config_carries_the_variant_parsed_rather_than_in_the_ref(api):
     result = _run("word-overlap", "beam:100k-smoke", "--on", "cloud", "--org", "acme")
 
     assert result.exit_code == 0, result.output
+    assert "~5 judge calls" in result.output
+    assert "1 judgeable queries" in result.output
     config = api["submits"][0][1]["config"]
     assert config["eval_ref"] == "beam"
     assert config["tier"] == "100k" and config["slice"] == "smoke"
     assert ":" not in config["eval_ref"]
 
 
-def test_a_bare_ref_submits_the_variant_it_resolved_to(api):
+def test_a_bare_ref_submits_the_variant_it_resolved_to(api, beam_data):
     """`beam` runs, but what it RAN is `beam:100k` -- the config must state that tier rather than
     leave the server's own catalog to pick a default a second time."""
     result = _run("word-overlap", "beam", "--on", "cloud", "--org", "acme")
 
     assert result.exit_code == 0, result.output
+    assert "~5 judge calls" in result.output
+    assert "1 judgeable queries" in result.output
     config = api["submits"][0][1]["config"]
     assert config["eval_ref"] == "beam" and config["tier"] == "100k"
+
+
+@pytest.mark.parametrize("ref", ["beam", "beam:100k-smoke"])
+def test_uncached_beam_without_datasets_is_refused_before_submission(api, uncached_beam, ref):
+    result = _run("word-overlap", ref, "--on", "cloud", "--org", "acme")
+
+    assert isinstance(result.exception, MissingOptionalDependency)
+    assert "datasets" in str(result.exception) and "benchmarks" in str(result.exception)
+    assert api["submits"] == []
+    assert not api["runs_root"].exists()
+
+
+@pytest.mark.parametrize("ref", ["beam", "beam:100k-smoke"])
+def test_beam_without_judge_coverage_is_refused_before_submission(api, beam_data, ref):
+    rows = json.loads(beam_data.read_text(encoding="utf-8"))
+    rows[0]["probing_questions"]["information_extraction"][0]["rubric"] = []
+    beam_data.write_text(json.dumps(rows), encoding="utf-8")
+
+    result = _run("word-overlap", ref, "--on", "cloud", "--org", "acme")
+
+    assert result.exit_code != 0
+    assert "0 judgeable queries" in result.output
+    assert api["submits"] == []
+    assert not api["runs_root"].exists()
 
 
 @pytest.mark.parametrize("flag", ["--image-tag", "--no-auto-push", "--allow-unverified-image"])

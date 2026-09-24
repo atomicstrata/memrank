@@ -98,6 +98,7 @@ class AtomicMemory(Memory):
             self._client = adapter_errors.engine_client(
                 engine=type(self).name, timeout_s=self.timeout_s,
                 env_var=f"{type(self).env_prefix}TIMEOUT_S",
+                base_url_env=self.base_url_env,
                 base_url=self.base_url, headers=headers)
         return self._client
 
