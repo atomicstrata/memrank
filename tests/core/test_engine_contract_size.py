@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 # The cell run that produces an `EvalResult` is imported from its own module, which is
 # where the CLI and the cloud reach it too; `memrank.run` is the typed run over the seven
 # (memrank/instrument/) and is not what these tests exercise.
@@ -31,6 +33,10 @@ from memrank import BenchmarkUnit, ComposedEvaluation, Document, MemoryAdapter, 
 from memrank.core import REQUIRED_LATENCY_KEYS, REQUIRED_TOKEN_KEYS
 from memrank.evaluation.api import run as run_cell
 from memrank.instrumentation import TokenCollector
+
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
 
 UNITS = [BenchmarkUnit(
     unit_id="u1", isolation_id="u1",

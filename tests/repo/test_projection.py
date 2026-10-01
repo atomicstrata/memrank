@@ -122,7 +122,8 @@ def test_the_rewrite_drops_what_does_not_ship(manifest):
     out = tp._public_pyproject((ROOT / "pyproject.toml").read_text(encoding="utf-8"), manifest)
 
     assert "memrank-ops" not in out, "a console script for an unpublished module"
-    assert "fastapi" not in out, "the `api` extra exists for `memrank/api/**`"
+    assert "psycopg" not in out, "the `api` extra exists for `memrank/api/**`"
+    assert "fastapi" in out, "the public `service` extra ships the evaluation service's stack"
     assert "jupyterlab" not in out, "the `notebooks` extra exists for `notebooks/**`"
     assert '"memrank[api]"' not in out, "the dev extra's self-reference to it"
     assert "tests/internal/" not in out, "ruff ignores for paths that do not ship"

@@ -33,7 +33,7 @@ Read the [memory systems comparison guide](../docs/comparing.md) for conditions,
 
 | Task | Example | Needs after installation |
 |---|---|---|
-| Check the installation | [01-first-result](01-first-result/README.md): the TFIDF/SQuAD quick-start pair | No service or key |
+| Check the installation | [01-first-result](01-first-result/README.md): the TFIDF/Demo quick-start pair | No service or key |
 | Implement a memory | [02-your-own-system](02-your-own-system/README.md): the four lifecycle methods | No service or key |
 | Express your own tasks | [03-your-own-evaluation](03-your-own-evaluation/README.md): context, expected outcomes and measures | No service or key |
 | Measure saved evidence | [04-your-own-measure](04-your-own-measure/README.md): load a result and apply a new measure | No service or key |

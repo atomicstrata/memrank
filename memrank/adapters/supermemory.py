@@ -26,6 +26,8 @@ snapshot in ``raw["graph_snapshot"]`` for relation-graph benchmarks.
 from __future__ import annotations
 
 import os
+import time
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -35,6 +37,7 @@ from memrank.adapters import errors as adapter_errors
 from memrank.adapters import transcript
 from memrank.adapters.effective import embedder_from_env, llm_from_env
 from memrank.core import Document, Memory, Recall
+from memrank.errors import MemrankError
 from memrank.instrumentation import LatencyCollector, TokenCollector
 
 _DEFAULT_BASE_URL = "http://localhost:6767"
@@ -47,6 +50,27 @@ _DEFAULT_TIMEOUT_S = 60.0
 # that sniffer; it returns memories synchronously (no readiness poll needed) but caps each memory
 # near 8k chars, so we chunk. See docs/research/2026-07-27-supermemory-v3-documents-extractor-limitation.md.
 _MAX_MEMORY_CHARS = 8000
+
+# How ordinary documents are written, chosen by a target's `ingest: {mode: ...}`. `memories` (the
+# default, as shipped) is the /v4/memories path above: pre-chunked text, no model. `documents` is
+# the engine's own ingestion, POST /v3/documents ("Add Context"): supermemory chunks the document
+# and its memory agent extracts memories with an LLM, so a target selecting it must give the engine
+# a model. Nothing falls back from one to the other.
+INGEST_MEMORIES = "memories"
+INGEST_DOCUMENTS = "documents"
+_INGEST_MODES = (INGEST_MEMORIES, INGEST_DOCUMENTS)
+# /v3/documents is asynchronous: the POST returns `queued` and the document moves through
+# extraction, embedding and the memory agent. These two are the only terminal statuses.
+_DOCUMENT_DONE = "done"
+_DOCUMENT_FAILED = "failed"
+_POLL_INTERVAL_S = 2.0
+# A stalled queue fails the ingest after this many polls (two hours at the interval above) rather
+# than hanging the run; the decision is made by the status alone, never by the clock.
+_MAX_POLLS = 3600
+
+
+class DocumentIngestFailed(MemrankError):
+    """supermemory took a /v3 document but did not turn it into memories."""
 
 
 class Supermemory(Memory):
@@ -64,7 +88,9 @@ class Supermemory(Memory):
         self,
         base_url: str | None = None,
         timeout_s: float | None = None,
+        ingest: dict[str, Any] | None = None,
     ) -> None:
+        self.ingest_mode = _ingest_mode(ingest)
         self.base_url = (base_url or os.environ.get("SUPERMEMORY_BASE_URL", _DEFAULT_BASE_URL)).rstrip("/")
         self.timeout_s = (
             timeout_s
@@ -75,6 +101,8 @@ class Supermemory(Memory):
         self._client: httpx.Client | None = None
         self.latency = LatencyCollector()
         self.tokens = TokenCollector()
+        #: How the status wait pauses between polls; a test replaces it so nothing sleeps.
+        self.pause: Callable[[float], None] = time.sleep
 
     def _http(self) -> httpx.Client:
         if self._client is None:
@@ -99,7 +127,10 @@ class Supermemory(Memory):
                 self._add_seed_memories(seeds)
         if ingest_docs:
             with self.latency.track("ingest"):
-                self._post_documents(ingest_docs)
+                if self.ingest_mode == INGEST_DOCUMENTS:
+                    self._add_documents(ingest_docs)
+                else:
+                    self._post_documents(ingest_docs)
 
     def retrieve(
         self,
@@ -229,6 +260,61 @@ class Supermemory(Memory):
         adapter_errors.raise_for_status(response)
         self._record_tokens("ingest", adapter_errors.safe_json(response))
 
+    def _add_documents(self, documents: list[Document]) -> None:
+        """Ingest through /v3/documents and wait until the engine has finished each one.
+
+        Loud at every step: a rejected POST raises with the engine's own words, a document that
+        ends ``failed`` raises, and so does a namespace left with no memories once every document
+        is done -- which is what a memory agent that could not reach its model looks like (the
+        engine then stores chunks and extracts nothing).
+        """
+        assert self._isolation is not None
+        posted = [self._post_v3_document(doc) for doc in documents]
+        for engine_id, doc in zip(posted, documents, strict=True):
+            self._await_document(engine_id, doc.id)
+        if self._memory_count(self._isolation) == 0:
+            raise DocumentIngestFailed(
+                f"supermemory finished {len(documents)} document(s) in {self._isolation} with no "
+                f"memories: its memory agent extracted nothing. Check the engine log for the "
+                f"model call; the run would otherwise score an empty memory.")
+
+    def _post_v3_document(self, doc: Document) -> str:
+        assert self._isolation is not None
+        payload = {"content": transcript.render(doc), "containerTag": self._isolation,
+                   "metadata": {"doc_id": doc.id, **(doc.metadata or {})}}
+        response = self._http().post("/v3/documents", json=payload)
+        adapter_errors.raise_for_status(response)
+        engine_id = adapter_errors.safe_json(response).get("id")
+        if not engine_id:
+            raise DocumentIngestFailed(
+                f"supermemory accepted document {doc.id} but returned no id to wait on")
+        return str(engine_id)
+
+    def _await_document(self, engine_id: str, doc_id: str) -> None:
+        """Poll the document's status until it is ``done``; raise on ``failed`` or a stall."""
+        status = None
+        for _ in range(_MAX_POLLS):
+            response = self._http().get(f"/v3/documents/{engine_id}")
+            adapter_errors.raise_for_status(response)
+            status = adapter_errors.safe_json(response).get("status")
+            if status == _DOCUMENT_DONE:
+                return
+            if status == _DOCUMENT_FAILED:
+                raise DocumentIngestFailed(
+                    f"supermemory could not ingest document {doc_id} (engine id {engine_id}): "
+                    f"status failed. The engine log names the stage.")
+            self.pause(_POLL_INTERVAL_S)
+        raise DocumentIngestFailed(
+            f"supermemory never finished document {doc_id} (engine id {engine_id}): still "
+            f"{status!r} after {_MAX_POLLS} polls")
+
+    def _memory_count(self, namespace: str) -> int:
+        response = self._http().post("/v4/memories/list",
+                                     json={"containerTags": [namespace], "limit": 1})
+        adapter_errors.raise_for_status(response)
+        pagination = adapter_errors.safe_json(response).get("pagination") or {}
+        return int(pagination.get("totalItems") or 0)
+
     @staticmethod
     def _chunk(content: str, size: int = _MAX_MEMORY_CHARS) -> list[str]:
         """Split content into <=size pieces, preferring newline boundaries so turns stay intact."""
@@ -306,6 +392,20 @@ class Supermemory(Memory):
                     "context_group": group,
                 })
         return out
+
+
+def _ingest_mode(ingest: dict[str, Any] | None) -> str:
+    """The ingest mode a target's ``ingest:`` block selects; refuses anything it cannot honour."""
+    settings = dict(ingest or {})
+    unsupported = sorted(set(settings) - {"mode"})
+    if unsupported:
+        raise ValueError(f"supermemory cannot apply ingest settings {unsupported}; it takes only "
+                         f"`mode` ({' or '.join(_INGEST_MODES)})")
+    mode = settings.get("mode", INGEST_MEMORIES)
+    if mode not in _INGEST_MODES:
+        raise ValueError(f"supermemory ingest mode {mode!r} is unknown; choose "
+                         f"{' or '.join(_INGEST_MODES)}")
+    return str(mode)
 
 
 #: Deprecated alias of the class above -- the same class object, so an out-of-tree import and

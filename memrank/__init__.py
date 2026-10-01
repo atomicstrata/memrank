@@ -11,20 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Memrank -- an open, vendor-neutral tool for reproducible, auditable evaluation of
-memory systems.
+"""Memrank -- Evaluate your agent on your tasks.
 
 You supply the system. Memrank puts the evaluation's tasks to it, records what happened,
 and applies the measures that turn those records into named values. (A memory is one kind
 of system it evaluates; `System` below names the others.)
 
     import memrank
-    from memrank.evaluations import SQuAD
+    from memrank.evaluations import Demo
 
     class MyMemory(memrank.Memory):
         ...                                        # the four verbs its kind requires
 
-    result = SQuAD().run(system=MyMemory())
+    result = Demo().run(system=MyMemory())
     result.values                                  # named values, each with its decider
     result.traces                                  # one per task per attempt, always
 
@@ -36,8 +35,8 @@ Seven things, and nothing else has to be learned:
   ``memrank.systems.TFIDF()`` is one memrank ships, and
   ``memrank.system("tfidf")`` is the same class by its catalog name.
 - **evaluation** -- a named, versioned bundle: its tasks, the measures it ships with, and the
-  rule for when state is cleared. ``memrank.evaluations.SQuAD()`` builds one from an in-tree
-  benchmark, ``memrank.evaluation("squad")`` does the same by name, and
+  rule for when state is cleared. ``memrank.evaluations.Demo()`` builds one from an in-tree
+  benchmark, ``memrank.evaluation("demo")`` does the same by name, and
   ``memrank.Evaluation(...)`` is the same object, written by hand.
 - **task** -- one thing to put to the system: the context, the prompt, what is expected.
 - **trace** -- everything observed while one task ran. Exactly one per task per attempt,

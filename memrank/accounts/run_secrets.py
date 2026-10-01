@@ -20,11 +20,57 @@ publish a number attributed to the wrong configuration.
 """
 from __future__ import annotations
 
-from memrank.errors import MemrankError
+from memrank.errors import ActionRequired, MemrankError
+from memrank.outcome import Step
+
+#: The command every "sign in first" step names.
+SIGN_IN = "memrank auth login"
 
 
 class OrgSecretsError(MemrankError):
-    """Raised when an org's credentials cannot be loaded. Never swallowed."""
+    """Raised when an org's credentials cannot be loaded or saved. Never swallowed.
+
+    ``status`` is the API's HTTP status, so a caller can tell a refusal it has a next step for
+    (401, 403) from a failure it does not.
+    """
+
+    def __init__(self, message: str, *, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def session_rejected() -> ActionRequired:
+    """The step when the API refuses the stored session: sign in again."""
+    return ActionRequired("Your memrank session was not accepted; it may have expired.",
+                          steps=(Step("Sign in again:", (SIGN_IN,)),))
+
+
+def api_message(response) -> str:
+    """The API's message, or its raw body when the shape is not the one we document."""
+    try:
+        detail = response.json().get("detail")
+    except ValueError:
+        return response.text
+    return detail.get("message", str(detail)) if isinstance(detail, dict) else str(detail)
+
+
+def save_org_secret(http, org: str, name: str, value: str) -> None:
+    """Store ``name`` for ``org`` through the API -- the one path every org key is saved by.
+
+    Raises:
+        ActionRequired: The session was refused, or the caller's role may not save keys.
+        OrgSecretsError: Any other refusal, with the API's own message -- a credential that did
+            not store must not read as though it did.
+    """
+    response = http.post(f"/orgs/{org}/secrets", json={"name": name, "value": value})
+    if response.status_code == 401:
+        raise session_rejected()
+    if response.status_code == 403:
+        raise ActionRequired(f"Only an owner of {org} can save its keys. Ask an owner to run:",
+                             f"memrank secrets set {name} --org {org}")
+    if response.status_code >= 400:
+        raise OrgSecretsError(f"could not store {name} for {org!r}: {api_message(response)}",
+                              status=response.status_code)
 
 
 def load_org_secrets(http, org: str) -> dict[str, str]:
@@ -44,10 +90,12 @@ def load_org_secrets(http, org: str) -> dict[str, str]:
     """
     response = http.get(f"/orgs/{org}/secrets/resolved")
     if response.status_code == 401:
-        raise OrgSecretsError("not signed in -- run `memrank auth login`")
+        raise OrgSecretsError("not signed in -- run `memrank auth login`", status=401)
     if response.status_code == 403:
-        raise OrgSecretsError(f"you are not a member of org {org!r}")
+        raise OrgSecretsError(f"you are not a member of org {org!r}, or your role may not read "
+                              "its saved credentials (an owner's may)", status=403)
     if response.status_code != 200:
         raise OrgSecretsError(
-            f"could not load credentials for {org!r}: {response.status_code} {response.text}")
+            f"could not load credentials for {org!r}: {response.status_code} {response.text}",
+            status=response.status_code)
     return response.json()

@@ -30,7 +30,7 @@ Optional extras, each added to the same environment:
 
 ```bash
 uv sync --extra dev --extra mem0          # the Mem0 SDK, for the SDK-backed `Mem0` system
-uv sync --extra dev --extra mcp           # the MCP server (`memrank-mcp`)
+uv sync --extra dev --extra mcp           # the MCP server (`python -m memrank.mcp_server`)
 ```
 
 ## Check the checkout works
@@ -117,7 +117,7 @@ uv run memrank submit atomicmemory beam:100k-smoke --judge --on none
 ```
 
 Datasets download on first use and cache under `MEMRANK_CACHE_DIR`. Each loader also honours a
-local path override -- `SQUAD_DATA_PATH`, `LOCOMO_DATA_PATH`, `BEAM_DATA_PATH`,
+local path override -- `LOCOMO_DATA_PATH`, `BEAM_DATA_PATH`,
 `LONGMEMEVAL_DATA_PATH`, `DEMO_DATA_PATH` -- so you can point one at a copy you already have.
 
 Run output lands under `results/`, which is gitignored.

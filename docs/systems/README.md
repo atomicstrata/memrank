@@ -1,6 +1,8 @@
 <a id="the-systems-that-ship"></a>
 # Supported systems
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A [system](../reference/system.md) is the implementation evaluated by Memrank, such as a local
 retrieval method or a client connected to a memory service. Memrank includes retrieval baselines,
 diagnostic controls and clients for external memory services. The table lists the available

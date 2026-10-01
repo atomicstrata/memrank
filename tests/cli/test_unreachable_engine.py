@@ -37,7 +37,7 @@ class _RefusingSocket(httpx.BaseTransport):
 #: so hindsight -- which ships there, and fails at the preflight probe -- keeps the public suite honest.
 _CASES = [
     ("mem0", "locomo", "MEM0_HTTP_URL", "http://localhost:8888/configure"),
-    ("hindsight", "squad", "HINDSIGHT_API_URL", "http://localhost:8888/v1/default/banks/"),
+    ("hindsight", "demo", "HINDSIGHT_API_URL", "http://localhost:8888/v1/default/banks/"),
 ]
 
 

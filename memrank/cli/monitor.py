@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""`memrank ps` / `status` / `logs` -- observe running evals (from any terminal).
+"""Deprecated: the hidden `memrank ps`/`logs` commands that follow `submit` runs. Evaluate an
+agent with `memrank run` instead; see the README. `render_status` is used by `memrank runs
+show` and does not warn.
+
+`memrank ps` / `status` / `logs` -- observe running evals (from any terminal).
 
 Reads the per-run heartbeat (:mod:`memrank.runs.status`) written by ``memrank submit``. Every
 submission runs in the background (the interface model's one lifecycle), so this surface is how

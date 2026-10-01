@@ -1,6 +1,8 @@
 <a id="reference-the-seven-words-one-page-each"></a>
 # Python API reference
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 Use `evaluation.run(system=...)` to run evaluation tasks against an implementation and record
 the results. The pages below define the objects involved, their fields and methods, and how to
 use them from Python.

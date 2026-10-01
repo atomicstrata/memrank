@@ -615,7 +615,7 @@ def test_ps_and_runs_ls_live_are_the_same_command(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMRANK_RUNS_DIR", str(tmp_path))
     invoke = CliRunner().invoke
 
-    assert invoke(app, ["ps", "--json"]).output == invoke(app, ["runs", "ls", "--live", "--json"]).output
+    assert invoke(app, ["ps", "--json"]).stdout == invoke(app, ["runs", "ls", "--live", "--json"]).stdout
 
 
 def test_ps_all_matches_an_unfiltered_listing(monkeypatch, tmp_path):
@@ -627,7 +627,7 @@ def test_ps_all_matches_an_unfiltered_listing(monkeypatch, tmp_path):
     monkeypatch.setenv("MEMRANK_RUNS_DIR", str(tmp_path))
     invoke = CliRunner().invoke
 
-    assert invoke(app, ["ps", "--all", "--json"]).output == invoke(app, ["runs", "ls", "--json"]).output
+    assert invoke(app, ["ps", "--all", "--json"]).stdout == invoke(app, ["runs", "ls", "--json"]).stdout
 
 
 #: The hot-path aliases the interface model names, and the `runs` verb each one aliases. Exactly
@@ -640,14 +640,17 @@ FLAT_ALIASES = {"ps": "ls", "watch": "watch", "logs": "logs", "kill": "kill"}
 
 def test_every_flat_alias_has_its_runs_twin_and_no_others_exist():
     """Enumerated over the live Typer tree, so a new flat command cannot be added silently."""
+    # Hidden ones count: the engine-hosting path is hidden, not unregistered (ATO-2343), and
+    # its aliases must stay paired for as long as its code stays.
+    from memrank.cli.retired import RETIRED
     from memrank.cli.runs import runs_app
     from memrank.runner import app
 
-    flat = {c.name for c in app.registered_commands if not c.hidden}
-    twins = {c.name for c in runs_app.registered_commands if not c.hidden}
+    flat = {c.name for c in app.registered_commands} - set(RETIRED)
+    twins = {c.name for c in runs_app.registered_commands}
 
-    # The flat surface is the aliases plus the commands that are nobody's alias: `submit` (the
-    # verb the whole tool exists for) and `version`. `preflight` used to sit here; it retired
-    # into `targets show` when `doctor` was dropped from the model.
-    assert flat - {"submit", "version"} == set(FLAT_ALIASES)
+    # The flat surface is the aliases plus the commands that are nobody's alias: `run` and
+    # `serve` (evaluating an agent, decision 0034), `submit`, and `version`. `preflight` used to
+    # sit here; it retired into `targets show` when `doctor` was dropped from the model.
+    assert flat - {"run", "serve", "submit", "version"} == set(FLAT_ALIASES)
     assert set(FLAT_ALIASES.values()) <= twins

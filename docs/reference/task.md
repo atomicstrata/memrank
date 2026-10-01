@@ -1,5 +1,7 @@
 # task
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **task** is one question, the documents the system should have been given before it is asked,
 and what a right answer looks like. `q_job`, the first task of
 [`demo`](../evaluations/demo.md), asks what Alex does for a living.

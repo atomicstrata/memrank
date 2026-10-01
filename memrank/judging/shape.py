@@ -34,7 +34,7 @@ that cannot size the shape it is about to run quotes a budget the run does not h
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from memrank.judging.judge import (
@@ -47,6 +47,7 @@ from memrank.judging.judge import (
     generate_answer,
     gold_answer,
     grade_nugget,
+    judge_answer,
     judge_equivalent,
     judge_query,
     judge_rubric_sufficiency,
@@ -63,6 +64,21 @@ def is_negative(query: dict[str, Any]) -> bool:
     what a query costs -- a negative skips sufficiency, and skipping it is worth `samples` calls.
     """
     return query.get("kind") == "negative"
+
+
+@dataclass(frozen=True)
+class AnswerGrade:
+    """One answer graded against its reference -- the correctness half of grading, alone.
+
+    What an agent evaluation needs: the agent answered for itself, so there is no context to
+    judge for sufficiency and no reader to run. :meth:`JudgeShape.grade` composes this with those
+    stages when memrank produced the answer from retrieved context.
+    """
+
+    correctness: JudgeVerdict
+    score: float
+    nuggets: list[NuggetScore] | None = None
+    ordering: dict[str, Any] | None = None
 
 
 class JudgeShape(ABC):
@@ -106,6 +122,16 @@ class JudgeShape(ABC):
     def grade(self, complete: Completer, cfg: JudgeConfig, *,
               query: dict[str, Any], context: str) -> JudgedQuery:
         """Grade one query against what the engine retrieved for it."""
+
+    def grade_answer(self, complete: Completer, cfg: JudgeConfig, *,
+                     query: dict[str, Any], answer: str) -> AnswerGrade:
+        """Grade an answer the system under test produced itself, with the judge model only.
+
+        Not abstract, so a shape written only for retrieval grading keeps constructing; asking it
+        to grade an agent's answer is what fails, and says which shape could not.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} cannot grade an agent's own answer; implement grade_answer")
 
     def aggregates(self, per_category: dict[str, list[float]],
                    per_prompt_key: dict[str, list[float]]) -> dict[str, Any]:
@@ -210,6 +236,14 @@ class BinaryJudgeShape(JudgeShape):
                            query_date=query.get("query_timestamp"),
                            prompt=self._prompt_for(query))
 
+    def grade_answer(self, complete: Completer, cfg: JudgeConfig, *,
+                     query: dict[str, Any], answer: str) -> AnswerGrade:
+        verdict = judge_answer(complete, question=query["text"], answer=answer,
+                               gold=gold_answer(query), model=cfg.judge_model,
+                               samples=cfg.samples, negative=is_negative(query),
+                               prompt=self._prompt_for(query))
+        return AnswerGrade(verdict, score=1.0 if verdict.passed else 0.0)
+
 
 #: Abilities the plain rubric grader cannot score. `event_ordering` needs rank correlation over an
 #: ordered gold list, which `BeamJudgeShape` below supplies -- so BEAM passes an empty set and this
@@ -261,7 +295,7 @@ class NuggetJudgeShape(JudgeShape):
             # Graded the same way as the real answer, so the two are on one scale. This half is
             # engine-independent and therefore cache-shared across a sweep -- it is paid once.
             blind = generate_answer(complete, question=question, context="",
-                                    model=cfg.answer_model)
+                                    model=cfg.answer_model, prompt=cfg.answer_prompt)
             answered_without_context = _mean(
                 self._score(complete, cfg, question=question, answer=blind, rubric=rubric)) == 1.0
         sufficiency = None
@@ -272,8 +306,15 @@ class NuggetJudgeShape(JudgeShape):
                                                    rubric=rubric, model=cfg.judge_model,
                                                    samples=cfg.samples)
         answer = generate_answer(complete, question=question, context=context,
-                                 model=cfg.answer_model)
-        scores = self._score(complete, cfg, question=question, answer=answer, rubric=rubric)
+                                 model=cfg.answer_model, prompt=cfg.answer_prompt)
+        graded = self.grade_answer(complete, cfg, query=query, answer=answer)
+        return JudgedQuery(answer, sufficiency, graded.correctness, answered_without_context,
+                           score=graded.score, nuggets=graded.nuggets)
+
+    def grade_answer(self, complete: Completer, cfg: JudgeConfig, *,
+                     query: dict[str, Any], answer: str) -> AnswerGrade:
+        rubric = list(query.get("rubric") or [])
+        scores = self._score(complete, cfg, question=query["text"], answer=answer, rubric=rubric)
         score = _mean(scores)
         full = sum(1 for s in scores if s.score == 1.0)
         partial = sum(1 for s in scores if 0.0 < s.score < 1.0)
@@ -283,8 +324,7 @@ class NuggetJudgeShape(JudgeShape):
             passed=score == 1.0,
             rationale=f"{full}/{len(scores)} criteria fully satisfied, {partial} partially",
             samples=cfg.samples)
-        return JudgedQuery(answer, sufficiency, correctness, answered_without_context,
-                           score=score, nuggets=scores)
+        return AnswerGrade(correctness, score=score, nuggets=scores)
 
 
 #: The ability BEAM scores by rank correlation rather than by averaging criteria.
@@ -369,7 +409,7 @@ class BeamJudgeShape(NuggetJudgeShape):
         answered_without_context = False
         if cfg.no_context_control:
             blind = generate_answer(complete, question=question, context="",
-                                    model=cfg.answer_model)
+                                    model=cfg.answer_model, prompt=cfg.answer_prompt)
             answered_without_context = self._align(
                 complete, cfg, question=question, answer=blind, gold=gold)[0].score == 1.0
         sufficiency = None
@@ -378,15 +418,24 @@ class BeamJudgeShape(NuggetJudgeShape):
                                                    rubric=gold, model=cfg.judge_model,
                                                    samples=cfg.samples)
         answer = generate_answer(complete, question=question, context=context,
-                                 model=cfg.answer_model)
-        scored, pairs = self._align(complete, cfg, question=question, answer=answer, gold=gold)
+                                 model=cfg.answer_model, prompt=cfg.answer_prompt)
+        graded = self.grade_answer(complete, cfg, query=query, answer=answer)
+        return JudgedQuery(answer, sufficiency, graded.correctness, answered_without_context,
+                           score=graded.score, ordering=graded.ordering)
+
+    def grade_answer(self, complete: Completer, cfg: JudgeConfig, *,
+                     query: dict[str, Any], answer: str) -> AnswerGrade:
+        if not self._is_ordering(query):
+            return super().grade_answer(complete, cfg, query=query, answer=answer)
+        gold = list(query.get("rubric") or [])
+        scored, pairs = self._align(complete, cfg, question=query["text"], answer=answer,
+                                    gold=gold)
         correctness = JudgeVerdict(
             passed=scored.score == 1.0,
             rationale=(f"order {scored.tau_norm:.2f} x coverage {scored.f1:.2f}; "
                        f"{sum(1 for p in pairs if p['matched_reference'])}/{len(gold)} matched"),
             samples=cfg.samples)
-        return JudgedQuery(answer, sufficiency, correctness, answered_without_context,
-                           score=scored.score,
+        return AnswerGrade(correctness, score=scored.score,
                            ordering={**asdict(scored), "alignment": pairs})
 
 

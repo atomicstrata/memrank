@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (service/scoring): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """The two readings a paired comparison needs, and nothing that draws a conclusion.
 
 Both are the standard forms for paired data, and both are computed exactly rather than

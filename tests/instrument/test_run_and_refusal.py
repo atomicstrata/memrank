@@ -20,6 +20,8 @@ rule says it is.
 """
 from __future__ import annotations
 
+import pytest
+
 from memrank.instrument.evaluation import Clearing, Evaluation
 from memrank.instrument.task import Task
 from tests.instrument.fakes import (
@@ -34,6 +36,10 @@ from tests.instrument.fakes import (
     TinyRetriever,
     two_task_evaluation,
 )
+
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
 
 
 def test_a_run_produces_one_trace_per_task_and_values_that_name_their_decider():

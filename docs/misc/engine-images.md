@@ -5,6 +5,8 @@ last_reviewed: 2026-09-02
 
 # Engine images: what you can obtain
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 This page lists the container images used by command-line targets and the alternatives when
 an image is unavailable. Local retrieval implementations need no engine container. HTTP clients
 still require a running service, whether called from Python or the command line.
@@ -64,8 +66,7 @@ export MEM0_HTTP_URL=http://localhost:8888
 ```
 
 Then either drive the system directly (see
-[`examples/02-your-own-system/`](../../examples/02-your-own-system/README.md) for the shape) or write a target manifest of your own and point `targets.path` at it, exactly as
-[`examples/more/custom-target/`](../../examples/more/custom-target/README.md) does. What you will be measuring
+[`examples/02-your-own-system/`](../../examples/02-your-own-system/README.md) for the shape) or write a target manifest of your own and point `targets.path` at it. What you will be measuring
 is upstream mem0, which differs from the private fork.
 
 Publishing the fork is a decision about the fork, not a documentation change, and it has not been

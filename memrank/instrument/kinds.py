@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (memrank.core): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """`Memory`, the memory kind: you tell it things, and later you ask it for what is relevant.
 
 The one memory contract is DEFINED here, under the kind's own name. `memrank.core` imports it

@@ -48,6 +48,7 @@ import typer
 from memrank import (
     settings,
 )
+from memrank.cli import deprecated as deprecated_cli
 from memrank.cli import monitor as monitor_cli
 from memrank.cli import runs_show as runs_show_cli
 from memrank.cli import sync as sync_cli
@@ -60,11 +61,14 @@ from memrank.runs.status import PLATFORM_STATES, UNKNOWN_STATE
 from memrank.term import style, table
 
 runs_app = typer.Typer(help="Browse and inspect runs -- the record of every evaluation.")
-runs_app.command("logs")(monitor_cli.logs)
-runs_app.command("watch")(watch_cli.watch)
-runs_app.command("kill")(watch_cli.kill)
+# `logs`, `watch`, `kill` and `sync` follow and reconcile the background runs `submit` starts,
+# hidden with it (ATO-2343); `memrank run` is foreground and uploads its own run.
+# Deprecated with `submit`. `sync` is not: it also uploads finished local runs.
+runs_app.command("logs", hidden=True)(deprecated_cli.deprecated("runs logs", monitor_cli.logs))
+runs_app.command("watch", hidden=True)(deprecated_cli.deprecated("runs watch", watch_cli.watch))
+runs_app.command("kill", hidden=True)(deprecated_cli.deprecated("runs kill", watch_cli.kill))
 runs_app.command("show")(runs_show_cli.show)
-runs_app.command("sync")(sync_cli.sync)
+runs_app.command("sync", hidden=True)(sync_cli.sync)
 
 #: A run nobody can still attach to or stop is not live. ``submitted`` and ``queued`` are (a
 #: live process will start them, and they are killable); ``stale`` and ``unknown`` are not,
@@ -145,6 +149,9 @@ class RunRow:
     org_composite: float | None = None
     org_cell_count: int | None = None
     org_score_kind: str | None = None
+    #: ``agent`` for a ``memrank run`` run, whose record is one result rather than engine cells:
+    #: the API sends its score with ``cell_count`` 0, so the count cannot say it is one score.
+    org_kind: str | None = None
 
     def as_dict(self) -> dict:
         """The machine-readable form -- every column, plus the per-cell results."""
@@ -216,7 +223,8 @@ def _platform_row(payload: dict) -> RunRow:
                   # same "—" as before rather than on a wrong number.
                   org_composite=payload.get("composite"),
                   org_cell_count=payload.get("cell_count"),
-                  org_score_kind=payload.get("score_kind"))
+                  org_score_kind=payload.get("score_kind"),
+                  org_kind=payload.get("kind"))
 
 
 def _merge(local: list[RunRow], platform: list[RunRow]) -> list[RunRow]:
@@ -323,7 +331,7 @@ def _score_value(row: RunRow) -> float | None:
     local = [c.headline for c in row.cells if c.headline is not None]
     if local:
         return local[0] if len(row.cells) == 1 else None
-    return row.org_composite if row.org_cell_count == 1 else None
+    return row.org_composite if _one_org_score(row) else None
 
 
 def _score_kind(row: RunRow) -> str | None:
@@ -331,7 +339,17 @@ def _score_kind(row: RunRow) -> str | None:
     local = [c for c in row.cells if c.headline is not None]
     if local:
         return local[0].headline_kind if len(row.cells) == 1 else None
-    return row.org_score_kind if row.org_cell_count == 1 else None
+    return row.org_score_kind if _one_org_score(row) else None
+
+
+def _one_org_score(row: RunRow) -> bool:
+    """Whether the org's number is one run's own score: a single engine cell, or an agent run.
+
+    An agent run's record holds one result and no cells, so the API counts it as zero cells
+    while sending its judged score; reading the count alone listed every judged ``memrank run``
+    run as "—" (ATO-2365).
+    """
+    return row.org_kind == "agent" or row.org_cell_count == 1
 
 
 def _composite(row: RunRow) -> str:

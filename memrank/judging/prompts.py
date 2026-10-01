@@ -24,6 +24,9 @@ never instructions to follow (prompt-injection defense).
 
 from __future__ import annotations
 
+import hashlib
+from dataclasses import dataclass
+
 # Methodology version for judged scoring. Bumped when prompts OR the judged
 # scope change (so receipts/cache discriminate). 2026-06-04.1: expanded
 # JUDGE_VALID_CATEGORIES to cover binary-suitable BEAM abilities. 2026-06-04.2:
@@ -63,7 +66,13 @@ from __future__ import annotations
 # are UNCHANGED (they pass no prompts and take the generic pair), but the cache key is prefixed
 # with this constant, so their cached verdicts are invalidated too -- a cost, not a correctness
 # issue, accepted deliberately so the receipt can distinguish the two grading regimes.
-JUDGE_PROMPT_VERSION = "2026-08-14.1"
+# 2026-09-29.1: the reader answers with each evaluation's OFFICIAL answer prompt (AnswerPrompt,
+# declared per benchmark in memrank/benchmarks/answer_prompts.py) instead of ANSWER_SYSTEM for
+# everything. ANSWER_SYSTEM's "If they are insufficient, reply exactly: I don't know." is imposed
+# by no benchmark's own reader and produced "I don't know" for 46-88% of BEAM-100k's 400
+# questions (only 40 are abstention probes); docs/methodology.md. New reader bytes for LoCoMo,
+# LongMemEval and BEAM, so cached answers and resumed checkpoints from before must not mix in.
+JUDGE_PROMPT_VERSION = "2026-09-29.1"
 DATA_SENTINEL = "<<<MEMRANK_UNTRUSTED_DATA>>>"
 
 _INJECTION_GUARD = (
@@ -79,6 +88,55 @@ ANSWER_SYSTEM = (
     "use it to resolve relative time references. " + _INJECTION_GUARD
     + "Output only the answer text."
 )
+
+
+
+@dataclass(frozen=True)
+class AnswerPrompt:
+    """The reader prompt an evaluation's answers are generated with, and where it comes from.
+
+    ``template`` is a :meth:`str.format` string whose positional fields are filled, in order, by
+    the names in ``fields`` (``context``, ``question``, ``date``); substituted values are never
+    re-parsed, so dataset braces are safe. ``template=None`` is memrank's own reader: the user
+    block is :func:`answer_user`. ``system`` is ``""`` when the official protocol sends none --
+    every official reader is one user message.
+    """
+
+    name: str
+    source: str
+    system: str
+    template: str | None = None
+    fields: tuple[str, ...] = ()
+    official: bool = True
+
+    def render(self, *, question: str, context: str,
+               query_date: str | None = None) -> tuple[str, str]:
+        """The (system, user) pair for one question."""
+        if self.template is None:
+            return self.system, answer_user(question=question, context=context,
+                                            query_date=query_date)
+        if "date" in self.fields and not query_date:
+            raise ValueError(f"the {self.name} answer prompt states the current date, and this "
+                             "question has none")
+        values = {"context": context, "question": question, "date": query_date}
+        return self.system, self.template.format(*(values[f] for f in self.fields))
+
+    @property
+    def fingerprint(self) -> str:
+        """``sha256:`` over the prompt's bytes, rendered around placeholder values."""
+        system, user = self.render(question="<question>", context="<context>",
+                                   query_date="<date>")
+        return "sha256:" + hashlib.sha256(f"{system}\x00{user}".encode()).hexdigest()
+
+    @property
+    def identity(self) -> str:
+        """What a record names the prompt by: its name and a short fingerprint."""
+        return f"{self.name}@{self.fingerprint[len('sha256:'):][:12]}"
+
+    def provenance(self) -> dict[str, str | bool]:
+        return {"answer_prompt": self.identity, "answer_prompt_source": self.source,
+                "answer_prompt_official": self.official}
+
 
 _JSON_INSTR = 'Respond with ONLY strict JSON: {"passed": <true|false>, "rationale": "<one sentence>"}.'
 
@@ -293,3 +351,10 @@ def rubric_sufficiency_user(*, question: str, context: str, rubric: list[str]) -
     criteria = "\n".join(f"- {item}" for item in rubric)
     return (f"{_wrap(question, 'Question')}\n\n{_wrap(criteria, 'Required criteria')}\n\n"
             f"{_wrap(context, 'Memory snippets')}")
+
+
+#: memrank's own reader, for an evaluation whose benchmark publishes no reader prompt (demo,
+#: relation_graph, evaluation files). Declared as the fallback, never picked up silently: its
+#: identity is recorded wherever answers are, like any official prompt's.
+MEMRANK_READER = AnswerPrompt(name="memrank-reader", source="memrank/judging/prompts.py",
+                              system=ANSWER_SYSTEM, official=False)

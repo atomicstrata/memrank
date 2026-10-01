@@ -5,11 +5,14 @@ last_reviewed: 2026-09-24
 
 # Documentation
 
-Memrank is a tool for reproducible, auditable evaluation of memory systems.
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
 
-Memrank focuses on memory systems: it runs evaluation tasks and reports scores and timings, with
-recorded responses and errors to inspect. Use these results to understand how your memory system
-performs, compare it with another memory system and investigate differences on individual tasks.
+Evaluate your agent on your tasks.
+
+Memrank evaluates agents: it runs evaluation tasks and reports scores and timings, with recorded
+responses and errors to inspect. Use these results to understand how your agent performs, compare
+it with an earlier version, an alternative or a baseline, and investigate differences on
+individual tasks.
 
 <a id="the-entry-path"></a>
 ## Start a task
@@ -59,7 +62,6 @@ Python result API.
 |---|---|
 | Submit, watch and inspect a tracked run | [The command line](misc/command-line.md) |
 | Check container availability and prerequisites | [Engine images](misc/engine-images.md) |
-| Register a system for command-line use | [Custom targets](../examples/more/custom-target/README.md) |
 
 ## Working on memrank itself
 

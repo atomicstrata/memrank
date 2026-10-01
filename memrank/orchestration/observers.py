@@ -21,10 +21,12 @@ cloud task performs. Together they are the CLI's replacement for the module-glob
 
 Thread-safety: methods are called from worker threads (``workers>1``,
 ``judge_workers>1``). ``RunStatus`` and ``RunProgress`` carry their own locks, and the
-observer holds no other mutable state after ``planned`` -- which runs before any pool
-starts, the same ordering contract the globals relied on.
+observer serializes snapshots through local and remote publication so an older snapshot
+cannot overwrite a newer one. ``planned`` runs before any pool starts.
 """
 from __future__ import annotations
+
+import threading
 
 from memrank.evaluation.observer import EvalObserver, EvalPlan, _eval_plan, _progress_step
 from memrank.runs import status as run_status
@@ -93,6 +95,7 @@ class RunStatusObserver(ConsoleObserver):
         super().__init__(verbose=verbose)
         self._status = status
         self._progress: RunProgress | None = None
+        self._publish_lock = threading.Lock()
 
     def planned(self, plan: EvalPlan) -> None:
         self._progress = _progress_from_plan(plan)
@@ -128,13 +131,16 @@ class RunStatusObserver(ConsoleObserver):
     def _publish(self, *, stage: str | None = None, unit: int | None = None) -> None:
         if self._progress is None:
             return
-        if unit is not None:
-            self._progress.enter_unit(unit)
-        if stage is not None:
-            # Announcing a stage makes it the current one before any of its work has
-            # completed -- a stage entered but not yet advanced must not render 0/0.
-            self._progress.enter_stage(stage)
-        record = self._progress.as_dict()
-        self._status.set_progress_record(
-            record, state=run_status.stage_state(stage) if stage else None)
-        run_status.publish_remote(record, run_id=self._status.data["run_id"])
+        # Keep snapshot order through both destinations; locking only the status write
+        # lets a delayed worker replace completed progress with its older snapshot.
+        with self._publish_lock:
+            if unit is not None:
+                self._progress.enter_unit(unit)
+            if stage is not None:
+                # Announcing a stage makes it the current one before any of its work has
+                # completed -- a stage entered but not yet advanced must not render 0/0.
+                self._progress.enter_stage(stage)
+            record = self._progress.as_dict()
+            self._status.set_progress_record(
+                record, state=run_status.stage_state(stage) if stage else None)
+            run_status.publish_remote(record, run_id=self._status.data["run_id"])

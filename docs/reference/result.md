@@ -1,5 +1,7 @@
 # result
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **result** contains a [run](run.md)'s recorded traces and measured values. Use it to inspect
 responses and failures, interpret scores, and save evidence for later analysis.
 

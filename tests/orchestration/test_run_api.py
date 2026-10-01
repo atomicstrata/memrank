@@ -30,6 +30,10 @@ from memrank.evaluation.api import run as run_cell
 from memrank.judging.judge import JudgeConfig
 from tests.fakes import FakeAdapter, FakeBenchmark, JudgeFakeBenchmark, make_fake_completer
 
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
+
 
 @pytest.fixture
 def isolated(tmp_path, monkeypatch):

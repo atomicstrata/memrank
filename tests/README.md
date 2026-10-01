@@ -19,7 +19,7 @@ A rule is executable when two people reading it put a new file in the same direc
 | `benchmarks/` | its subject is a `Benchmark` implementation -- the operator layer a named evaluation resolves to -- loading, scoring, or a methodology claim |
 | `cli/` | it invokes a `memrank` command through Typer/`CliRunner` and asserts on the command surface |
 | `composition/` | its subject is `memrank.composition`: how several evaluations compose into one |
-| `core/` | its subject is a top-level module of the package: `core`, `config`, `settings`, `plugins`, `rate_limit`, `atomic_json`, or the shared fakes those contracts are exercised with |
+| `core/` | its subject is a top-level module of the package: `core`, `config`, `settings`, `rate_limit`, `atomic_json`, or the shared fakes those contracts are exercised with |
 | `instrument/` | its subject is one of the seven as `memrank/instrument/` defines them: system, evaluation, task, trace, measure, run, result. A test about a **measure** or a **trace** belongs here, not in `metrics/` or `provenance/` |
 | `instrumentation/` | its subject is `LatencyCollector` / `TokenCollector` |
 | `judging/` | its subject is `memrank.judging.*`: the client, the prompts, the shape, the budget |

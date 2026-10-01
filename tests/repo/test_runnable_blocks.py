@@ -227,9 +227,13 @@ def test_the_readme_leads_with_a_block_that_runs():
     F1 of the 2026-09-21 session is that the README's FIRST Python block did not run after the
     README's own install command. A floor over the whole corpus would pass with that block marked
     and the rest green, which is the one outcome that would reproduce the session exactly.
+
+    The README's quick start is now shell -- the one-command install and `memrank run` -- so it
+    may carry no Python block at all. When it carries one, the first must still run.
     """
     first = next((b for b in BLOCKS if b.path == "README.md"), None)
-    assert first is not None, "the README carries no Python block"
+    if first is None:
+        return
     assert first.reason is None, (
         f"the README's first Python block declares a marker ({first.reason}) -- the front page's "
         f"way in is not allowed to be a block nobody runs")

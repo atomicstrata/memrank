@@ -28,7 +28,8 @@ from pathlib import Path
 import pytest
 
 from memrank.cli.runs import RunRow, _composite
-from memrank.metrics.headline import cell_headline
+from memrank.metrics.headline import DEFAULT_QUALITY_METRIC, cell_headline
+from memrank.metrics.headline import JUDGED as JUDGED_KIND
 from memrank.runs.registry import RunInfo
 
 #: A judged cell at full coverage, a judged cell too sparse to rank, and the plain composites.
@@ -73,3 +74,27 @@ AGREEMENT = [
 @pytest.mark.parametrize("cells,expected_cli,expected_api", AGREEMENT)
 def test_the_cli_renders_one_record_the_documented_way(cells, expected_cli, expected_api):
     assert _composite(_row([_info(c) for c in cells])) == expected_cli
+
+
+#: A row the org listed and this machine holds no cells for, as (the org's fields, the column).
+#: An agent run from `memrank run` has one result and no cells, so the API sends its score with
+#: `cell_count` 0 (ATO-2365); an engine run's count still decides whether its number is one cell's.
+ORG_ONLY = [
+    ({"org_kind": "agent", "org_composite": 0.5, "org_cell_count": 0,
+      "org_score_kind": JUDGED_KIND}, "0.5000 j"),
+    ({"org_kind": "agent", "org_composite": None, "org_cell_count": 0,
+      "org_score_kind": None}, "—"),
+    ({"org_kind": "engine", "org_composite": 0.5, "org_cell_count": 1,
+      "org_score_kind": DEFAULT_QUALITY_METRIC}, "0.5000"),
+    ({"org_kind": "engine", "org_composite": None, "org_cell_count": 3,
+      "org_score_kind": None}, "3 cells"),
+    ({"org_kind": "engine", "org_composite": None, "org_cell_count": 0,
+      "org_score_kind": None}, "—"),
+]
+
+
+@pytest.mark.parametrize("org,expected", ORG_ONLY,
+                         ids=["agent-judged", "agent-unjudged", "engine-one-cell",
+                              "engine-sweep", "engine-empty"])
+def test_a_run_listed_only_by_the_org_shows_the_orgs_score(org, expected):
+    assert _composite(_row([], **org)) == expected

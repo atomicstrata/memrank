@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Where a target materialises -- this laptop, or a cloud task.
+"""Deprecated: placement, the engine-hosting path behind `memrank submit`. Evaluate an agent with
+`memrank run` instead; see the README. `run_api_client` and `hosted` are used by the current
+path (`loop/`, `cli/runs*`, `runs/`) and do not warn.
+
+Where a target materialises -- this laptop, or a cloud task.
 
 Placement is the third noun: a target says *what* is under test, an experiment says what is being
 measured, and a placement says *where* it runs. Keeping them separate is what turns "which bash

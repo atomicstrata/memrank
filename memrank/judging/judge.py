@@ -91,6 +91,10 @@ class JudgeConfig:
     # and the receipt records both truthfully.
     answer_temperature: float = 0.0
     completer: Completer | None = None
+    # The reader prompt answers are generated with. `run_cell` sets it from the benchmark it runs
+    # (Benchmark.answer_prompt), and the receipt records it; memrank's own reader is only the
+    # default for a configuration built without a benchmark.
+    answer_prompt: jp.AnswerPrompt = jp.MEMRANK_READER
 
     def __post_init__(self) -> None:
         # Methodology-critical knobs are validated at construction (no silent
@@ -158,10 +162,10 @@ def _vote(verdicts: list[JudgeVerdict]) -> JudgeVerdict:
 
 
 def generate_answer(complete: Completer, *, question: str, context: str, model: str,
-                    query_date: str | None = None) -> str:
-    return complete(model, jp.ANSWER_SYSTEM,
-                    jp.answer_user(question=question, context=context,
-                                   query_date=query_date)).strip()
+                    prompt: jp.AnswerPrompt, query_date: str | None = None) -> str:
+    """The reader's answer under ``prompt`` -- the evaluation's own, never a silent default."""
+    system, user = prompt.render(question=question, context=context, query_date=query_date)
+    return complete(model, system, user).strip()
 
 
 def _sample_user(user: str, i: int) -> str:
@@ -443,7 +447,8 @@ def judge_query(complete: Completer, *, question: str, context: str, gold: str,
         # or a date-driven improvement would be misread as context dependence. It gets the same
         # per-type prompt for the same reason.
         nc_answer = generate_answer(complete, question=question, context="",
-                                    model=cfg.answer_model, query_date=query_date)
+                                    model=cfg.answer_model, prompt=cfg.answer_prompt,
+                                    query_date=query_date)
         answered_without_context = judge_answer(
             complete, question=question, answer=nc_answer, gold=gold,
             model=cfg.judge_model, samples=cfg.samples, negative=negative,
@@ -453,7 +458,8 @@ def judge_query(complete: Completer, *, question: str, context: str, gold: str,
         sufficiency = judge_sufficiency(complete, question=question, context=context,
                                         gold=gold, model=cfg.judge_model, samples=cfg.samples)
     answer = generate_answer(complete, question=question, context=context,
-                             model=cfg.answer_model, query_date=query_date)
+                             model=cfg.answer_model, prompt=cfg.answer_prompt,
+                             query_date=query_date)
     correctness = judge_answer(complete, question=question, answer=answer, gold=gold,
                                model=cfg.judge_model, samples=cfg.samples, negative=negative,
                                prompt=prompt)

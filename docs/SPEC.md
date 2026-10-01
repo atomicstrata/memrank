@@ -10,7 +10,9 @@ maintainer: AtomicStrata (vendor-neutral charter)
 
 # Memrank -- Public Specification
 
-**One line:** Memrank is a tool for reproducible, auditable evaluation of memory systems. It runs
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
+**One line:** Evaluate your agent on your tasks. Memrank runs
 evaluations against supplied systems and records measurements with their supporting evidence.
 Tracked runs additionally record reproducibility receipts.
 
@@ -93,7 +95,7 @@ translator of the system contract through `native`, and in-process for `tfidf`, 
 `word-overlap` retrieval baseline, beside the control arms `no-context`, `fixed-context` and
 `full-context`; `memrank.catalog()` prints them and `memrank.systems` holds them as classes. Not
 every engine image is obtainable, and the ones that are not are named as such: see
-[engine images](misc/engine-images.md). Evaluations ship for `squad`, the synthetic `demo`,
+[engine images](misc/engine-images.md). Evaluations ship for the synthetic `demo`,
 `relation_graph`, `locomo`, `longmemeval` and `beam`.
 
 ### 2.3 Control arms are part of the measurement
@@ -123,8 +125,7 @@ corpus whose answers cluster late disadvantages it, and `no-context` needs an an
 This section is normative. A consumer of memrank output that ignores it will misreport.
 
 **`composite` is not answer correctness.** It is whatever the evaluation declares in
-`quality_metric`. `squad` computes full-passage retrieval recall (`passage_recall`), not
-answer-span or end-to-end answer correctness; `demo` computes a deterministic substring-recall
+`quality_metric`. `demo` computes a deterministic substring-recall
 proxy; `relation_graph` computes a structural graph score. LoCoMo, LongMemEval and BEAM declare
 judged metrics and compute no proxy at all: their gold answers are derived or written as prose
 rubrics, so substring recall would be near zero for reasons that have nothing to do with the

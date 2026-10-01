@@ -49,12 +49,18 @@ ENGINE_ENV: dict[str, dict[tuple[str, str], str]] = {
         ("embedder", "provider"): "MEM0_EMBEDDER_PROVIDER",
         ("embedder", "model"): "MEM0_EMBEDDER_MODEL",
         ("embedder", "dims"): "MEM0_EMBEDDING_DIMS",
+        # The fork's server (mem0-internal server/main.py) passes these to the OpenAI SDK as
+        # its base URL for an openai-family provider.
+        ("llm", "endpoint"): "MEM0_LLM_ENDPOINT",
+        ("embedder", "endpoint"): "MEM0_EMBEDDER_ENDPOINT",
     },
     # No embedder knob: hindsight exposes only its extraction LLM
     # (docs/research/2026-07-29-memory-engine-configurability-and-forks.md).
     "hindsight": {
         ("llm", "provider"): "HINDSIGHT_API_LLM_PROVIDER",
         ("llm", "model"): "HINDSIGHT_API_LLM_MODEL",
+        # Read by 0.6.2's config.py; its OpenAI-compatible providers send to it.
+        ("llm", "endpoint"): "HINDSIGHT_API_LLM_BASE_URL",
     },
     # Unprefixed by design -- the engine owns its whole container, so its config vars are not
     # namespaced. They must never be read out of memrank's own environment for that reason.
@@ -417,7 +423,7 @@ def engine_secret_vars(target: Manifest) -> dict[str, list[str]]:
     """
     from memrank.secrets import requirements
 
-    providers = {role: comp.provider for role, comp in target.components.items()}
+    providers = requirements.keyed_providers(target.components)
     derived = requirements.required_secrets(
         target.adapter, embedder=providers.get("embedder"), llm=providers.get("llm"))
     out: dict[str, list[str]] = {

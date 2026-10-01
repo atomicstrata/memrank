@@ -2,7 +2,7 @@
 
 `uv run python examples/02-your-own-system/run.py`
 
-Run the SQuAD evaluation from example 01 against a memory implemented in this script.
+Run the Demo evaluation from example 01 against a memory implemented in this script.
 Subclass `memrank.Memory` and implement `prepare`, `ingest`, `retrieve` and `cleanup`.
 No registration or changes to the Memrank package are required.
 

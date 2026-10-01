@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import typer
 
@@ -69,6 +69,25 @@ def supports_boxes() -> bool:
     return bool(getattr(sys.stdout, "isatty", lambda: False)()) and os.environ.get("TERM") != "dumb"
 
 
+def decorates(stream: object) -> bool:
+    """Whether ``stream`` gets colour and clickable links, rather than the same words plain.
+
+    Stricter than :func:`wants_color`, whose escapes Click strips from a pipe on its own: a
+    hyperlink escape is not one Click knows to strip, so this asks the stream itself. CI logs
+    are recorded rather than read live, and get the plain words even from a pseudo-terminal.
+    """
+    tty = bool(getattr(stream, "isatty", lambda: False)())
+    return (tty and wants_color() and not os.environ.get("CI")
+            and os.environ.get("TERM") != "dumb")
+
+
+def link(url: str, stream: object = None) -> str:
+    """``url`` blue and clickable (OSC 8) where ``stream`` is a terminal; plain elsewhere."""
+    if not decorates(sys.stdout if stream is None else stream):
+        return url
+    return typer.style(f"\033]8;;{url}\033\\{url}\033]8;;\033\\", fg=typer.colors.BLUE)
+
+
 def terminal_width(default: int = 100) -> int:
     """The width a boxed table may fill. One source, so table and panel agree.
 
@@ -86,7 +105,9 @@ def _fragment(text: str, *, fg: str | None = None, dim: bool = False, bold: bool
     """Every styled string passes through here -- the single gate NO_COLOR closes."""
     if not wants_color():
         return text
-    return typer.style(text, fg=fg, dim=dim, bold=bold)
+    # None, not False: Click renders `dim=False` as "normal intensity" (SGR 22), which cancels
+    # the bold it has just emitted, so every bold fragment used to render plain.
+    return typer.style(text, fg=fg, dim=dim or None, bold=bold or None)
 
 
 def out(text: str = "", *, nl: bool = True) -> None:
@@ -115,6 +136,19 @@ def error(message: str) -> None:
     the file a caller was capturing an answer into.
     """
     typer.echo(_fragment(f"error: {message}", fg=typer.colors.RED), err=True)
+
+
+def step(statement: str, commands: Sequence[str] = ()) -> None:
+    """Tell the user what they need to do: the statement, then each command on its own line.
+
+    The missing-step voice, deliberately unlike :func:`error`: no red and no ``error:`` label,
+    because a step the user has not taken yet is not something that broke. Commands are indented
+    and bold so they can be found and copied whole.
+    """
+    if statement:
+        say(statement)
+    for command in commands:
+        say(f"  {bold(command)}")
 
 
 def warn(message: str) -> None:
@@ -168,6 +202,26 @@ def bad(text: str) -> str:
 def caution(text: str) -> str:
     """Style an attention fragment (``!`` advisories) yellow."""
     return _fragment(text, fg=typer.colors.YELLOW)
+
+
+#: The look of WHOSE and WHICH: the organisation a run is recorded to and the run's own id.
+#: One constant, so the run's opening lines and its ending (:mod:`memrank.term.outcome`) match.
+IDENTITY_LOOK: dict[str, object] = {"fg": typer.colors.YELLOW, "bold": True}
+
+#: What every line ``memrank run`` says about itself opens with, as W&B's ``wandb:`` does.
+PREFIX = "memrank:"
+
+
+def identity(text: str) -> str:
+    """An identity the reader must not misread -- an org slug, a run id, a login. Bold yellow,
+    so which organisation a run lands in is the first thing the eye finds."""
+    return _fragment(text, fg=typer.colors.YELLOW, bold=True)
+
+
+def prefixed(text: str) -> str:
+    """``memrank: <text>``, the prefix bold blue: a line the tool says about the run, set apart
+    from the agent's and the evaluation's own output."""
+    return f"{_fragment(PREFIX, fg=typer.colors.BLUE, bold=True)} {text}"
 
 
 def dim(text: str) -> str:

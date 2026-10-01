@@ -1,11 +1,13 @@
 # measure
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **measure** is one named rule that reads [traces](trace.md) and produces named values. Five
 measures ship with the package:
 
 | Measure | What it answers | Decided by |
 |---|---|---|
-| `<evaluation>-score` | the evaluation's own score -- `squad-score` is the first value the quick start prints. Each shipped evaluation says on its own page what its score is and is not | a fixed rule |
+| `<evaluation>-score` | the evaluation's own score -- `demo-score` is the first value the quick start prints. Each shipped evaluation says on its own page what its score is and is not | a fixed rule |
 | `word-match` | did the expected words appear in something the system recalled? It is retrieval, not answer correctness, and says so on every value | a fixed rule |
 | `latency` | how long ingest and retrieve took, at memrank's own call boundary | memrank's clock |
 | `failure-rate` | how many traces carry an error | memrank's bookkeeping |

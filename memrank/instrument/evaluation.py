@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from memrank import deprecation
 from memrank.instrument.asking import DEFAULT_K
 from memrank.instrument.measure import Measure
 from memrank.instrument.task import Task
@@ -79,10 +80,10 @@ class Evaluation(BaseModel):
         and a stated reason, or one trace per task per attempt plus the values this
         evaluation's measures produced over them.
 
-            from memrank.evaluations import SQuAD
+            from memrank.evaluations import Demo
             from memrank.systems import TFIDF
 
-            result = SQuAD().run(system=TFIDF())
+            result = Demo().run(system=TFIDF())
 
         ``answerer`` writes the answer for a system that only recalls; ``k`` is how many
         documents to ask a memory or a retriever for; ``attempts`` repeats every task. Each
@@ -94,6 +95,7 @@ class Evaluation(BaseModel):
         # this module that needs it. `DEFAULT_K` comes from `asking`, which imports neither.
         from memrank.instrument.run import run as _run
 
+        deprecation.warn("evaluation.run(system=...)")
         return _run(system, self, answerer=answerer, k=k, attempts=attempts)
 
     def group_of(self, task: Task) -> str:

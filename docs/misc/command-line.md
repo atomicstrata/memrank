@@ -1,5 +1,7 @@
 # The command line
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 Use the command line to submit tracked runs, choose where they run, inspect their status and
 save reproducibility receipts. For direct Python evaluation, see [Start here](../getting-started.md).
 
@@ -13,7 +15,7 @@ The command line uses these terms in commands and stored records:
 | Word here | What the Python interface calls it |
 |---|---|
 | **target** | a **system** that the catalog knows by name -- a named composition of a system plus the embedder and LLM it is configured with, identified by its configuration |
-| **eval** | an **evaluation** that the catalog knows by name (`squad`, `demo`, `locomo`, `beam`, `longmemeval`) |
+| **eval** | an **evaluation** that the catalog knows by name (`demo`, `locomo`, `beam`, `longmemeval`) |
 | **adapter** | the class a target's entry resolves to: the code that talks to that system |
 | **benchmark** | the class an eval's entry resolves to: the loader and scorer behind the name |
 
@@ -168,14 +170,8 @@ again. `MEMRANK_TOKEN` overrides both, and is what CI should use.
 
 ## Connecting an AI agent
 
-Install the optional MCP server with `uv tool install 'memrank[mcp]'`, then configure the agent to
-launch `memrank-mcp`. Run `memrank-mcp --help` for the tool workflow and configuration.
-
-From the source install, the same extra is named against the URL:
-
-```bash
-uv tool install --force --refresh 'memrank[mcp] @ git+https://github.com/atomicstrata/memrank'
-```
+memrank does not currently install an MCP server command. To have a coding agent run an
+evaluation, point it at `memrank run --help`.
 
 ## Every command
 

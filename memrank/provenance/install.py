@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -70,6 +71,30 @@ _COMMIT_IN_VERSION = 8
 #: A hung ``git`` must not hold up a run; two seconds is the value receipt.py has always used.
 _GIT_TIMEOUT_SECONDS = 2
 
+#: The record the standalone build carries beside its interpreter: the commit it was built from,
+#: its target, and the origin its install script is served from. Written by
+#: ``tools/internal/binary/build.py``; the name is the seam between the two.
+STANDALONE_RECORD = "memrank-build.json"
+
+
+def standalone_build() -> dict[str, str] | None:
+    """The standalone build's record of itself, or ``None`` when this is a Python install.
+
+    The standalone build has no installer front end and no PEP 610 record worth reading -- its
+    package metadata was copied in at build time and names the build machine's directory. What
+    identifies it is the commit it was frozen from, and what upgrades it is its install script.
+    A frozen process without the record is a broken build and fails loudly here.
+    """
+    if not getattr(sys, "frozen", False):
+        return None
+    record = Path(sys._MEIPASS) / STANDALONE_RECORD  # type: ignore[attr-defined]
+    return dict(json.loads(record.read_text(encoding="utf-8")))
+
+
+def _reinstall_command(build: dict[str, str]) -> str:
+    """The standalone build updates and repairs itself the one way it was installed."""
+    return f"curl -fsSL {build['origin']}/install.sh | sh"
+
 
 def _direct_url(distribution: str) -> dict[str, Any] | None:
     """The distribution's PEP 610 record, or ``None`` when it has none.
@@ -93,8 +118,11 @@ def describe_origin(distribution: str = "memrank") -> str | None:
     Three shapes, because PEP 610 records three: a VCS install carries ``vcs_info`` and is
     reported by resolved commit; an editable install carries ``dir_info.editable`` and is
     reported as the working tree it tracks, since its code is whatever is on disk right now;
-    anything else is reported by URL.
+    anything else is reported by URL. The standalone build is reported by its own record.
     """
+    build = standalone_build()
+    if build is not None:
+        return f"standalone {build['target']}, commit {build['commit'][:_SHORT_COMMIT]}"
     record = _direct_url(distribution)
     if record is None:
         return None
@@ -152,8 +180,12 @@ def build_commit(distribution: str = "memrank") -> str | None:
     answer, and the tree is the one the record names rather than wherever the caller happens
     to be standing. A wheel or sdist install has no commit at all: its version is its identity
     and ``None`` is the honest answer, where a commit read out of the caller's own repository
-    would be a plausible lie in the artifact that exists to be reproducible.
+    would be a plausible lie in the artifact that exists to be reproducible. The standalone build
+    was frozen from one commit and carries it.
     """
+    build = standalone_build()
+    if build is not None:
+        return build["commit"]
     record = _direct_url(distribution)
     if record is None:
         return None
@@ -238,8 +270,15 @@ def dependency_instruction(package: str, extra: str | None = None,
     reader's install is a second dead end stacked on the first. An editable install is a
     checkout and syncs; a tool environment takes the extra alongside the source it was
     installed from; anything else is a plain install of the package, or of the extra that
-    carries it.
+    carries it. The standalone build is fixed at build time: a missing package it should carry
+    means it is damaged and reinstalls, and an extra it does not carry is not one it can gain.
     """
+    build = standalone_build()
+    if build is not None:
+        if extra:
+            return (f"a Python install of memrank, pip install '{distribution}[{extra}]' -- "
+                    f"this standalone build does not carry it")
+        return _reinstall_command(build)
     record = _direct_url(distribution)
     if record is not None and record.get("dir_info", {}).get("editable"):
         return f"uv sync --extra {extra}" if extra else "uv sync"
@@ -258,8 +297,12 @@ def upgrade_instruction(distribution: str = _DISTRIBUTION) -> str:
     a release to run a git install replaces their release with a branch checkout, and telling
     someone whose install is editable to reinstall anything is telling them to do nothing at
     all, since their code is the tree on disk. An editable install therefore gets prose rather
-    than a command; the working tree is the thing to move and only its owner knows how.
+    than a command; the working tree is the thing to move and only its owner knows how. The
+    standalone build upgrades by re-running the script that installed it.
     """
+    build = standalone_build()
+    if build is not None:
+        return _reinstall_command(build)
     record = _direct_url(distribution)
     if record is not None and record.get("dir_info", {}).get("editable"):
         tree = _editable_tree(record.get("url", ""))

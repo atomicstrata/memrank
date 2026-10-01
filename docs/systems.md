@@ -1,5 +1,7 @@
 # Adding a system
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 A **[system](reference/system.md)** is the implementation you put under test. First check the
 [shipped systems](systems/README.md): a client may already support your engine. Otherwise,
 implement the appropriate kind below, then pass an instance to the evaluation.
@@ -235,18 +237,16 @@ line, at `workers > 1`, in the cloud, or by other people. Registration decides w
 lives and what may address it; it never changes what the four verbs do, and it never changes what
 may be claimed about a measurement.
 
-There are three ways to take that step.
+There are two ways to take that step.
 
-| | **Register from outside** | **Write an in-tree adapter** | **Write a translator** |
-|---|---|---|---|
-| What you write | the same class, plus one `register_adapter` call | a Python `memrank.Memory` subclass, in this repo | a program serving [the translator contract](system-contract.md), in any language |
-| Where it lives | your repository | `memrank/adapters/` | your repository |
-| Needs a PR? | no | yes, plus entries in ~8 tables and 6 test lists | no |
-| Works today on | `--on local`, sweeps and `workers > 1`, on a machine you configured; not the cloud, which carries only the manifests inside the package | every placement, including cloud | `--on local`, from a source checkout |
-| Evidence class | derives from how the artifact was bound | artifact-backed, publishable | `development_observation`, `publishable: false` |
-| Verify with | `memrank targets verify <ref>` | `pytest tests/live/conformance/test_adapter_contract.py` | `memrank targets verify <ref>` |
-
-[`examples/more/custom-target/`](../examples/more/custom-target/README.md) demonstrates these integration options with a small local implementation.
+| | **Write an in-tree adapter** | **Write a translator** |
+|---|---|---|
+| What you write | a Python `memrank.Memory` subclass, in this repo | a program serving [the translator contract](system-contract.md), in any language |
+| Where it lives | `memrank/adapters/` | your repository |
+| Needs a PR? | yes, plus entries in ~8 tables and 6 test lists | no |
+| Works today on | every placement, including cloud | `--on local`, from a source checkout |
+| Evidence class | artifact-backed, publishable | `development_observation`, `publishable: false` |
+| Verify with | `pytest tests/live/conformance/test_adapter_contract.py` | `memrank targets verify <ref>` |
 
 Which one to pick:
 
@@ -256,10 +256,6 @@ Which one to pick:
 - **A translator** when your engine is not Python, or when you would rather memrank never
   imported your code. Read [the translator contract](system-contract.md) and copy
   [`examples/more/native-adapter/`](../examples/more/native-adapter/README.md).
-- **From outside** when you want the in-tree driving model -- your own Python `memrank.Memory`,
-  your own target descriptors, the full `memrank submit` lifecycle -- without the class living
-  here. [Registering a system from outside](#registering-a-system-from-outside) has the
-  mechanics.
 
 ### 3. Register the system (in-tree)
 
@@ -393,45 +389,6 @@ Per the vendor-neutral charter, AtomicStrata commits to reviewing valid PRs with
 Include the class under `memrank/adapters/<name>.py`, its registry entry, tests under
 `tests/adapters/`, documentation for any new env vars, and instructions for starting the
 backend locally.
-
-### Registering a system from outside
-
-Keep the Python `memrank.Memory` and the full lifecycle, but let the class live in your own
-repository. `memrank/plugins.py` exposes `register_adapter`, which takes the adapter class **and
-every table row that drives it** as one object:
-
-<!-- runnable: no -- the registration names `MyAdapter`, the class you are writing, and `{...}` stands for your own provenance -->
-```python
-from memrank.plugins import AdapterRegistration, register_adapter
-from memrank.secrets.requirements import EngineRequirements
-from memrank.targets.engine_env import Readiness
-
-register_adapter(AdapterRegistration(
-    adapter=MyAdapter,
-    engine_env={("llm", "provider"): "MYENGINE_EXTRACTOR"},
-    base_url_env="MYENGINE_API_URL",
-    readiness=Readiness("curl -fsS http://localhost:{port}{path} || exit 1", "/health", 60),
-    engine_command=None,
-    requirements=EngineRequirements("myengine", providers={"llm": "openai"}),
-    provenance={...},
-))
-```
-
-Point memrank at the module that makes that call, put it on the interpreter's import path, and
-name a directory of your own for the engine's descriptors:
-
-```bash
-memrank config set adapters.plugins myengine_memrank
-export PYTHONPATH=/abs/path/to/your/plugins
-memrank config set targets.path /abs/path/to/your/targets
-```
-
-Both settings persist, and both are read on every command: a module named in `adapters.plugins`
-that is not importable fails every command until the path is restored or the setting is cleared
-(`memrank config set adapters.plugins ""`). Direct instance use does not require these settings.
-
-For an in-process system, use `AdapterRegistration.in_process(...)` and declare its credential
-requirements and provenance.
 
 The first seven fields of `AdapterRegistration` have no defaults on purpose. Each is read where
 absence is either a loud failure far from its cause or -- for `provenance` -- a silent one:

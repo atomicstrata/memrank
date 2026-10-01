@@ -31,7 +31,10 @@ exception class defined under ``memrank/`` and fails when a new one skips this b
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from typing import Any
+
+from memrank.outcome import Outcome, Step
 
 
 class MemrankError(Exception):
@@ -41,6 +44,48 @@ class MemrankError(Exception):
     message is the whole user interface -- write it as a sentence that names what was wrong
     and, where there is one, the move that fixes it. It is printed verbatim.
     """
+
+
+class ActionRequired(MemrankError):
+    """Nothing broke: there is a step the user takes first -- sign in, save a key, pick an org.
+
+    Rendered apart from a failure (no red, no ``error:``), because a missing step reported as a
+    crash reads as something inside memrank having broken. ``statement`` says what is missing in
+    plain words; each of ``commands`` is one line the user can copy and run, printed on its own.
+
+    ``steps``, when given, are what to do spelled out one by one, and ``statement`` is then only
+    what happened -- the shape a run's ending shows (:mod:`memrank.outcome`).
+    """
+
+    def __init__(self, statement: str, *commands: str, steps: Sequence[Step] = ()) -> None:
+        super().__init__(statement)
+        self.statement = statement
+        self.commands = commands
+        self.steps = tuple(steps) or ((Step("", commands),) if commands else ())
+
+    def __str__(self) -> str:
+        rows = [self.statement]
+        for step in self.steps:
+            rows += ([step.text] if step.text else []) + [f"  {c}" for c in step.commands]
+        return "\n".join(rows)
+
+
+class Concluded(MemrankError):
+    """A command's ending, carried to the CLI boundary to be rendered and exited with.
+
+    ``str()`` is the outcome as plain lines, so anything that prints the error without the
+    renderer still says what happened and what to do.
+    """
+
+    def __init__(self, outcome: Outcome, exit_code: int = 1) -> None:
+        super().__init__(outcome.title)
+        self.outcome = outcome
+        self.exit_code = exit_code
+
+    def __str__(self) -> str:
+        from memrank.term.outcome import plain
+
+        return plain(self.outcome)
 
 
 class MissingOptionalDependency(MemrankError):

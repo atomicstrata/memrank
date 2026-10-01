@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -95,3 +96,74 @@ def test_no_staging_files_survive_a_concurrent_burst(status, tmp_path):
     """Leftover staging files would be mistaken for run artifacts by later readers."""
     _run_workers(lambda index: [status.update(message=str(n)) for n in range(WRITES_PER_WORKER)])
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+class _ObservedLock:
+    """Let a paused publisher proceed once its successor contends for the lock."""
+
+    def __init__(self, contended):
+        self._lock = threading.Lock()
+        self._contended = contended
+
+    def __enter__(self):
+        if not self._lock.acquire(blocking=False):
+            self._contended.set()
+            self._lock.acquire()
+
+    def __exit__(self, *exc):
+        self._lock.release()
+
+
+def _pause_first_publish(publish, stage, paused, resume):
+    def wrapped(record, **kwargs):
+        if record[stage]["done"] == 1:
+            paused.set()
+            resume.wait()
+        publish(record, **kwargs)
+
+    return wrapped
+
+
+def _publish_overlapping_items(observer, stage, paused, resume):
+    def newer_item():
+        try:
+            observer.item_done(stage, seconds=0.01, done=2, total=2)
+        finally:
+            # Without serialization the newer publication finishes first. With it,
+            # lock contention releases the older publisher before this one can snapshot.
+            resume.set()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        older = pool.submit(observer.item_done, stage, seconds=0.01, done=1, total=2)
+        paused.wait()
+        newer = pool.submit(newer_item)
+        older.result()
+        newer.result()
+
+
+@pytest.mark.parametrize("stage", ["ingest", "retrieve", "judge"])
+@pytest.mark.parametrize("pause_at", ["local", "remote"])
+def test_older_progress_cannot_overwrite_completed_progress(
+        status, tmp_path, monkeypatch, stage, pause_at):
+    """Force an older snapshot to stall at each publication boundary, without sleeps."""
+    from memrank.evaluation.observer import EvalPlan
+    from memrank.orchestration.observers import RunStatusObserver
+
+    observer = RunStatusObserver(status, verbose=True)
+    observer.planned(EvalPlan(units=1, documents=2, retrievals=2, judgements=2))
+    paused, resume = threading.Event(), threading.Event()
+    monkeypatch.setattr(observer, "_publish_lock", _ObservedLock(resume), raising=False)
+    remote_records = []
+    monkeypatch.setattr(run_status, "publish_remote",
+                        lambda record, **kwargs: remote_records.append(record))
+    target, name = ((status, "set_progress_record") if pause_at == "local"
+                    else (run_status, "publish_remote"))
+    monkeypatch.setattr(target, name, _pause_first_publish(
+        getattr(target, name), stage, paused, resume))
+
+    _publish_overlapping_items(observer, stage, paused, resume)
+
+    record = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))["progress"]
+    assert record[stage]["done"] == 2
+    assert [record[stage]["done"] for record in remote_records] == [1, 2]
+    assert remote_records[-1] == record

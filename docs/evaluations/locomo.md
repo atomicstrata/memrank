@@ -34,6 +34,11 @@ reference. The reference answers can be derived -- *"three times"*,
 *"2022"* -- rather than quotes, so literal retrieval matching can miss correct evidence. Without a judge this evaluation reports latency, failures and question
 counts, and no quality number at all.
 
+
+The answer is generated with LoCoMo's own reader prompt (`QA_PROMPT`, after the context), verbatim:
+a short phrase, in the context's own words where possible. See
+[the reader prompt](../methodology.md#the-reader-prompt).
+
 ## What it needs
 
 A one-time download of the dataset, cached after the first run, or a local copy pointed at with

@@ -130,6 +130,9 @@ def run_cell(
     if workers > 1 and make_adapter is None:
         raise ValueError("run_cell(workers>1) requires make_adapter (an adapter factory)")
     random.seed(seed)
+    if judge is not None:
+        # The benchmark's own reader prompt, so answers follow its protocol; the receipt says which.
+        judge = replace(judge, answer_prompt=benchmark.answer_prompt)
     receipt = _build_receipt(adapter, benchmark,
                              k=k, repeats=repeats, model=model,
                              token_budget=token_budget, seed=seed, judge=judge, workers=workers)

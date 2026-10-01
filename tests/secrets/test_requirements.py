@@ -30,11 +30,10 @@ def test_keyless_providers_contribute_nothing():
 
 
 def test_an_unregistered_engine_is_not_reported_as_a_memrank_bug():
-    """The first wall a plugin-provided target hits when its plugin was not loaded.
+    """The first wall a target naming an unknown adapter hits.
 
     A bare KeyError escaped to the CLI's last branch and printed "internal error ... this is a bug in
-    memrank", which is wrong and sends the reader to the wrong place. Adapters can be registered
-    from outside the tree, so an unknown name usually means an unloaded plugin, not a typo.
+    memrank", which is wrong and sends the reader to the wrong place.
 
     Still a KeyError, so lookup call sites read naturally; also a MemrankError, so it prints as one
     actionable line.
@@ -44,4 +43,4 @@ def test_an_unregistered_engine_is_not_reported_as_a_memrank_bug():
 
     assert isinstance(caught.value, MemrankError), "must route through the error boundary"
     assert isinstance(caught.value, KeyError), "call sites still catch KeyError"
-    assert "adapters.plugins" in str(caught.value), "must name the likely cause"
+    assert "known:" in str(caught.value), "must name what is known"

@@ -52,7 +52,7 @@ evaluation; `Benchmark` is what that route resolves one to.
 explaining the deprecation, and ATO-2151 is what removes them and extends the table below.
 `Benchmark` is neither -- it is demoted and it stays. And `memrank submit TARGET EVAL` keeps
 its own nouns -- *target* is the command line's word for a catalog entry, this step did not
-change it, and `examples/more/custom-target/` is about exactly that. Only Python spellings are
+change it. Only Python spellings are
 scanned, never a file name.
 """
 from __future__ import annotations

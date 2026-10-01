@@ -67,6 +67,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from memrank.benchmarks.answer_prompts import LONGMEMEVAL_READER
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
 
 _DATA_URL = (
@@ -214,6 +215,7 @@ class LongMemEvalBenchmark(Benchmark):
     # whole field reports it -- Zep's own headline is 71.2% at 1.6k against full-context's 60.2%
     # at 115k.
     context_policy = "uncapped"
+    answer_prompt = LONGMEMEVAL_READER
 
     substring_recall_supported = False
     composite_rankable = False

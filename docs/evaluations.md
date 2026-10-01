@@ -1,5 +1,7 @@
 # Adding an evaluation
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 An [**evaluation**](reference/evaluation.md) bundles its [tasks](reference/task.md), the
 [measures](reference/measure.md) that read them, and the rule for when the system's state is
 cleared. This guide shows how to express tasks and success criteria you have chosen. You decide
@@ -257,7 +259,7 @@ be there. The same check runs on the judge side: a scorer whose `judge_shape()` 
 grading prompts is compared against the prompt keys the questions carry, to prevent applying the wrong grading prompt (`memrank/judging/shape.py`,
 `BinaryJudgeShape._prompt_for`).
 
-Declaring nothing is the default and is not a disagreement: all six registered benchmarks
+Declaring nothing is the default and is not a disagreement: all five registered benchmarks
 declare no criteria, which is what keeps somebody else's scorer acceptable over their questions.
 
 **What the instance route does not reach.** A benchmark passed as an object has no catalog ref, so

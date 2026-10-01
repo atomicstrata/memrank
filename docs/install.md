@@ -1,5 +1,7 @@
 # Installing memrank
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 This page installs Memrank's Python package into a project and checks it with a local retrieval
 evaluation. Installing needs the network; the run below needs no network, API key or service.
 For the comparison workflow and how to read the output, see [Start here](getting-started.md).
@@ -33,10 +35,10 @@ checkout, use [local development](local-development.md) instead.
 Save this as `first_run.py`:
 
 ```python
-from memrank.evaluations import SQuAD
+from memrank.evaluations import Demo
 from memrank.systems import TFIDF
 
-evaluation = SQuAD()
+evaluation = Demo()
 result = evaluation.run(system=TFIDF())
 
 print(result)
@@ -46,14 +48,14 @@ Run it with `uv run python first_run.py`, or with `python first_run.py` in the v
 installed into.
 
 [`TFIDF`](systems/tfidf.md) is keyword search weighted by how rare each word is.
-[`SQuAD`](evaluations/squad.md) is 64 questions about 32 passages bundled with the package. It
-measures full-passage retrieval recall, not answer-span or end-to-end answer correctness.
+[`Demo`](evaluations/demo.md) is one synthetic scenario of five questions bundled with the package.
+Its scores are retrieval proxies, not answer correctness.
 
 <a id="4-what-done-looks-like"></a>
 ## 4. Verify the installation
 
-The run prints a `system:` line naming `TFIDF`, an `evaluation:` line naming `squad` with 64
-tasks, the measured values, and a `traces:` line reading `64 recorded, 0 with errors`. That is
+The run prints a `system:` line naming `TFIDF`, an `evaluation:` line naming `demo` with 5
+tasks, the measured values, and a `traces:` line reading `5 recorded, 0 with errors`. That is
 the installation check. An agent reports those three lines and any failure it encountered.
 It does not establish performance on your workload. [Read the output](getting-started.md#read-the-installation-check),
 then [compare memory systems and their versions](comparing.md).

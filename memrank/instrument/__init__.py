@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The seven: system, evaluation, task, trace, measure, run, result.
+"""Deprecated: the in-process Python route (`evaluation.run(system=...)`) and its seven nouns.
+Evaluate an agent with `memrank run` instead; see the README. `kinds` (via `memrank.core`) and
+`statistics` (via `service/scoring`) are used by the current path and do not warn.
+
+The seven: system, evaluation, task, trace, measure, run, result.
 
 One module per noun, and the names here are the words the conceptual model uses -- the
 nouns are the vocabulary, so the code spells them the way the documentation does.

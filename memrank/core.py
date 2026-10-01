@@ -13,6 +13,10 @@
 # permissions and limitations under the License.
 """Core abstractions for Memrank.
 
+Shared by the current path. Deprecated here: the ``MemoryAdapter``/``MemoryEngine`` contract
+and the in-process route it serves; evaluate an agent with `memrank run` instead (see the
+README). ``Benchmark`` and the value types are not deprecated.
+
 Defines ``Benchmark``, and re-exports the memory contract that ``Memory`` defines in
 :mod:`memrank.instrument.kinds` -- under that name and under its deprecated spellings,
 ``MemoryAdapter`` and ``MemoryEngine``. The value types the two contracts exchange --
@@ -53,6 +57,7 @@ from memrank.contract import (
     Recall as Recall,  # noqa: PLC0414 - re-export only
 )
 from memrank.instrument.kinds import Memory
+from memrank.judging.prompts import MEMRANK_READER, AnswerPrompt
 from memrank.quality import DATASET_VERSION_UNSET, QUALITY_METRICS
 
 if TYPE_CHECKING:  # `judge_shape` reaches `judge`; keep that out of `core`'s import graph.
@@ -130,6 +135,11 @@ class Benchmark(ABC):
     # uncapped, so a capped run is not that benchmark). The runner promotes matched arms
     # accordingly; the no-memory arm ("none") is never promoted.
     context_policy: str = "matched"
+    # The reader prompt this evaluation's answers are generated with: the benchmark's OFFICIAL
+    # one where its authors publish one (memrank/benchmarks/answer_prompts.py), so a score follows
+    # that benchmark's protocol. The default is memrank's own reader, for an evaluation with no
+    # official prompt; demo and relation_graph declare it explicitly. Every run records which.
+    answer_prompt: AnswerPrompt = MEMRANK_READER
     # The scored keys this benchmark's questions EXPECT their scorer to produce -- the
     # declaration `memrank.composition.ComposedEvaluation` checks the scorer's against when the
     # two halves are supplied separately (ATO-2149). Empty -- the default, and what all five

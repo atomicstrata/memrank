@@ -28,6 +28,8 @@ from pathlib import Path
 
 import typer
 
+from memrank.accounts.run_secrets import SIGN_IN, api_message, save_org_secret
+from memrank.errors import ActionRequired
 from memrank.secrets import wallet
 from memrank.term import style, table
 
@@ -87,33 +89,22 @@ def _org_client():
     try:
         return run_api_client.authenticated_client()
     except run_api_client.RunApiError as exc:
+        if exc.code == "no_session":
+            raise ActionRequired("You are not signed in. An organisation's keys are reached "
+                                 "through your memrank login:", SIGN_IN) from exc
         style.error(str(exc))
         raise typer.Exit(1) from exc
 
 
 def _put_org_secret(org: str, name: str, value: str) -> None:
-    """Store ``name`` for ``org`` through the API.
+    """Store ``name`` for ``org`` through the API, by the path ``memrank run`` saves one too.
 
-    Raises:
-        typer.Exit: On any refusal, with the API's own message -- a credential that did not
-            store must not read as though it did, or the next submission fails for a reason
-            already known here.
+    A refusal raises (see :func:`save_org_secret`) -- a credential that did not store must not
+    read as though it did, or the next submission fails for a reason already known here.
     """
     with _org_client() as http:
-        response = http.post(f"/orgs/{org}/secrets", json={"name": name, "value": value})
-    if response.status_code >= 400:
-        style.error(f"could not store {name} for {org!r}: {_message(response)}")
-        raise typer.Exit(1)
-    style.say(f"stored {name} for org {org} -- cloud runs will spend this key")
-
-
-def _message(response) -> str:
-    """The API's message, or its raw body when the shape is not the one we document."""
-    try:
-        detail = response.json().get("detail")
-    except ValueError:
-        return response.text
-    return detail.get("message", str(detail)) if isinstance(detail, dict) else str(detail)
+        save_org_secret(http, org, name, value)
+    style.say(f"stored {name} for org {org} -- runs recorded in {org} will spend this key")
 
 
 #: The wallet listing. NAME is what a reader looks up, VALUE is masked because a terminal is a
@@ -168,7 +159,7 @@ def _list_org_secrets(org: str) -> None:
     with _org_client() as http:
         response = http.get(f"/orgs/{org}/secrets")
     if response.status_code >= 400:
-        style.error(f"could not list secrets for {org!r}: {_message(response)}")
+        style.error(f"could not list secrets for {org!r}: {api_message(response)}")
         raise typer.Exit(1)
     rows = response.json()
     if not rows:
@@ -248,7 +239,7 @@ def _rm_org_secret(org: str, name: str) -> None:
     with _org_client() as http:
         response = http.delete(f"/orgs/{org}/secrets/{name}")
     if response.status_code >= 400:
-        style.error(f"could not remove {name} for {org!r}: {_message(response)}")
+        style.error(f"could not remove {name} for {org!r}: {api_message(response)}")
         raise typer.Exit(1)
     style.say(f"removed {name} for org {org} -- cloud runs can no longer spend it")
     if response.json().get("backend") == "ssm":

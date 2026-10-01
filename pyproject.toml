@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "memrank"
 version = "0.4.7"
-description = "Open, vendor-neutral tool for reproducible, auditable evaluation of memory systems."
+description = "Evaluate your agent on your tasks."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -28,12 +28,18 @@ classifiers = [
 dependencies = [
     "requests>=2.31",
     "httpx>=0.26",          # the CLI's client for the memrank API
-    "typer>=0.12",
+    # Capped at the next minor: typer is pre-1.0 and its minors break (0.27 runs commands on a
+    # click it bundles, which crashed `memrank run`). Every minor below the cap has run the CLI
+    # suite; raise it only after the suite passes on the next one.
+    "typer>=0.12,<0.28",
     # The table/panel renderer behind `memrank/term/table.py`. Already ours: typer has
     # required rich since 0.13, so naming it here adds nothing to an install -- it only
     # stops a transitive dependency from being load-bearing without saying so.
     "rich>=13",
     "python-dotenv>=1.0",
+    # JMESPath extracts an agent's answer from its HTTP response (memrank/connect/http.py). Already
+    # installed through boto3; named because the connector depends on it directly.
+    "jmespath>=1.0",
     "pyyaml>=6",
     "keyring>=25",          # where the CLI session token lives, when the OS offers one
     # [email] pulls email-validator, which backs EmailStr on the sign-in route. Hand-rolled
@@ -49,15 +55,26 @@ dependencies = [
     # fresh machine, every time. The `dev` extra already learned this ("the kind of instruction
     # that gets forgotten"); it was never extended to the people who install the tool. Two wheels
     # on top of httpx/pydantic/anyio, which are already here.
-    "anthropic>=0.40",
+    # Capped below 1: anthropic 1.x dropped `temperature` from `messages.create`, which the
+    # answer-model calls pin (judging.client.sampling_params); a fresh install resolved 1.8 and
+    # every call of the shipped full-context agent failed. Raise it with that call ported.
+    "anthropic>=0.40,<1",
 ]
 
 [project.optional-dependencies]
 # The accounts API service -- imported by memrank/api/** and memrank/accounts/store.py, never by
 # the CLI. Deployed with `uv sync --extra api` (deploy/api/Dockerfile).
+# The evaluation service and the local reference agents (`memrank serve`, `memrank agent serve`).
+# Public, and deliberately NOT repeated under `api`: the hosted accounts API needs them too, but a
+# package listed under the dropped `api` extra is pruned from every public extra that also needs
+# it (tools/lockfile.py). The API image syncs `--extra api --extra service` instead.
+service = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 mem0 = ["mem0ai>=0.1.0"]
 # The downloading evaluations' loader. Only BEAM's first-run download imports it
-# (memrank/benchmarks/beam.py); the quick start, the bundled SQuAD subset and every shipped memory
+# (memrank/benchmarks/beam.py); the quick start and every shipped memory
 # need none of it, and it is the heaviest thing a base install would otherwise carry (pyarrow,
 # pandas, fsspec, aiohttp). The floor is the version BEAM's loader was verified against.
 benchmarks = ["datasets>=4.8.5"]
@@ -89,6 +106,7 @@ dev = [
     # The suite exercises the API service too, so a developer install carries its stack. Written
     # as a self-reference rather than a copy: two lists of the same dependencies drift, and the
     # copy that drifts is the one nobody deploys.
+    "memrank[service]",
     # Read by the two boundary tests. Stdlib `tomllib` only exists from 3.11 and the
     # supported floor is 3.10, so the backport is a dev dependency rather than a hope.
     "tomli>=2.0; python_version < '3.11'",
@@ -102,19 +120,21 @@ Issues = "https://github.com/atomicstrata/memrank/issues"
 
 [project.scripts]
 memrank = "memrank.runner:main"
-memrank-mcp = "memrank.mcp_server:main"
+# No `memrank-mcp`: the local stdio MCP server belongs to the engine-hosting path and is not
+# offered to new users (ATO-2343). Its code stays, reachable as `python -m memrank.mcp_server`.
 # The operator entrypoint, on PATH rather than reached by file path. Its commands were evicted
 # from `memrank` deliberately -- they operate the public product rather than evaluate anything --
 # but "de-exposed" was never meant to mean "hard to run", and a rescue command typed during an
 # outage is the worst time to remember where a script lives.
 
 [tool.setuptools.package-data]
-# Offline evaluations and their separate data licence notices must ship in the wheel.
+# Offline evaluations' bundled data must ship in the wheel.
 # `tools/internal/distribution.py` records the installed contents.
 # `py.typed` (PEP 561) is what tells a type checker the annotations in this package are
 # real and may be used. Without it Pyright and mypy treat an installed memrank as
 # untyped, and every hover in an editor shows `Any` however precise the signature is.
-memrank = ["targets/builtin/*.yaml", "benchmarks/data/*.json", "benchmarks/data/*.md", "py.typed"]
+memrank = ["targets/builtin/*.yaml", "agents/*.yaml", "definitions/*.yaml", "benchmarks/data/*.json",
+           "skill/*.md", "py.typed"]
 
 [tool.setuptools.packages.find]
 where = ["."]

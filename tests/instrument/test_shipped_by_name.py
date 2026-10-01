@@ -26,6 +26,10 @@ from memrank.adapters import REGISTRY, list_adapters
 from memrank.instrument.catalog import evaluation, system
 from memrank.instrument.system import kind_of
 
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
+
 
 @pytest.mark.parametrize("name", list_adapters())
 def test_every_name_the_catalog_prints_constructs(name: str):

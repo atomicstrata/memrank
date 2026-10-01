@@ -39,6 +39,10 @@ from memrank import (
 from memrank.benchmarks.demo import DemoBenchmark
 from memrank.evaluation.api import run as run_cell
 
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
+
 MY_UNITS = [BenchmarkUnit(
     unit_id="acme", isolation_id="acme",
     documents=[Document(id="d1", user_id="acme",

@@ -87,8 +87,9 @@ def engine_secrets(target: Manifest) -> dict[str, str]:
     lane (2026-08-19); `sidecar_stack` in tests/placement/conftest.py is what keeps this covered.
     """
     from memrank import config
+    from memrank.secrets import requirements
 
-    providers = {role: comp.provider for role, comp in target.components.items()}
+    providers = requirements.keyed_providers(target.components)
     # Preflight the DERIVED set only, which is what it has always covered: it raises on a missing
     # credential rather than launching an engine that dies on one. A declared credential is checked
     # by `catalog.secret_status` at submit time, where its name is known.

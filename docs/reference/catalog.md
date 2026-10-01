@@ -1,5 +1,7 @@
 # catalog
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 `memrank.catalog()` lists the included systems and evaluations, their import names, string
 keys and requirements.
 
@@ -11,7 +13,7 @@ memrank.catalog()
 
 <!-- output: exact -->
 ```console
-memrank ships 11 system(s) and 6 evaluation(s).
+memrank ships 11 system(s) and 5 evaluation(s).
 
 systems -- `from memrank.systems import TFIDF`, or `memrank.system("tfidf")`
 
@@ -27,10 +29,8 @@ systems -- `from memrank.systems import TFIDF`, or `memrank.system("tfidf")`
   Mem0          'mem0'            memory   the mem0 SDK, or a running engine at MEM0_HTTP_URL
   Native        'native'          memory   a running translator of memrank's system contract, at NATIVE_API_URL
 
-evaluations -- `from memrank.evaluations import SQuAD`, or `memrank.evaluation("squad")`
+evaluations -- `from memrank.evaluations import Demo`, or `memrank.evaluation("demo")`
 
-  SQuAD()          'squad'           nothing -- 32 bundled passages, 64 questions
-                                     measures full-passage retrieval recall, not answer-span or end-to-end answer correctness
   Demo()           'demo'            nothing -- a bundled synthetic scenario
                                      measures a substring retrieval proxy and evidence recall
   RelationGraph()  'relation_graph'  nothing -- in-repo fixtures, and a graph-capable system
@@ -45,8 +45,8 @@ evaluations -- `from memrank.evaluations import SQuAD`, or `memrank.evaluation("
 
 ## What it is
 
-Each row shows the **Python class**, **string key** and **requirements**. `TFIDF` and the default
-`SQuAD` subset need no service, API key or download after installation.
+Each row shows the **Python class**, **string key** and **requirements**. `TFIDF` and `Demo` need
+no service, API key or download after installation.
 
 System rows also show a role: `memory` for retrieval implementations and clients, or `control`
 for diagnostic comparisons. This differs from the system's [kind](system.md): every included
@@ -59,7 +59,7 @@ Use `memrank.system("tfidf")` to construct an instance when the key comes from c
 
 ## Who supplies what
 
-Memrank supplies eleven [systems](system.md) and six [evaluations](evaluation.md). Listing them
+Memrank supplies eleven [systems](system.md) and five [evaluations](evaluation.md). Listing them
 needs no service or credentials; running a selected implementation may require both.
 
 ## The Python names
@@ -70,14 +70,14 @@ from memrank import evaluations, systems
 
 print(len(systems.SHIPPED), "systems,", len(evaluations.SHIPPED), "evaluations")
 print(memrank.system("tfidf").name)
-print(memrank.evaluation("squad").name)
+print(memrank.evaluation("demo").name)
 ```
 
 - `memrank.catalog()` -- prints the table and returns it.
 - `memrank.systems` -- the module: `TFIDF`, `BM25`, `WordOverlap`, `NoContext`, `FixedContext`,
   `FullContext`, `AtomicMemory`, `Hindsight`, `Supermemory`, `Mem0`, `Native`.
-- `memrank.evaluations` -- the module: `SQuAD`, `Demo`, `RelationGraph`, `LoCoMo`,
-  `LongMemEval`, `BEAM`.
+- `memrank.evaluations` -- the module: `Demo`, `RelationGraph`, `LoCoMo`, `LongMemEval`,
+  `BEAM`.
 - `memrank.system("<name>")` and `memrank.evaluation("<name>")` -- the same things by string.
 
 ## Going deeper

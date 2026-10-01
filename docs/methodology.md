@@ -30,7 +30,10 @@ value is invented on an evaluation's behalf.
 `why` of every value it produces, so the caveat travels with the value.
 
 **`judge`** scores generated-answer correctness using a model. The Python API requires callers
-to add it explicitly. Applying it without the required API key raises an error.
+to add it explicitly. Applying it without the required API key raises an error. `memrank run`
+judges with Claude Haiku (`claude-haiku-4-5`) unless `--judge-model` names another Anthropic
+model, and every result it produces names the model that judged it. Scores judged by different
+models are not comparable.
 
 **Metric applicability.** `substring_recall_supported` says whether the answer-substring proxy
 applies. `composite_rankable` independently says whether the evaluation's own composite may be
@@ -200,6 +203,46 @@ measured the truncation rather than the memory. The promotion applies to every t
 symmetrically, so rows within the evaluation stay comparable; what is given up is
 budget-normalization against other evaluations' rows
 (a standing decision recorded with the evaluation).
+
+## The reader prompt
+
+On a judged evaluation, a model -- the reader -- turns the question and the context a system
+supplied into the answer the judge grades. The reader's wording is part of the benchmark's
+protocol, so **each evaluation answers with its benchmark's own published reader prompt**,
+verbatim, sent as its authors' code sends it: one user message, no system prompt.
+
+| Evaluation | Reader prompt | Source |
+|---|---|---|
+| `beam` | `answer_generation_for_rag` | [BEAM `src/prompts.py` @ b2da22e](https://github.com/mohammadtavakoli78/BEAM/blob/b2da22eac88bb0874c64665f13457eb99835774a/src/prompts.py), filled as in `src/answer_probing_questions/long_term_memory_methods.py` |
+| `locomo` | `QA_PROMPT`, after the context | [LoCoMo `task_eval/gpt_utils.py` @ 3eb6f2c](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/task_eval/gpt_utils.py) |
+| `longmemeval` | the direct (no chain-of-thought) reader, with its `Current Date` line | [LongMemEval `src/generation/run_generation.py` @ 9e0b455](https://github.com/xiaowu0162/LongMemEval/blob/9e0b455f4ef0e2ab8f2e582289761153549043fc/src/generation/run_generation.py) |
+| `demo`, `relation_graph`, evaluation files | memrank's own reader | no official reader exists |
+
+LongMemEval's reader is the variant its harness uses both for retrieved chunks and for the full
+history, so it describes any system's context truthfully; its fact-only variant presumes extracted
+facts, which only some systems return. LoCoMo's adversarial category has a reader of its own, a
+multiple choice built from the reference answer; memrank excludes that category because the
+release ships almost none of those questions with an answer.
+
+Two things memrank's own reader adds are deliberately **absent** from the official prompts:
+
+- **No current-date line where the official prompt has none.** BEAM's and LoCoMo's readers state
+  no date, so neither does memrank's rendering of them; LongMemEval's does, and keeps it. (LoCoMo's
+  temporal questions still carry the official "Use DATE of CONVERSATION" suffix in their text.)
+- **No untrusted-data wrapping.** memrank's own reader delimits the question and context and tells
+  the model not to follow instructions inside them. The official readers do not, and the dataset
+  text is trusted benchmark data rather than user input, so fidelity wins.
+
+Why this matters: until 2026-09-29 every evaluation shared memrank's own reader, which told the
+model *"If they are insufficient, reply exactly: I don't know."* No benchmark's reader says that.
+On BEAM-100k it produced "I don't know"-style answers for 46%, 82% and 88% of 400 questions across
+three memory systems, of which only 40 are abstention questions -- a measurement of the
+instruction, not of the memory. memrank's own reader, instruction included, remains only where no
+official reader exists.
+
+Every judged run records the reader prompt it answered with -- its name and a fingerprint of its
+bytes, its source, and whether it is official -- and results answered under different reader
+prompts are never ranked together.
 
 ## Baseline arms
 

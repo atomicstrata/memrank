@@ -1,3 +1,5 @@
+# Used by the current path (cli/evals, through get_eval): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """Structured, presentation-neutral target and eval discovery.
 
 Presentation-neutral in both directions: this describes what a deployment can run, and every

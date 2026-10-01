@@ -72,3 +72,27 @@ def test_cache_hits_bypass_cap_and_counter(tmp_path, monkeypatch):
     c2("m", "s", "u1")  # cache hit
     c2("m", "s", "u1")  # cache hit again -- would exceed cap=1 if hits counted
     assert n2() == 0 and calls["n"] == 1  # no new egress
+
+
+def test_the_anthropic_completer_sends_no_system_prompt_when_there_is_none(monkeypatch):
+    """The official readers are one user message; an empty system field is not sent at all."""
+    import anthropic
+
+    from memrank.judging.client import anthropic_completer
+
+    sent: list[dict] = []
+
+    class Messages:
+        def create(self, **kwargs):
+            sent.append(kwargs)
+            return type("Reply", (), {"content": []})()
+
+    class Client:
+        def __init__(self, **_):
+            self.messages = Messages()
+
+    monkeypatch.setattr(anthropic, "Anthropic", Client)
+    complete = anthropic_completer(JudgeConfig(), api_key="k")
+    complete("claude-haiku-4-5", "", "the whole prompt")
+    complete("claude-haiku-4-5", "judge", "u")
+    assert "system" not in sent[0] and sent[1]["system"] == "judge"

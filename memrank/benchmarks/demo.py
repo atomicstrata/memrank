@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
+from memrank.judging.prompts import MEMRANK_READER
 from memrank.metrics.scoring import SpanRecall
 
 #: The bundled scenario, resolved beside this module inside the package.
@@ -52,6 +53,8 @@ class DemoBenchmark(Benchmark):
     #: The scorer, under its public name. It used to be spelled out inline here, which is why
     #: it had no name for anyone else to reach (ATO-2135); the arithmetic is unchanged.
     scorer = SpanRecall()
+    # No official reader prompt exists for this synthetic evaluation: memrank's own, declared.
+    answer_prompt = MEMRANK_READER
     info = EvalInfo(unit="scenario",
                     units_declared="1 hand-crafted multi-session scenario (bundled JSON)",
                     slices=())

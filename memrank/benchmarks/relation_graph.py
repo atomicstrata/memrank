@@ -30,6 +30,7 @@ from typing import Any
 
 from memrank.benchmarks.relation_graph_fixtures import FIXTURES
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
+from memrank.judging.prompts import MEMRANK_READER
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
@@ -56,6 +57,8 @@ class RelationGraphBenchmark(Benchmark):
     quality_metric = "graph_score"
     is_synthetic = True
     question_text_public = True
+    # No official reader prompt exists for this synthetic evaluation: memrank's own, declared.
+    answer_prompt = MEMRANK_READER
     requires_graph = True
 
     def __init__(self, slice: str | None = None, k: int = 10) -> None:

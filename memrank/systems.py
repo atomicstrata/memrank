@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The systems memrank ships, as classes -- `from memrank.systems import TFIDF`.
+"""Deprecated: the shipped in-process systems (`TFIDF`, `BM25`, the engine clients) and the
+in-process Python route they serve. Evaluate an agent with `memrank run` instead; see the
+README.
+
+The systems memrank ships, as classes -- `from memrank.systems import TFIDF`.
 
 `memrank.system("tfidf")` needs the string first, and a string is not navigable: nothing
 in an editor follows it, and nothing tells a reader what else is out there. Here the same

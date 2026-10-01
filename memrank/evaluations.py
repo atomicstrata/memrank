@@ -11,12 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The evaluations memrank ships, as classes -- `from memrank.evaluations import SQuAD`.
+"""Deprecated: the shipped evaluations as classes for the in-process Python route
+(`Demo().run(system=...)`). Evaluate an agent with `memrank run` instead; see the README.
 
-`memrank.evaluation("squad")` needs the string first, and a string is not navigable: nothing in
+The evaluations memrank ships, as classes -- `from memrank.evaluations import Demo`.
+
+`memrank.evaluation("demo")` needs the string first, and a string is not navigable: nothing in
 an editor follows it, nothing states what a tier or a slice may be, and nothing tells a reader
 what else is out there. Each class here is a subclass of `memrank.Evaluation` whose constructor
-takes the keywords its benchmark takes, typed, and loads it -- so `SQuAD()` beside
+takes the keywords its benchmark takes, typed, and loads it -- so `Demo()` beside
 `TFIDF()` reads as two nouns of one shape, and "go to definition" on either lands on a
 class whose docstring says what it is.
 
@@ -26,7 +29,6 @@ and not two, and an instance carries exactly the fields the string form produces
 ================  ==================================================================
 name              what it needs
 ================  ==================================================================
-SQuAD()           nothing -- 32 bundled passages, 64 questions
 Demo()            nothing -- a bundled synthetic scenario
 RelationGraph()   nothing -- in-repo fixtures
 LoCoMo()          a one-time download, or LOCOMO_DATA_PATH; judging for any quality
@@ -35,7 +37,7 @@ BEAM()            the benchmarks extra's download, or BEAM_DATA_PATH; judging to
 ================  ==================================================================
 
 Each benchmark class is imported INSIDE its constructor. `import memrank` reaches this module,
-and a dataset loader's module graph is not something a caller who asked for `SQuAD()` should pay
+and a dataset loader's module graph is not something a caller who asked for `Demo()` should pay
 for. `memrank.catalog()` prints this table at runtime.
 """
 
@@ -57,23 +59,6 @@ class _Shipped(Evaluation):
         Evaluation.__init__(self, name=built.name, version=built.version, tasks=built.tasks,
                             measures=built.measures, clearing=built.clearing,
                             metadata=built.metadata)
-
-
-class SQuAD(_Shipped):
-    """32 bundled SQuAD v1.1 passages and 64 questions, with no download or API key.
-
-    Measures full-passage retrieval recall, not answer-span or end-to-end answer correctness.
-    The first 32 paragraphs and first two questions per paragraph follow source array order.
-    `slice="smoke"` is the same bundled mode. `slice="full"` downloads and verifies the complete dev set; `data_path` or SQUAD_DATA_PATH
-    selects a local v1.1 file. A missing or corrupt selected source raises; there is no fallback.
-    """
-
-    def __init__(self, slice: str | None = None, k: int = 10,
-                 data_path: str | None = None) -> None:
-        from memrank.benchmarks.squad import SQuADBenchmark
-
-        built = evaluation(SQuADBenchmark(slice=slice, k=k, data_path=data_path))
-        self._adopt(built)
 
 
 class Demo(_Shipped):
@@ -165,9 +150,6 @@ class BEAM(_Shipped):
 #: The same table the module docstring carries, in the form `memrank.catalog()` prints. One
 #: entry per name in `memrank.benchmarks.REGISTRY`, which `tests/instrument` holds it to.
 SHIPPED: tuple[ShippedEvaluation, ...] = (
-    ShippedEvaluation("SQuAD", "squad",
-                      "full-passage retrieval recall, not answer-span or end-to-end answer correctness",
-                      "nothing -- 32 bundled passages, 64 questions"),
     ShippedEvaluation("Demo", "demo", "a substring retrieval proxy and evidence recall",
                       "nothing -- a bundled synthetic scenario"),
     ShippedEvaluation("RelationGraph", "relation_graph", "a structural graph score",
@@ -180,4 +162,4 @@ SHIPPED: tuple[ShippedEvaluation, ...] = (
                       "a one-time download (the benchmarks extra), or BEAM_DATA_PATH"),
 )
 
-__all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph", "SQuAD"]
+__all__ = ["BEAM", "SHIPPED", "Demo", "LoCoMo", "LongMemEval", "RelationGraph"]

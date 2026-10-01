@@ -21,6 +21,8 @@ importable, the demo benchmark uses it, and a person who brings only questions g
 
 from __future__ import annotations
 
+import pytest
+
 # `memrank.run` is now the typed run over the seven (memrank/instrument/); the cell run
 # that produces an `EvalResult` is imported from its own module, which is where the CLI
 # and the cloud reach it too.
@@ -28,6 +30,10 @@ import memrank
 from memrank import Benchmark, BenchmarkUnit, Document, SpanRecall
 from memrank.benchmarks.demo import DemoBenchmark
 from memrank.evaluation.api import run as run_cell
+
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
 
 
 def test_the_scorer_imports_from_memrank_and_from_memrank_metrics() -> None:

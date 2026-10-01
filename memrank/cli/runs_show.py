@@ -30,6 +30,7 @@ from memrank import (
     settings,
 )
 from memrank.cli import monitor as monitor_cli
+from memrank.cli import runs_show_agent
 from memrank.metrics import headline
 from memrank.placement import run_api_client
 from memrank.runs import reconcile, registry
@@ -68,8 +69,9 @@ def _render_platform(payload: dict) -> None:
     state = run_status.PLATFORM_STATES.get(payload.get("state", ""), run_status.UNKNOWN_STATE)
     fields = [
         ("state", f"{style.state(state)} {style.unit('(' + str(payload.get('state')) + ')')}"),
-        ("cell", f"{style.accent(str(payload.get('target_ref')))} × "
-                 f"{style.accent(str(payload.get('benchmark')))}"),
+        ("agent" if runs_show_agent.is_agent(payload) else "cell",
+         f"{style.accent(str(payload.get('target_ref')))} × "
+         f"{style.accent(str(payload.get('benchmark')))}"),
     ]
     # A synced local run is in the org universe but never had a cluster; naming one would be
     # the interface lying about where a number came from, which is the whole point of place.
@@ -175,7 +177,9 @@ def _gather(run_id: str) -> _Gathered:
     # alone left finished runs unreadable with their results already in the bucket. reconcile()
     # decides from the artifacts whether such a run actually finished, so asking is cheap and
     # honest -- a run that has produced nothing still renders its reason rather than results.
-    if not cells and platform is not None and platform.get("state") in _FETCHABLE_STATES:
+    # A `memrank run` run has no cells to fetch: its result is in the org's record itself.
+    if (not cells and platform is not None and not runs_show_agent.is_agent(platform)
+            and platform.get("state") in _FETCHABLE_STATES):
         unfetched = pull_results(run_id, platform)
         cells = registry.cells_by_run().get(run_id, [])
     return _Gathered(run_id=run_id, heartbeat=heartbeat, platform=platform, cells=cells,
@@ -200,7 +204,7 @@ def _describe(found: _Gathered, *, full: bool) -> dict:
         state = run_status.classify(heartbeat)
     else:
         state = run_status.UNKNOWN_STATE
-    return {
+    described = {
         "run_id": found.run_id,
         "state": state,
         "place": (platform or heartbeat or {}).get("place")
@@ -210,6 +214,9 @@ def _describe(found: _Gathered, *, full: bool) -> dict:
         "results": [_describe_cell(cell, full=full) for cell in found.cells],
         "results_unavailable": found.unfetched,
     }
+    if runs_show_agent.is_agent(platform):
+        described["agent_result"] = runs_show_agent.describe(found.run_id, platform, full=full)
+    return described
 
 
 def _describe_cell(cell, *, full: bool) -> dict:
@@ -251,6 +258,10 @@ def show(run_id: str = typer.Argument(..., help="run-id (from `memrank runs ls`)
 def _render(found: _Gathered, *, full: bool) -> None:
     """The terminal form: the state block, then the cells the run recorded."""
     run_id, data, platform, cells = found.run_id, found.heartbeat, found.platform, found.cells
+    if runs_show_agent.is_agent(platform):
+        _render_platform(platform)
+        runs_show_agent.render(run_id, platform, full=full)
+        return
     if platform is not None:
         _render_platform(platform)
     elif data is not None:

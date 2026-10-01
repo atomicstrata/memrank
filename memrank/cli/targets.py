@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The ``memrank targets`` command surface -- list and inspect what is under test."""
+"""Deprecated: the hidden `memrank targets` command. Evaluate an agent with `memrank run`
+instead; see the README.
+
+The ``memrank targets`` command surface -- list and inspect what is under test."""
 
 from __future__ import annotations
 

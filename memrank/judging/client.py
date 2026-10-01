@@ -187,7 +187,13 @@ def sampling_params(model: str, cfg: JudgeConfig) -> dict[str, float]:
     return {}
 
 
-def anthropic_completer(cfg: JudgeConfig) -> Completer:
+def anthropic_completer(cfg: JudgeConfig, *, api_key: str | None = None) -> Completer:
+    """The Anthropic-backed completer.
+
+    ``api_key`` is given by ``memrank run``, which judges with the organisation's saved key
+    (decision 0037); without it the key resolves on this machine. The endpoint is the SDK's own
+    setting (``ANTHROPIC_BASE_URL``), which is how a local stack reaches a stand-in provider.
+    """
     from memrank.errors import optional_import
 
     anthropic = optional_import("anthropic", None)
@@ -197,7 +203,7 @@ def anthropic_completer(cfg: JudgeConfig) -> Completer:
     # Resolve through memrank's one credential chokepoint (environment -> wallet) rather
     # than reading os.environ, and pass the key explicitly rather than letting the SDK read the
     # environment itself -- otherwise a key held only in the wallet would never reach this client.
-    api_key = config.secret(JUDGE_SECRET)
+    api_key = api_key or config.secret(JUDGE_SECRET)
     if not api_key:
         raise RuntimeError(
             f"{JUDGE_SECRET} not found. Checked the environment and the wallet at "
@@ -207,14 +213,43 @@ def anthropic_completer(cfg: JudgeConfig) -> Completer:
     client = anthropic.Anthropic(api_key=api_key)
 
     def complete(model: str, system: str, user: str) -> str:
+        # No system prompt at all when there is none: the official readers are one user message.
         msg = client.messages.create(
-            model=model, max_tokens=_MAX_TOKENS,
-            system=system, messages=[{"role": "user", "content": user}],
+            model=model, max_tokens=_MAX_TOKENS, **({"system": system} if system else {}),
+            messages=[{"role": "user", "content": user}],
             **sampling_params(model, cfg),
         )
         return "".join(b.text for b in msg.content if isinstance(b, anthropic.types.TextBlock))
 
     return complete
+
+
+#: Anthropic's answers that mean "not this key": invalid (401), not allowed (403), and 400,
+#: which is how an account with no credit refuses a request.
+_KEY_REFUSALS = (400, 401, 403)
+
+
+def key_refusal(api_key: str) -> str | None:
+    """``None`` when Anthropic accepts ``api_key`` for judging, else Anthropic's reason.
+
+    One tiny request to the judge model through the judge's own completer, so a key is checked
+    exactly as judging will use it. Any other failure -- unreachable, overloaded -- is not an
+    answer about the key and is raised.
+    """
+    from memrank.errors import optional_import
+
+    anthropic = optional_import("anthropic", None)
+    cfg = JudgeConfig()
+    complete = anthropic_completer(cfg, api_key=api_key)
+    try:
+        complete(cfg.judge_model, "Reply with the word OK.", "OK?")
+    except anthropic.APIStatusError as exc:
+        if exc.status_code not in _KEY_REFUSALS:
+            raise
+        body = exc.body if isinstance(exc.body, dict) else {}
+        error = body.get("error")
+        return str(error.get("message")) if isinstance(error, dict) else exc.message
+    return None
 
 
 def build_completer(cfg: JudgeConfig, *,

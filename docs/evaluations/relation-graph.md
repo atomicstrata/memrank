@@ -29,7 +29,7 @@ separate, was the inference drawn and the distractor left alone.
 A system can retrieve the correct document while retaining contradictory facts or merging two
 people's identities. This evaluation checks the reported graph for those structural errors.
 
-Its score is **structural and decided by a fixed rule**. Like `squad`'s and `demo`'s it needs no judge; unlike theirs, it scores what the
+Its score is **structural and decided by a fixed rule**. Like `demo`'s it needs no judge; unlike it, it scores what the
 system holds rather than what it retrieved.
 
 ## What it needs

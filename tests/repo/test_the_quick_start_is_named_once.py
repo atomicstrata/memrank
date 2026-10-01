@@ -73,8 +73,9 @@ MENTION = re.compile(r"`([\w-]+)(?:\(\))?`|\b([A-Z][A-Za-z0-9]+)\b")
 #: Empty: a demoted class has no first-result role anywhere.
 ALLOWED: dict[str, str] = {}
 
-#: Where the pair must be exactly what is imported.
-QUICK_START_BLOCKS = ("README.md", "docs/install.md")
+#: Where the pair must be exactly what is imported. The README is not here: its quick start is the
+#: one-command install and `memrank run`, and it carries no Python block.
+QUICK_START_BLOCKS = ("docs/install.md",)
 
 
 def _page_subject(path: str) -> str | None:
