@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 import click
 import pytest
 
-from memrank.benchmarks.answer_prompts import LOCOMO_READER
+from memrank.benchmarks.answer_prompts import LOCOMO_READER, LONGMEMEVAL_READER
 from memrank.connect.base import AgentError, AgentUnreachable
 from memrank.connect.http import HttpConnector, HttpSpec
 from memrank.connect.presets import preset_mapping
@@ -254,3 +254,23 @@ def test_a_run_without_judging_is_uploaded_unscored(engine, tmp_path, org):
                      quiet([]))
     assert not done.result.judged and done.result.score.mean is None
     assert org.keys == [] and org.uploads == [done.result]
+
+
+def test_a_longmemeval_run_gets_past_the_leak_probe(engine, tmp_path, hosted):
+    """LongMemEval's official reader states the current date: an undated probe question stopped
+    every `memrank run longmemeval` before its first question."""
+    def dated_reader(model: str, system: str, user: str) -> str:
+        context = user.split("History Chats:", 1)[-1].split("Current Date:", 1)[0]
+        return "blue" if "blue" in context else "I don't know"
+
+    fields = {**preset_mapping("openai-chat", {"model": "m"}), "base_url": "http://agent",
+              "vars": {"model": "m"}}
+    app = agent_app(dated_reader, "m", LONGMEMEVAL_READER)
+    connector = HttpConnector(HttpSpec.model_validate(fields), transport=asgi_transport(app))
+    agent = AgentSpec(ref=AgentRef(name="full-context"), connector=connector, start=None,
+                      description=None)
+    done = run_agent(engine, agent, RunOptions(evaluation="longmemeval:smoke"), tmp_path,
+                     hosted, quiet([]))
+    assert done.result.failed == 0
+    assert [q.answer for c in done.result.cases for q in c.questions] == [
+        "blue", "blue", "I don't know"]

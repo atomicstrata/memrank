@@ -30,6 +30,10 @@ from memrank.service.protocol import Op, Question, Session, Step, Turn
 
 PROBE_QUESTION = ("What is the secret code word mentioned earlier in our conversation? "
                   "If none was mentioned, say you don't know.")
+#: The date the probe's question is asked on. A question carries one wherever its evaluation
+#: dates questions, and a reader prompt that states the current date (LongMemEval's official one)
+#: refuses a question without one, so an undated probe failed every such agent before its run.
+PROBE_DATE = "2023-05-30T00:00:00+00:00"
 
 
 class LeakDetected(MemrankError):
@@ -44,7 +48,8 @@ def _steps(token: str) -> tuple[Step, Step, Step, Step]:
             Step(op=Op.FEED, case_id=planted, session_id=planted, sessions=sessions),
             Step(op=Op.RESET, case_id=asked, session_id=asked),
             Step(op=Op.ASK, case_id=asked, session_id=asked,
-                 question=Question(id="probe", text=PROBE_QUESTION)))
+                 question=Question(id="probe", text=PROBE_QUESTION,
+                                   timestamp=PROBE_DATE)))
 
 
 def canary(token: str) -> str:

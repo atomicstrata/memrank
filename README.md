@@ -1,9 +1,16 @@
-# Memrank
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/atomicstrata/memrank/main/docs/assets/memrank-logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/atomicstrata/memrank/main/docs/assets/memrank-logo-light.svg" alt="memrank" width="360">
+  </picture>
+</p>
 
-[![public-ci workflow status on main](https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml/badge.svg?branch=main)](https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml)
-[![Code license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/atomicstrata/memrank/blob/main/LICENSE)
+<h1 align="center">Find the memory that works best for your agent.</h1>
 
-**Find the memory that works best for your agent.**
+<p align="center">
+  <a href="https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml"><img src="https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml/badge.svg?branch=main" alt="public-ci workflow status on main"></a>
+  <a href="https://github.com/atomicstrata/memrank/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Code license: Apache-2.0"></a>
+</p>
 
 Memrank is a command-line tool that evaluates your agent end to end, so you can see which memory
 engine, version or setup actually answers its questions better. It is for people building agents:
@@ -14,6 +21,16 @@ with evidence. Memrank provides both the evaluation framework and the evaluation
 [Quick start](https://memrank.ai/docs/quickstart) |
 [Connect your agent](https://memrank.ai/docs/connect-your-agent) |
 [Command reference](https://memrank.ai/docs/reference/commands)
+
+<a href="https://memrank.ai">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/atomicstrata/memrank/main/docs/assets/beam-chart-dark.png">
+    <img src="https://raw.githubusercontent.com/atomicstrata/memrank/main/docs/assets/beam-chart-light.png" alt="Chart of answer quality against median memory retrieval time for memory systems on BEAM 100K" width="100%">
+  </picture>
+</a>
+
+*Answer quality against median memory retrieval time (log scale) for the memory systems published
+on the BEAM 100K board at [memrank.ai](https://memrank.ai).*
 
 ## How it works
 
@@ -26,11 +43,11 @@ where it already runs.
    the past conversations, asks questions about them, and judges every answer. Before it asks
    anything, it checks that your agent keeps conversations separate.
 3. **Compare runs.** Each run reports the score, the failures and the latency. Put it beside an
-   earlier version of your agent, another memory setup, or a reference agent Memrank ships, such
-   as `full-context`, which answers from the whole history with no memory engine. Runs with the
+   earlier version of your agent, another memory setup, or a baseline Memrank ships, such as
+   `full-context`, which answers from the whole history with no memory engine. Runs with the
    same evaluation, sample and seed ask the same questions.
 
-Answers are judged by Claude with your organisation's own Anthropic key, on your machine. Each
+Answers are judged by an LLM judge with your organisation's own API key, on your machine. Each
 score comes with a 95% interval, so you can tell a real difference from noise. Results land in
 the terminal, in a `results/<run-id>/` folder on your machine, and in your organisation's run
 history on memrank.ai, where every question, answer and verdict can be read.
@@ -51,39 +68,44 @@ history on memrank.ai, where every question, answer and verdict can be read.
 
 ## Install
 
-Requires macOS on Apple Silicon, a [memrank.ai](https://memrank.ai) account, and an
-[Anthropic API key](https://console.anthropic.com/settings/keys).
+The current version runs on macOS with Apple Silicon. You need a [memrank.ai](https://memrank.ai)
+account and an API key for the judge.
 
 ```bash
 curl -fsSL https://memrank.ai/install.sh | sh
 memrank --version
 ```
 
+<details>
+<summary>What the installer does</summary>
+
 The installer puts Memrank, with its own Python, under `~/.local/share/memrank` and links
 `~/.local/bin/memrank`. It does not touch your Python, your shell startup files, or anything that
 needs `sudo`. If it says `~/.local/bin` is not on `PATH`, run the `export` line it prints.
 
+</details>
+
 ## First run
 
 Every run is recorded in your organisation's run history, so `memrank run` needs you to sign in
-first. Judging spends your own Anthropic credit; this run asks 15 questions.
+first. Judging spends your own credit; this run asks 15 questions.
 
 ```bash
 memrank auth login
-export ANTHROPIC_API_KEY=sk-ant-...
+export ANTHROPIC_API_KEY=...   # the model key full-context answers with
 memrank run locomo --agent full-context --cases 3 --questions 5
 ```
 
-This evaluates `full-context`, a reference agent Memrank ships, on three LoCoMo conversations.
-The first judged run asks for your organisation's Anthropic key and saves it for later runs. While
-it runs, Memrank prints a link to watch it live and one line per step. It ends with a `Done` line
-followed by a summary like this (your numbers will differ):
+This evaluates `full-context`, a baseline agent that answers from the whole conversation history,
+on three LoCoMo conversations. The first judged run asks for the judge's API key and saves it to
+your organisation for later runs. While it runs, Memrank shows its progress and a link to follow
+the run on memrank.ai. It ends with a `Done` line followed by a summary like this (abridged; your
+numbers will differ):
 
 ```text
   Score         53.3% correct: 8 of 15 questions, from 3 conversations
   Likely range  27%-80%: on other conversations like these, the score would usually land here
   Not answered  none
-  Judged by     claude-haiku-4-5
 Saved locally: results/20260928-182017__locomo__f11cd7/
 View results: https://memrank.ai/acme/runs/20260928-182017__locomo__f11cd7
 ```
@@ -98,8 +120,8 @@ pass its path instead of `full-context`.
 
 ### Hand the setup to a coding agent
 
-To have Claude Code, Codex or Cursor set Memrank up and evaluate your agent, paste this into it,
-in the folder where your agent lives:
+To have a coding agent set Memrank up and evaluate your agent, paste this into Claude Code, Codex
+or Cursor:
 
 ```text
 Evaluate my agent with Memrank, then show me its score and the link to the result. First set
@@ -116,33 +138,36 @@ Memrank up:
    follow it.
 ```
 
-[For coding agents](https://memrank.ai/docs/coding-agents) is the same procedure as a page.
+See [For coding agents](https://memrank.ai/docs/coding-agents) for the full steps.
 
 ## Common tasks
 
 | Task | Guide |
 |---|---|
-| Connect an agent through a command, an OpenAI-compatible URL or an HTTP API | [Connect your agent](https://memrank.ai/docs/connect-your-agent) |
-| Ask your agent your own questions | [Your own cases](https://memrank.ai/docs/benchmarks/your-own-cases) |
-| Read a run and compare two runs | [Compare results](https://memrank.ai/docs/results) |
-| Understand how answers are judged | [Evaluation methodology](https://memrank.ai/docs/methodology/evaluation-methodology) |
-| Know what a run does not tell you | [Limitations](https://memrank.ai/docs/methodology/limitations) |
-| Look up a command or option | [Command reference](https://memrank.ai/docs/reference/commands) |
+| Connect your agent to Memrank | [Connect your agent](https://memrank.ai/docs/connect-your-agent) |
+| Evaluate on your own questions | [Your own cases](https://memrank.ai/docs/benchmarks/your-own-cases) |
+| Compare two runs | [Compare results](https://memrank.ai/docs/results) |
+| See how answers are judged | [Evaluation methodology](https://memrank.ai/docs/methodology/evaluation-methodology) |
+| See what a run cannot tell you | [Limitations](https://memrank.ai/docs/methodology/limitations) |
+| Look up a command | [Command reference](https://memrank.ai/docs/reference/commands) |
 
 ## Contributing
 
-You can add a connector or preset for an agent stack Memrank does not reach easily yet, an
-evaluation, a reference agent to use as a baseline, fixes to how answers are graded, or
-improvements to the command line and the run report.
-The [contributing guide](https://github.com/atomicstrata/memrank/blob/main/docs/contributing.md)
+Memrank aims to be a neutral evaluation tool for agent memory that the whole industry can stand
+behind, built together with its ecosystem. This is the beginning of that journey, and anything you think
+would make it better is welcome: ideas, issues, discussions or code.
+
+Some places to start: a connector or preset for an agent stack Memrank does not reach easily yet,
+a new evaluation, a new baseline, better grading, or a clearer command line and run report. The
+[contributing guide](https://github.com/atomicstrata/memrank/blob/main/docs/contributing.md)
 covers the development setup and where each of these lives in the code.
 
 ## Help
 
 Report a bug or ask a question in [GitHub issues](https://github.com/atomicstrata/memrank/issues).
 Include the Memrank version (`memrank --version`), the command you ran and the block the run ended
-with. Never include API keys or private data. Do not report a security problem in a public issue;
-email hello@atomicstrata.ai instead.
+with. Issues are public, so keep them to what is safe to share: never include API keys or
+private data.
 
 ## License
 
