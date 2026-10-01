@@ -76,3 +76,16 @@ def test_the_probe_refuses_an_agent_that_leaks_across_sessions():
 
 def test_the_probe_passes_an_agent_that_keeps_sessions_apart():
     leak_probe(Scoped(), token="abc123")
+
+
+def test_the_probe_passes_an_agent_whose_reader_states_the_current_date():
+    """LongMemEval's official reader refuses an undated question; the probe's is dated."""
+    from memrank.benchmarks.answer_prompts import LONGMEMEVAL_READER
+
+    class DatedReader(Scoped):
+        def ask(self, step):
+            LONGMEMEVAL_READER.render(question=step.question.text, context="",
+                                      query_date=step.question.timestamp)
+            return super().ask(step)
+
+    leak_probe(DatedReader(), token="abc123")

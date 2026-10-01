@@ -1,18 +1,21 @@
 # Contributing and getting help
 
 Memrank helps people building agents find the memory that works best for them, by evaluating the
-agent end to end. Contributions that make that comparison easier to set up, broader, or more
-trustworthy are welcome: a way to reach another agent stack, a new evaluation, a new baseline,
-better grading, or a clearer command line and report.
+agent end to end. It aims to be a neutral evaluation tool for agent memory that the whole industry
+can stand behind, built together with its ecosystem. This is the beginning of that journey, and
+anything you think would make it better is welcome: ideas, issues, discussions or code.
+
+Some places to start: a way to reach another agent stack, a new evaluation, a new baseline, better
+grading, or a clearer command line and report. [Where each contribution lives](#where-each-contribution-lives)
+shows where these sit in the code.
 
 ## Get help
 
 Use the [GitHub issue tracker](https://github.com/atomicstrata/memrank/issues) for bugs,
 questions about a run, and methodology disagreements. Include the Memrank version
 (`memrank --version`), the command you ran, the block the run ended with, the result you expected
-and what happened instead. Remove keys and private data before posting. Do not report a security
-problem in a public issue: email hello@atomicstrata.ai, which is also the address for any other
-question.
+and what happened instead. Issues are public, so keep them to what is safe to share: remove keys
+and private data before posting.
 
 Open an issue before a large change, so we can agree on its shape first.
 
@@ -78,9 +81,9 @@ all: an evaluation file (`memrank/definitions/file.py`, starter in
 shared as it is. Changing how an evaluation is scored needs a matching update to its
 documentation page.
 
-### A reference agent
+### A baseline
 
-Reference agents are the baselines runs are compared against. Each one is an agent file in
+Baselines are the agents runs are compared against. Each one is an agent file in
 `memrank/agents/` (its file name is the name `--agent` takes), usually starting a small server
 that speaks the OpenAI Chat Completions API. `full-context` is the example: its file is
 `memrank/agents/full-context.yaml` and its server is `memrank/reference/full_context.py`, started
