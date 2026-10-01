@@ -122,17 +122,17 @@ def test_the_scan_reads_claims_in_the_corpus():
 
 
 def test_the_scan_catches_the_claims_that_shipped_wrong():
-    """The 0.4.4 leftovers, verbatim, each caught."""
+    """The 0.4.4 leftovers, each caught -- counts restated against today's five evaluations."""
     def caught(text: str) -> int:
         return sum(len(count_offences(s)) + len(list_offences(s))
                    for s in sentences_of("d.md", text))
 
-    assert caught("Memrank ships five evaluations, each bundling its own measures.") == 1
-    assert caught("Memrank supplies eleven [systems](system.md) and five "
+    assert caught("Memrank ships six evaluations, each bundling its own measures.") == 1
+    assert caught("Memrank supplies eleven [systems](system.md) and six "
                   "[evaluations](evaluation.md), with what each needs.") == 1
     assert caught("Five measures ship with the package.") == 0
     assert caught("Four measures ship with the package.") == 1
-    assert caught("Declaring nothing is the default: all five registered benchmarks do.") == 1
+    assert caught("Declaring nothing is the default: all six registered benchmarks do.") == 1
     assert caught("- `memrank.evaluations` -- the module: `Demo`, `RelationGraph`, `LoCoMo`, "
-                  "`LongMemEval`, `BEAM`.") == 1
+                  "`BEAM`.") == 1
     assert caught("Three shipped measures produce a quality value.") == 0

@@ -25,15 +25,15 @@ from typer.testing import CliRunner
 
 from memrank.benchmarks import REGISTRY, list_benchmarks
 from memrank.benchmarks.beam import _HF_SPLIT_MAP, BEAMBenchmark
-from memrank.benchmarks.refs import list_eval_refs
 from memrank.core import EvalInfo
+from memrank.definitions.shipped import shipped_refs
 from memrank.runner import app
 
 runner = CliRunner()
 
 
 def test_evals_ls_lists_every_runnable_variant():
-    """The catalog is every EVALUATION, not every benchmark family.
+    """The catalog is every EVALUATION `memrank run` takes, not every benchmark family.
 
     `beam:100k-smoke` is 20 questions over one conversation and `beam:1m` is 700 over
     thirty-five; a line reading "beam" named neither, and their scores were never comparable.
@@ -41,8 +41,9 @@ def test_evals_ls_lists_every_runnable_variant():
     result = runner.invoke(app, ["evals", "ls"])
     assert result.exit_code == 0
     listed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
-    assert listed == set(list_eval_refs())
+    assert listed == set(shipped_refs())
     assert {"locomo", "locomo:smoke", "beam:100k", "beam:1m-mini"}.issubset(listed)
+    assert not {"demo", "relation_graph"} & listed, "evaluations an agent cannot be put to"
     assert "beam" not in listed, "a tiered benchmark has no unqualified evaluation"
 
 

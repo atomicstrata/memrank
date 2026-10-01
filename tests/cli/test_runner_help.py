@@ -21,6 +21,7 @@ stated without the internal command table, and `memrank.ops` is not in a public 
 
 from __future__ import annotations
 
+import pytest
 from typer.testing import CliRunner
 
 from memrank.runner import app
@@ -28,7 +29,12 @@ from memrank.runner import app
 runner = CliRunner()
 
 #: The noun-spaces the interface model says the CLI is made of.
-DIMENSIONS = ("targets", "evals", "runs", "auth", "secrets")
+DIMENSIONS = ("agents", "evals", "runs", "auth", "secrets")
+
+#: The engine-hosting path, hidden from help and still runnable (ATO-2343): (group, command).
+HIDDEN = (((), "submit"), ((), "targets"), ((), "ps"), ((), "logs"), ((), "watch"),
+          ((), "kill"), (("runs",), "logs"), (("runs",), "watch"), (("runs",), "kill"),
+          (("runs",), "sync"))
 
 
 def test_help_exits_zero():
@@ -44,6 +50,26 @@ def test_help_shows_every_dimension():
     listed = runner.invoke(app, ["--help"]).stdout
     missing = [name for name in DIMENSIONS if name not in listed]
     assert missing == [], f"dimensions absent from the CLI: {missing}"
+
+
+def _listed(group: tuple[str, ...]) -> set[str]:
+    """The command names a group's help lists, one per row of its Commands box."""
+    rows = runner.invoke(app, [*group, "--help"]).stdout.split("Commands")[-1].splitlines()
+    border = "\u2502 "  # the Commands box's left edge, escaped for the ASCII gate
+    return {row.strip(border).split(" ")[0] for row in rows if row.startswith(border)}
+
+
+@pytest.mark.parametrize("group,command", HIDDEN)
+def test_the_engine_hosting_path_is_hidden_but_still_runs(group, command):
+    """A new user meets `memrank run --agent` only; the old path answers when typed."""
+    assert command not in _listed(group)
+    assert runner.invoke(app, [*group, command, "--help"]).exit_code == 0
+
+
+def test_the_hidden_scan_sees_a_listed_command():
+    """Guards the guard: a scan that finds nothing would pass every hidden command."""
+    assert {"run", "agents", "runs"} <= _listed(())
+    assert {"ls", "show"} <= _listed(("runs",))
 
 
 def test_version_prints_semver():

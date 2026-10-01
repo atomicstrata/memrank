@@ -28,6 +28,10 @@ from memrank.instrument.evaluation import Clearing
 from memrank.instrument.kinds import Memory
 from tests.instrument.fakes import TinyMemory
 
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
+
 
 def test_the_demo_benchmark_converts_to_tasks_measures_and_a_clearing_rule():
     converted = evaluation("demo")

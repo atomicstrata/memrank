@@ -178,3 +178,14 @@ class _NullClient:
 class _NullStore:
     def save(self, token: str) -> None:
         return None
+
+
+def test_the_browser_login_prints_its_link_as_well_as_opening_it(monkeypatch, capsys):
+    """A coding agent cannot see the browser window, so it needs the link to hand on."""
+    opened = []
+    monkeypatch.setattr(auth_cli.webbrowser, "open", opened.append)
+
+    auth_cli._open_and_announce("http://api/auth/authorize?state=s")
+
+    assert opened == ["http://api/auth/authorize?state=s"]
+    assert "http://api/auth/authorize?state=s" in capsys.readouterr().err

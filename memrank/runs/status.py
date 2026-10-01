@@ -57,6 +57,8 @@ PLATFORM_STATES = {
     "running": "running",
     "stopped-success": "done",
     "stopped-failed": "failed",
+    # A local agent run that stopped before it finished; `memrank run --resume` continues it.
+    "stopped-incomplete": "incomplete",
     "unknown": UNKNOWN_STATE,
 }
 

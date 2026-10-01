@@ -24,7 +24,9 @@ experiment need to be launchable?", which :mod:`memrank.config` preflights befor
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from memrank.docs import doc_url
 from memrank.errors import MemrankError
@@ -99,10 +101,7 @@ class UnknownEngine(MemrankError, KeyError):
     as one actionable line rather than as "internal error: KeyError ... this is a bug in memrank".
 
     This is the FIRST wall a target with an unregistered adapter hits -- required secrets are
-    computed at planning time, before any placement -- so it is also the message that has to name
-    the likely cause. Since adapters can be registered from outside the tree
-    (:mod:`memrank.plugins`), an unknown name usually means a plugin was not loaded rather than a
-    typo, and a bare list of built-ins sends the reader looking in the wrong place.
+    computed at planning time, before any placement -- so it names what is known.
     """
 
 
@@ -111,15 +110,31 @@ def get_requirements(engine: str) -> EngineRequirements:
     if engine not in REQUIREMENTS:
         raise UnknownEngine(
             f"no engine registered as {engine!r}; known: {', '.join(sorted(REQUIREMENTS))}. "
-            f"If it is provided by a plugin, name that plugin's module in the `adapters.plugins` "
-            f"setting (`memrank config set adapters.plugins <module>`) and make sure the module is "
-            f"importable -- see {doc_url('systems.md')}.")
+            f"See {doc_url('systems.md')}.")
     return REQUIREMENTS[engine]
 
 
 def _key_for(provider: str | None) -> str:
     """The API-key env var for ``provider`` ('' when keyless/unknown)."""
     return PROVIDER_KEY_ENV.get(provider or "", "")
+
+
+def keyed_providers(components: Mapping[str, Any]) -> dict[str, str | None]:
+    """The provider whose own API key each declared component spends, by role.
+
+    A component that names its own ``endpoint`` is served by that address rather than by its
+    provider's API, so it spends no provider key: ``""`` says so. Deriving one anyway would hand,
+    say, an ``OPENAI_API_KEY`` to whatever the endpoint is. Its credential is the one the target
+    declares under ``secrets:``.
+
+    Args:
+        components: A manifest's components, each with ``provider`` and ``endpoint``.
+
+    Returns:
+        ``{role: provider}`` to pass to :func:`required_secrets` as overrides.
+    """
+    return {role: "" if component.endpoint else component.provider
+            for role, component in components.items()}
 
 
 def required_secrets(engine: str, *, embedder: str | None = None, llm: str | None = None) -> list[str]:

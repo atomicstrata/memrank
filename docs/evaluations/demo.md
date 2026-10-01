@@ -1,5 +1,7 @@
 # Demo -- `demo`
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 ```python
 from memrank.evaluations import Demo
 
@@ -29,6 +31,10 @@ something the system recalled, and whether the evidence message was recalled at 
 **retrieval proxies decided by a fixed rule**, not answer correctness, and every value says so.
 They are meaningful here because the scenario was written so its answers are literal spans -- a
 property of this evaluation, not of word matching in general.
+
+
+Its benchmark publishes no reader prompt, so a judged run answers with memrank's own
+([the reader prompt](../methodology.md#the-reader-prompt)).
 
 ## What it needs
 

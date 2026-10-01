@@ -1,5 +1,7 @@
 # The memrank system contract, v1
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 Implement this HTTP contract to connect a memory engine to Memrank through a **translator**.
 The translator receives evaluation requests and calls your engine. It can run outside the
 Memrank repository and be written in any language.

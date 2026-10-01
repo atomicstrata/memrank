@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Adapter registry.
+"""Deprecated: memory adapters and `MemoryAdapter`. Evaluate an agent with `memrank run` instead;
+see the README. `errors` is used by the current path (`connect/http`, `api_client`) and does
+not warn.
+
+Adapter registry.
 
 Adapter classes register themselves here by short name. The CLI looks up by
 this name; the conformance suite iterates over the registry to assert every

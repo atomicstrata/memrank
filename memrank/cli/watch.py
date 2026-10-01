@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""`memrank watch` / `kill` -- the lifecycle verbs of the detached-by-default model.
+"""Deprecated: the hidden `memrank watch`/`kill` commands that follow `submit` runs. Evaluate an
+agent with `memrank run` instead; see the README.
+
+`memrank watch` / `kill` -- the lifecycle verbs of the detached-by-default model.
 
 Every submission returns immediately with run ids; blocking is a VERB, not a flag (the
 interface model's rejected shapes: `--wait`, `--detach`). `watch <id...>` attaches until the

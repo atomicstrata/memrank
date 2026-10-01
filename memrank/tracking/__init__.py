@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Experiment tracking -- mirroring finished runs into MLflow.
+"""Deprecated: the MLflow mirror of the `submit` sweep. Evaluate an agent with `memrank run`
+instead; see the README.
+
+Experiment tracking -- mirroring finished runs into MLflow.
 
 memrank's own run registry is the source of truth; this package is a one-way mirror for teams who
 already read their experiments somewhere else. `export` walks the local registry and writes one

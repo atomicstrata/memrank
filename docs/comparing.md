@@ -1,6 +1,8 @@
 <a id="compare-systems-and-versions"></a>
 # Compare memory systems and their versions
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 Run the same evaluation on two memory systems to see which tasks each handles better, how long they
 take and where they fail. You can also compare two versions of your memory system to investigate
 whether your changes improved its performance. A **result** records one run;
@@ -108,7 +110,7 @@ each result's errors and missing values; a comparison of successful tasks can hi
 problems if read alone. `only_in_a` and `only_in_b` report trace IDs missing from one result, not
 the measure-level omissions.
 
-The current `squad-score` is an aggregate passage-recall value with no task ID, so it is not
+The `demo-score` is an aggregate evidence-recall value with no task ID, so it is not
 paired. Neither are run-level latency summaries or `failure-rate`. Compare those values in the
 individual results with their sample counts, failures and settings. An empty `reading.measures`
 means there were no eligible pairs, not that the systems tied.

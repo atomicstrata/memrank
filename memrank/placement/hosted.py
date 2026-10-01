@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (cli/runs, runs/push): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """When the hosted side could not be consulted, and whether that is worth saying.
 
 Two paths reach for the org universe while serving a request that may be entirely local:

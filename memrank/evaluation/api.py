@@ -31,6 +31,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
+from memrank import deprecation
 from memrank.core import Benchmark, MemoryAdapter
 from memrank.evaluation.cell import _close_adapter, run_cell
 from memrank.evaluation.constants import DEFAULT_JUDGE_WORKERS
@@ -122,6 +123,7 @@ def run(
     downloads (~4 MB, cached) on first cost accounting -- both inherited from the
     measurement loop and documented rather than hidden.
     """
+    deprecation.warn("memrank.evaluation.api.run()")
     chosen_engine = cast("str | MemoryAdapter", _settled(engine, target, "target"))
     chosen_evaluation = cast("str | Benchmark", _settled(evaluation, eval, "eval"))
 

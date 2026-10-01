@@ -1,5 +1,7 @@
 # run
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **run** executes an [evaluation](evaluation.md) against a [system](system.md), records task
 attempts and applies the evaluation's measures.
 

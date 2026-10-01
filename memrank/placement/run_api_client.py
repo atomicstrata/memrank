@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (loop/, cli/runs*, cli/secrets, runs/): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """The CLI's HTTP client for the run-submission API.
 
 ``--on cloud`` no longer touches AWS from the laptop: submission, status, and listing go
@@ -30,11 +33,13 @@ from memrank.provenance.install import with_upgrade_instruction
 
 class RunApiError(MemrankError):
     """The API refused or failed a run operation. ``code`` is machine-dispatchable --
-    the CLI's auto-build loop triggers on ``image_missing`` and nothing else."""
+    the CLI's auto-build loop triggers on ``image_missing`` and nothing else. ``status`` is the
+    API's HTTP status, when it answered with one."""
 
-    def __init__(self, message: str, *, code: str = "") -> None:
+    def __init__(self, message: str, *, code: str = "", status: int | None = None) -> None:
         super().__init__(message)
         self.code = code
+        self.status = status
 
 
 def _refusal(response) -> RunApiError:
@@ -46,14 +51,26 @@ def _refusal(response) -> RunApiError:
     this seam exists to prevent.
     """
     if response.status_code == 401:
-        return RunApiError("not signed in -- run `memrank auth login`")
+        return RunApiError("not signed in -- run `memrank auth login`", code="unauthorized")
     if response.status_code == 403:
-        return RunApiError("you are not a member of this org")
+        return RunApiError("you are not a member of this org", code="forbidden")
     detail = response.json().get("detail", {}) if _is_json(response) else {}
     code = detail.get("code", "") if isinstance(detail, dict) else ""
     message = detail.get("message", response.text) if isinstance(detail, dict) else response.text
+    if response.status_code >= 500:
+        return RunApiError(_server_failure(response, str(message)), code=code,
+                           status=response.status_code)
     return RunApiError(f"{with_upgrade_instruction(str(message))} ({response.status_code})",
-                       code=code)
+                       code=code, status=response.status_code)
+
+
+def _server_failure(response, message: str) -> str:
+    """A 5xx, led by whose side it is on: the API's, not the caller's run."""
+    from memrank import config
+
+    return (f"the memrank API at {config.memrank_api_url()} failed on its side "
+            f"({response.status_code}); nothing in your command caused it. Retry, and if it "
+            f"keeps failing, report it with this message.\n  what the API said: {message}")
 
 
 def _is_json(response) -> bool:
@@ -75,6 +92,29 @@ def sync_run(http, org: str, run_id: str, payload: dict[str, Any]) -> dict[str, 
     born), and re-syncing a run is a repair rather than a second run.
     """
     response = http.put(f"/orgs/{org}/runs/{run_id}", json=payload)
+    if response.status_code != 200:
+        raise _refusal(response)
+    return response.json()
+
+
+def put_answers(http, org: str, run_id: str, answers: dict[str, Any]) -> dict[str, Any]:
+    """Store an agent run's every question beside its record, before the record points at them.
+
+    Idempotent, like :func:`sync_run`: sending them again after a failed upload is the repair.
+    """
+    response = http.put(f"/orgs/{org}/runs/{run_id}/answers", json=answers)
+    if response.status_code != 200:
+        raise _refusal(response)
+    return response.json()
+
+
+def add_judging(http, org: str, run_id: str, judging: dict[str, Any]) -> dict[str, Any]:
+    """Add a judging of a finished agent run's recorded answers, beside its earlier ones.
+
+    Idempotent: the same judging sent again answers ``added: false``. A different judging under
+    the same judge model and prompt version is refused (``judging_exists``), never replaced.
+    """
+    response = http.post(f"/orgs/{org}/runs/{run_id}/judgings", json=judging)
     if response.status_code != 200:
         raise _refusal(response)
     return response.json()
@@ -284,6 +324,14 @@ def list_runs(http, org: str, *, mine: bool = True, limit: int,
     return response.json()
 
 
+def whoami(http) -> dict[str, Any]:
+    """The signed-in account and the orgs it can act on: ``login``, ``email``, ``orgs``."""
+    response = http.get("/whoami")
+    if response.status_code != 200:
+        raise _refusal(response)
+    return response.json()
+
+
 def authenticated_client():
     """An httpx client bound to the configured API and carrying the stored token.
 
@@ -291,10 +339,8 @@ def authenticated_client():
     need it, and the listing path (``runs_cli``) cannot import ``runner`` -- ``runner`` imports
     it. Raises rather than guessing at an unauthenticated request.
     """
-    import httpx
-
-    from memrank import config
     from memrank.accounts.credentials import CredentialError, CredentialStore
+    from memrank.api_client import api_client
 
     try:
         token = CredentialStore().load()
@@ -305,5 +351,4 @@ def authenticated_client():
         raise RunApiError(str(exc), code="credential_store") from exc
     if token is None:
         raise RunApiError("not signed in -- run `memrank auth login`", code="no_session")
-    return httpx.Client(base_url=config.memrank_api_url(), timeout=60,
-                        headers={"Authorization": f"Bearer {token}"})
+    return api_client(timeout=60, token=token)

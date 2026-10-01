@@ -39,6 +39,10 @@ It is also one of two evaluations whose own protocol caps context at the model's
 than at a fairness budget, so memrank's token budget is lifted for it, symmetrically across every
 system. This applies equally to all systems, but removes budget normalization against other evaluations.
 
+
+The answer is generated with LongMemEval's own direct reader prompt, verbatim, including its
+`Current Date` line. See [the reader prompt](../methodology.md#the-reader-prompt).
+
 ## What it needs
 
 A one-time download of the dataset, cached after the first run, or a local copy pointed at with

@@ -1,5 +1,7 @@
 # paired
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **paired** reading puts two [results](result.md) of the same [evaluation](evaluation.md) side
 by side and reports differences and statistical summaries for common task-level values. It does
 not choose a winner. For a walkthrough, start with [Compare memory systems and their versions](../comparing.md).
@@ -44,7 +46,7 @@ changed task IDs and caution.
 ## Coverage and interpretation
 
 Each measure's means use only task IDs with non-null values on both sides. Run-scope or
-group-only values without a task ID are omitted, including `squad-score`, latency summaries and
+group-only values without a task ID are omitted, including `demo-score`, latency summaries and
 `failure-rate`. Check errors and missing values in the original results. An empty `measures`
 tuple means no measure had eligible pairs, not that the systems tied.
 

@@ -52,6 +52,11 @@ BLOB, TREE = f"{REPO}blob/main/", f"{REPO}tree/main/"
 #: branch, a `raw.githubusercontent.com` host, a bare `.../memrank` -- is out of contract.
 FORMS = (BLOB, TREE)
 
+#: Repository pages that are not files in the tree -- the issue tracker the README's Help section
+#: names, and the public CI workflow its status badge links to. GitHub serves both as absolute URLs,
+#: so they resolve on PyPI, and the projection has nothing to check them against.
+PAGES = (f"{REPO}issues", f"{REPO}actions/workflows/")
+
 #: Guard the guard. The README carried 20 links when this landed; a floor well under that catches
 #: an extraction that matched nothing without pinning the count.
 LINK_FLOOR = 12
@@ -76,6 +81,8 @@ def _defects(body: str, published: frozenset[str]) -> list[str]:
             continue
         if not raw.startswith(REPO):
             continue                      # an external site: nothing here to check
+        if raw.startswith(PAGES):
+            continue
         if not raw.startswith(FORMS):
             found.append(f"{raw}: not a {BLOB} or {TREE} URL")
             continue

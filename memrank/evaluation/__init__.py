@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The eval library: run one (adapter x benchmark) cell and hand back its result.
+"""Deprecated: the in-process eval library behind `memrank.evaluation.api.run` and `memrank
+submit`. Evaluate an agent with `memrank run` instead; see the README. `constants` and
+`result` are used by the current path (`loop/judge`, `runs/registry`) and do not warn.
+
+The eval library: run one (adapter x benchmark) cell and hand back its result.
 
 What belongs here: the measurement loop (`cell`), what an engine may declare about
 itself and what memrank measures for it (`measurement`), the aggregation into the

@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (connect/http, api_client): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """When an engine refuses a request, say what it said.
 
 Every HTTP adapter guarded its calls with a bare ``response.raise_for_status()``. httpx's

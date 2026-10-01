@@ -1,5 +1,7 @@
 # FixedContext -- `fixed-context`
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 ```python
 from memrank.systems import FixedContext
 

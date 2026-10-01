@@ -38,6 +38,11 @@ latency, failures and counts; its previous retrieval proxy was withdrawn.
 Its protocol gives the reader all retrieved context. Tracked runs therefore lift the shared
 retrieval token budget for every system on BEAM.
 
+
+The answer is generated with BEAM's own reader prompt (`answer_generation_for_rag`), verbatim:
+answer only from the context, directly and concisely. It has no abstention instruction and no
+date line; see [the reader prompt](../methodology.md#the-reader-prompt).
+
 ## What it needs
 
 A one-time download of the dataset, cached after the first run, or a local copy pointed at with

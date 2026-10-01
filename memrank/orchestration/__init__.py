@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""The run lifecycle: everything a recorded run wires AROUND the eval library.
+"""Deprecated: the cloud and sweep orchestration behind `memrank submit`. Evaluate an agent with
+`memrank run` instead; see the README. `sweep._mirror_to_mlflow` is reached lazily by
+`runs/reconcile` and does not warn.
+
+The run lifecycle: everything a recorded run wires AROUND the eval library.
 
 What belongs here: the observers that bridge `memrank.evaluation`'s narration into the
 terminal and the run heartbeat, and (as the runner split proceeds) target resolution,

@@ -85,7 +85,8 @@ def _judge_receipt_config(judge: JudgeConfig | None) -> dict[str, Any]:
             "judge_samples": judge.samples, "judge_token_budget": judge.token_budget,
             "judge_no_context_control": judge.no_context_control,
             "judge_cache_enabled": judge.cache,
-            "judge_allow_empty_coverage": judge.allow_empty_coverage}
+            "judge_allow_empty_coverage": judge.allow_empty_coverage,
+            **judge.answer_prompt.provenance()}
 
 
 def _judge_cfg_from_receipt(cell: dict[str, Any]) -> JudgeConfig:

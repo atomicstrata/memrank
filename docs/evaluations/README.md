@@ -1,20 +1,21 @@
 <a id="the-evaluations-that-ship"></a>
 # Available evaluations
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 An [evaluation](../reference/evaluation.md) defines tasks, measures and when to clear system
 state. Use this catalog to choose a task set and check its scoring method and requirements.
 
 | Evaluation | Key | What it measures | What it needs |
 |---|---|---|---|
-| [SQuAD](squad.md) | `squad` | full-passage retrieval recall, not answer-span or end-to-end answer correctness | Bundled subset; no download or API key |
 | [Demo](demo.md) | `demo` | Substring retrieval proxy and evidence recall on a synthetic conversation | Bundled data; no download or API key |
 | [RelationGraph](relation-graph.md) | `relation_graph` | Structural graph correctness across four memory scenarios | Bundled fixtures and a graph-capable system |
 | [LoCoMo](locomo.md) | `locomo` | Answer correctness over ten dated conversations and about 1,500 scored questions | a one-time download; a judge for quality |
 | [LongMemEval](longmemeval.md) | `longmemeval` | Answer correctness on 500 questions, each with its own set of chat sessions | a one-time download; a judge for quality |
 | [BEAM](beam.md) | `beam` | Answer quality across ten memory abilities in long conversations | a one-time download; a judge for quality |
 
-`memrank.catalog()` lists these evaluations at runtime. SQuAD's default subset, Demo and
-RelationGraph use bundled data. System and answer-writer requirements apply separately.
+`memrank.catalog()` lists these evaluations at runtime. Demo and RelationGraph use bundled
+data. System and answer-writer requirements apply separately.
 
 <a id="the-standard-every-page-follows"></a>
 <a id="proxy-or-judged-and-why-it-is-on-every-page"></a>
@@ -25,8 +26,7 @@ scores. Without judging, they report timings, failures and counts. The Python AP
 to configure the answer writer and judge; the command line enables judging by default for these
 evaluations.
 
-SQuAD measures full-passage retrieval recall. Demo measures answer-substring and evidence
-retrieval proxies. RelationGraph scores graph structure. These fixed rules need no judge;
+Demo measures answer-substring and evidence retrieval proxies. RelationGraph scores graph structure. These fixed rules need no judge;
 none measures generated-answer correctness.
 
 ## Using one

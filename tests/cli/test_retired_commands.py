@@ -69,7 +69,7 @@ def test_retired_names_are_absent_from_help():
 
 def test_the_help_scan_would_catch_a_name_that_really_leaked():
     """Guards the guard: a laxer scan passes everything, which is worse than no test."""
-    assert "ps" in _command_names(runner.invoke(app, ["--help"]).output)
+    assert "agents" in _command_names(runner.invoke(app, ["--help"]).output)
 
 
 @pytest.mark.parametrize("old,new", sorted(RETIRED.items()))

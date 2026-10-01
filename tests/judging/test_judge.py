@@ -10,6 +10,9 @@ from memrank.judging.judge import (
     judge_sufficiency,
     parse_verdict,
 )
+from memrank.judging.prompts import (
+    MEMRANK_READER,
+)
 
 
 def test_parse_verdict_strict_json():
@@ -57,7 +60,8 @@ def _scripted_completer(script):
 
 def test_generate_answer_passes_through_text():
     c = _scripted_completer({"answer the user's question": "the blue whale"})
-    assert generate_answer(c, question="q", context="ctx", model="m") == "the blue whale"
+    assert generate_answer(c, question="q", context="ctx", model="m",
+                           prompt=MEMRANK_READER) == "the blue whale"
 
 
 def test_judge_sufficiency_parses_verdict():

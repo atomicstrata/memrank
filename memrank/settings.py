@@ -107,13 +107,6 @@ SETTINGS: tuple[Setting, ...] = (
     Setting("targets.path", "MEMRANK_TARGETS_PATH", None,
             "extra directories to read target descriptors from (os.pathsep-separated)",
             search_path=True),
-    # Importable module names, not paths -- which is why this is comma-separated rather than a
-    # search path: os.pathsep is ':' on unix and a module name may not contain a comma, while
-    # `search_path=True` would rewrite each entry as an absolute directory and destroy it.
-    # A module named here registers an adapter memrank does not ship (memrank/plugins.py), so a
-    # descriptor's `interface.adapter` can resolve to a class living in another repository.
-    Setting("adapters.plugins", "MEMRANK_ADAPTER_PLUGINS", None,
-            "modules to import that register out-of-tree adapters (comma-separated)"),
 )
 
 _BY_KEY = {s.key: s for s in SETTINGS}
@@ -170,7 +163,23 @@ def resolve(key: str) -> tuple[str | None, str]:
     stored = _load().get(key)
     if stored is not None:
         return stored, FILE
-    return spec.default, DEFAULT
+    return _shipped_default(spec), DEFAULT
+
+
+def _shipped_default(spec: Setting) -> str | None:
+    """The default this install ships with.
+
+    The standalone build is built for one site and names that site's API in its record
+    (``tools/internal/binary/build.py --api-url``), so a staging build reaches the staging API
+    with no setup. A Python install, or a build whose record names no API, ships the table's.
+    """
+    if spec.key == "api.url":
+        from memrank.provenance.install import standalone_build
+
+        build = standalone_build()
+        if build is not None and build.get("api_url"):
+            return build["api_url"]
+    return spec.default
 
 
 def get(key: str) -> str | None:

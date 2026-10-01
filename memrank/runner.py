@@ -47,6 +47,10 @@ from memrank.benchmarks import (
     judge_required,
 )
 from memrank.benchmarks.refs import parse_eval_ref
+from memrank.cli import deprecated as deprecated_cli
+from memrank.cli.agents import agents_app
+from memrank.cli.agents import run as _run_cmd
+from memrank.cli.agents import serve as _serve_cmd
 from memrank.cli.auth import app as auth_app
 from memrank.cli.config import config_app
 from memrank.cli.evals import evals_app
@@ -61,10 +65,11 @@ from memrank.cli.retired import refuse_retired_flags, register_retired
 from memrank.cli.runs import cli_ps as _ps_cmd
 from memrank.cli.runs import runs_app
 from memrank.cli.secrets import secrets_app
+from memrank.cli.skills import skills_app
 from memrank.cli.targets import targets_app
 from memrank.cli.watch import kill as _kill_cmd
 from memrank.cli.watch import watch as _watch_cmd
-from memrank.errors import MemrankError
+from memrank.errors import ActionRequired, Concluded, MemrankError
 
 # The eval loop lives in `memrank.evaluation` now; every name it took along is re-imported
 # here BY ASSIGNMENT so `memrank.runner.<name>` stays importable and -- crucially -- stays
@@ -204,7 +209,7 @@ from memrank.orchestration.sweep import (  # noqa: F401
 )
 from memrank.provenance.install import version_line
 from memrank.targets.resolve import RefError
-from memrank.term import style
+from memrank.term import outcome, style
 
 
 def _exit_with(exc: BaseException) -> SystemExit:
@@ -215,6 +220,14 @@ def _exit_with(exc: BaseException) -> SystemExit:
     name it as such so it gets reported, and point at the stack without printing it --
     ``submit`` decrypts org credentials into a frame, and locals would carry them out.
     """
+    if isinstance(exc, Concluded):
+        outcome.render(exc.outcome)
+        return SystemExit(exc.exit_code)
+    if isinstance(exc, ActionRequired):
+        style.step(exc.statement)
+        for step in exc.steps:
+            style.step(step.text, step.commands)
+        return SystemExit(1)
     if isinstance(exc, MemrankError):
         style.error(str(exc))
         return SystemExit(1)
@@ -253,9 +266,9 @@ class _BoundedTyper(typer.Typer):
 #: Named once because the root callback below would otherwise silently replace it with its
 #: own docstring -- Typer prefers the callback's help over the app's.
 _APP_HELP = (
-    "Memrank is an open, vendor-neutral tool for reproducible, auditable evaluation of "
-    "memory systems. You supply the system; memrank puts the evaluation to it and writes "
-    "down what produced every value."
+    "Evaluate your agent on your tasks. You supply the system -- an agent: `memrank run locomo --agent "
+    "full-context` -- and memrank puts the evaluation to it and writes down what produced "
+    "every value."
 )
 
 
@@ -269,16 +282,25 @@ app = _BoundedTyper(
     # decides how a failure reaches the terminal.
     pretty_exceptions_enable=False,
 )
+app.command("run")(_run_cmd)
+app.command("serve")(_serve_cmd)
+app.add_typer(agents_app, name="agents")
 app.add_typer(auth_app, name="auth")
 app.add_typer(config_app, name="config")
 app.add_typer(evals_app, name="evals")
 app.add_typer(runs_app, name="runs")
 app.add_typer(secrets_app, name="secrets")
-app.add_typer(targets_app, name="targets")
-app.command("ps")(_ps_cmd)
-app.command("logs")(_logs_cmd)
-app.command("watch")(_watch_cmd)
-app.command("kill")(_kill_cmd)
+app.add_typer(skills_app, name="skills")
+# The engine-hosting path -- `submit`, its catalog of targets, and the commands that follow a
+# background run it started -- is hidden rather than removed (ATO-2343): a new user meets only
+# `memrank run --agent`, while the code, its tests and anyone's muscle memory keep working.
+# Each one is deprecated and says so on stderr when invoked.
+app.add_typer(targets_app, name="targets", hidden=True,
+              callback=lambda: deprecated_cli.notice("targets"))
+app.command("ps", hidden=True)(deprecated_cli.deprecated("ps", _ps_cmd))
+app.command("logs", hidden=True)(deprecated_cli.deprecated("logs", _logs_cmd))
+app.command("watch", hidden=True)(deprecated_cli.deprecated("watch", _watch_cmd))
+app.command("kill", hidden=True)(deprecated_cli.deprecated("kill", _kill_cmd))
 register_retired(app)
 
 
@@ -315,7 +337,7 @@ def _root(
 # ---------------------------------------------------------------------------- #
 
 
-@app.command("submit")
+@app.command("submit", hidden=True)  # the engine-hosting path; see the registrations above
 def submit(
     target: str | None = typer.Argument(None, help="Target ref, e.g. hindsight:matched (comma-separated to sweep)"),
     benchmark_arg: str | None = typer.Argument(None, metavar="EVAL",
@@ -380,6 +402,7 @@ def submit(
                                              help="internal: source target definition guard"),
 ) -> None:
     """Submit a (target, benchmark) cell -- or a comma sweep -- and print one id per target."""
+    deprecated_cli.notice("submit")
     refuse_retired_flags({"--adapter": adapter, "--benchmark": benchmark,
                           "--all-adapters": all_adapters, "--tier": tier, "--slice": slice,
                           "--ack-egress": ack_egress, "--max-judge-calls": max_judge_calls})

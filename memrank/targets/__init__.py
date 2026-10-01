@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""Target catalog -- named, reproducible descriptions of what is under test."""
+"""Deprecated: the target catalog behind `memrank submit` and `memrank targets`. Evaluate an
+agent with `memrank run` instead; see the README. `resolve.parse_ref` is used by the current
+path (`benchmarks/refs`) and does not warn.
+
+Target catalog -- named, reproducible descriptions of what is under test."""
 
 from memrank.targets.catalog import TargetNotFound, list_targets, resolve_target
 from memrank.targets.manifest import Manifest, ManifestError

@@ -28,6 +28,10 @@ from memrank.instrument.result import Result
 from memrank.instrument.run import measure
 from tests.instrument.fakes import TinyMemory, two_task_evaluation
 
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
+
 
 def test_a_saved_result_loads_back_with_its_traces_typed(tmp_path):
     original = two_task_evaluation(measures=(WordMatch(),)).run(system=TinyMemory())

@@ -25,19 +25,25 @@ the catalog answers "what would I be running?" without spending a byte of datase
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import typer
 
 from memrank.application.catalogs import get_eval
-from memrank.benchmarks.refs import list_eval_refs
+from memrank.errors import ActionRequired, Concluded
+from memrank.outcome import Kind, Outcome, Step
 from memrank.term import detail, style, table
 
-evals_app = typer.Typer(help="Inspect the catalog of evaluation goals.")
+evals_app = typer.Typer(help="The shipped evaluations, and your own evaluation files.",
+                        no_args_is_help=True)
+
+#: The starter ``evals new`` writes: every field, commented, and valid as it stands.
+STARTER = Path(__file__).resolve().parent.parent / "definitions" / "starter.yaml"
 
 
 @evals_app.command("ls")
 def cli_evals_ls() -> None:
-    """Print every runnable evaluation (one per line).
+    """Print every shipped evaluation `memrank run` takes (one per line).
 
     Every VARIANT, not every benchmark: `beam:100k-smoke` and `beam:1m` are different
     evaluations with different question counts and non-comparable scores, so listing them as one
@@ -47,13 +53,55 @@ def cli_evals_ls() -> None:
     them into a loop should not have to strip a heading off the front. A terminal gets the same
     refs in a box, where a heading costs nothing.
     """
-    refs = list_eval_refs()
+    from memrank.definitions.shipped import shipped_refs
+
+    refs = shipped_refs()
     if not style.supports_boxes():
         for ref in refs:
             style.out(ref)
         return
     table.emit((table.Column("REF", styler=style.accent),), [[ref] for ref in refs],
                title="Evals")
+    style.note("Your own cases: `memrank evals new my-eval.yaml` writes a starter file.")
+
+
+@evals_app.command("new")
+def cli_evals_new(
+    path: Path = typer.Argument(..., help="Where to write the starter, e.g. my-eval.yaml"),
+) -> None:
+    """Write a commented starter evaluation file to edit, then check and run."""
+    if path.exists():
+        raise ActionRequired(f"{path} already exists, and memrank does not overwrite it.",
+                             steps=(Step("Name a new file:", (f"memrank evals new {path.stem}"
+                                                              f"-2{path.suffix or '.yaml'}",)),))
+    if path.suffix not in (".yaml", ".yml"):
+        raise ActionRequired(f"{path} is not a .yaml file; an evaluation file is YAML.",
+                             steps=(Step("Name it .yaml:", (f"memrank evals new "
+                                                            f"{path.with_suffix('.yaml')}",)),))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(STARTER.read_text(encoding="utf-8").replace("this-file.yaml", str(path)),
+                    encoding="utf-8")
+    style.step(f"Wrote {path}. Edit it, then check it and run it:",
+               (f"memrank evals check {path}",
+                f"memrank run {path} --agent <agent name or file>"))
+
+
+@evals_app.command("check")
+def cli_evals_check(
+    path: Path = typer.Argument(..., help="Your evaluation file"),
+    seed: int = typer.Option(0, "--seed", help="The seed a case program is given"),
+) -> None:
+    """Validate an evaluation file and summarise what a run would ask. Runs no agent."""
+    from memrank.definitions.problems import EvaluationInvalid
+    from memrank.definitions.summary import summarise
+
+    try:
+        title, rows = summarise(path, seed)
+    except EvaluationInvalid as exc:
+        raise Concluded(Outcome(kind=Kind.ACTION, title="The evaluation file needs fixing",
+                                happened=exc.statement, steps=exc.steps)) from exc
+    detail.emit(detail.panel(title, rows))
+    style.step("It is valid. Run it:", (f"memrank run {path} --agent <agent name or file>",))
 
 
 @evals_app.command("show")

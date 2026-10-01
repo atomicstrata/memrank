@@ -23,9 +23,15 @@ So this asserts the two halves together: zero errors, and a value per task that 
 """
 from __future__ import annotations
 
+import pytest
+
 import memrank
 from memrank.adapters import REGISTRY
 from memrank.contract import Recall
+
+# These tests exercise the deprecated in-process route on purpose; its notice is expected here.
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:.*is deprecated and will be removed:DeprecationWarning")
 
 
 def test_word_overlap_runs_demo_end_to_end_with_no_errors():

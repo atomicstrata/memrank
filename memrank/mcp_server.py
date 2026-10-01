@@ -1,4 +1,7 @@
-"""Local stdio MCP presentation over Memrank application operations."""
+"""Deprecated: the local stdio MCP server over the `submit` operations. Evaluate an agent with
+`memrank run` instead; see the README.
+
+Local stdio MCP presentation over Memrank application operations."""
 
 from __future__ import annotations
 

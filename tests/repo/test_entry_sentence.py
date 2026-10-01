@@ -21,19 +21,18 @@ sessions in September 2026 failed at exactly this point: a person who had read t
 could not say what memrank measures.
 
 Three surfaces drift because nothing compares them. This compares them: each must carry the
-one-line definition, and each must use the one word for what memrank is. The word is asserted in
-both directions -- present, and the retired one absent -- because a surface that gains the
-sentence and keeps calling memrank a benchmark suite has half-landed and reads as landed.
+one-line definition, and none may keep a retired one -- because a surface that gains the
+sentence and keeps an older description of memrank has half-landed and reads as landed.
 
 `pyproject.toml` is the fourth surface, and it is what PyPI renders, so it carries the sentence
 and the word too. `docs/SPEC.md`'s "One line" is the fifth: the specification calls itself the
 document to cite in a dispute about method, so the line a citer quotes says the same thing.
 
-The sentence pinned here is the maintainer's own, recorded in direction decision 0011 and landed
-by ATO-2249: *"Memrank is a tool for reproducible, auditable evaluation of memory systems."* It
-replaced a longer predicate about what is measured, and with it went a second assertion that the
-entry surface also named which pieces were the reader's. That half now belongs to the quick start,
-where a reader meets it while running something rather than before they have run anything.
+The sentence pinned here is the maintainer's own: *"Evaluate your agent on your tasks."* It
+replaced decision 0011's *"Memrank is a tool for reproducible, auditable evaluation of memory
+systems."* (ATO-2249) once memrank evaluated agents rather than memory systems, and traded some
+reproducibility for flexibility and ease of use. With that sentence went the assertion that every
+surface calls memrank a "tool": the new sentence is an imperative and names no noun for memrank.
 """
 from __future__ import annotations
 
@@ -52,16 +51,13 @@ from memrank.runner import _APP_HELP
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: The predicate of the one line, from direction decision 0011 -- *"Memrank is a tool for
-#: reproducible, auditable evaluation of memory systems."* Only the predicate is pinned: the
-#: subject is "Memrank" on one surface and "it" on the others, and that is prose, not vocabulary.
-MEASURES = "reproducible, auditable evaluation of memory systems"
+#: The one line, lowercased: some surfaces open with it, and the package docstring follows
+#: "Memrank --" with it.
+MEASURES = "evaluate your agent on your tasks"
 
-#: One word for what memrank is, and the word it is not. The distinction is load-bearing: a
-#: tool is run by its user against their own system; a benchmark suite is a fixed set of tests
-#: with a scoreboard.
-WORD = "tool"
-RETIRED_WORD = "benchmark suite"
+#: Earlier descriptions of memrank that no entry surface may keep: decision 0011's predicate,
+#: and "benchmark suite" -- a fixed set of tests with a scoreboard, which memrank is not.
+RETIRED = ("reproducible, auditable evaluation of memory systems", "benchmark suite")
 
 
 def _normalised(text: str) -> str:
@@ -114,11 +110,11 @@ def test_every_entry_surface_says_what_memrank_measures(surface: str):
 
 
 @pytest.mark.parametrize("surface", sorted(SURFACES))
-def test_every_entry_surface_uses_one_word_for_what_memrank_is(surface: str):
-    """Present and absent, so a half-done rewording fails rather than passing quietly."""
+def test_no_entry_surface_keeps_a_retired_description(surface: str):
+    """Absent as well as present, so a half-done rewording fails rather than passing quietly."""
     text = SURFACES[surface]()
-    assert WORD in text, f"{surface} does not call memrank a {WORD}"
-    assert RETIRED_WORD not in text, f"{surface} still calls memrank a {RETIRED_WORD}"
+    for retired in RETIRED:
+        assert retired not in text, f"{surface} still describes memrank as {retired!r}"
 
 
 def test_the_distribution_description_agrees_with_them():
@@ -126,5 +122,5 @@ def test_the_distribution_description_agrees_with_them():
     with (ROOT / "pyproject.toml").open("rb") as handle:
         description = _normalised(tomllib.load(handle)["project"]["description"])
     assert MEASURES in description
-    assert WORD in description
-    assert RETIRED_WORD not in description
+    for retired in RETIRED:
+        assert retired not in description

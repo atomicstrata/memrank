@@ -49,6 +49,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from memrank.benchmarks.answer_prompts import BEAM_READER
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
 from memrank.judging.shape import BeamJudgeShape, JudgeShape
 
@@ -134,6 +135,7 @@ class BEAMBenchmark(Benchmark):
     # the reader is part of the system under test, not a harness control. The runner promotes
     # matched arms to uncapped for benchmarks that declare this; the no-memory arm stays "none".
     context_policy = "uncapped"
+    answer_prompt = BEAM_READER
     # 2026-08-13: loading stopped forwarding the dataset's time anchors (no rendered header, no
     # Document.timestamp, no query_timestamp) and the reader went uncapped -- scores across this
     # boundary are not comparable.

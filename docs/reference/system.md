@@ -1,5 +1,7 @@
 # system
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **system** is the implementation evaluated by Memrank: a local retrieval method, a client
 connected to a memory service, a model or an assistant.
 

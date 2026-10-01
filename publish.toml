@@ -75,6 +75,11 @@ internal = [
   "memrank/analysis/",
   "memrank/ops/",
   "docs-internal/",
+  # The Fern documentation site (ATO-2344). Internal until it is published: it describes the
+  # one-command install, the skill and evaluation files ahead of their release, with TODO
+  # markers naming the tickets that must land first, and nothing public reads it yet. It moves
+  # to `public` when the site is published and those markers are cleared.
+  "fern/",
   "tests/internal/",
   # `scripts/` in full, and the notebooks. Neither is what an outsider needs to install,
   # run, interpret or extend memrank: `examples/` is the demonstration surface that ships,

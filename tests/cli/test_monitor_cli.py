@@ -165,7 +165,7 @@ def test_logs_is_reachable_by_its_canonical_name_and_by_its_alias(monkeypatch, t
     (directory / "run.log").write_text("local output\n", encoding="utf-8")
     invoke = CliRunner().invoke
 
-    assert invoke(app, ["runs", "logs", "local-run"]).output == invoke(app, ["logs", "local-run"]).output
+    assert invoke(app, ["runs", "logs", "local-run"]).stdout == invoke(app, ["logs", "local-run"]).stdout
     assert "local output" in invoke(app, ["runs", "logs", "local-run"]).output
 
 

@@ -143,16 +143,7 @@ def _load_path_dirs() -> dict[str, tuple[dict[str, Any], Path]]:
 
 
 def load_all() -> dict[str, tuple[dict[str, Any], Path]]:
-    """Every known manifest with the directory it was read from; later sources win.
-
-    Adapter plugins load here, before any descriptor is read. This is the chokepoint every ref
-    resolution passes through, and it has to precede all of them: the first thing a resolved
-    target is asked for is its required secrets, which raises on an adapter with no requirements
-    row. Loading later would make a configured plugin work or fail depending on which command ran.
-    """
-    from memrank.plugins import load_plugins
-
-    load_plugins()
+    """Every known manifest with the directory it was read from; later sources win."""
     return {**_load_dir(builtin_dir()), **_load_path_dirs(), **_load_dir(user_dir())}
 
 
@@ -249,7 +240,7 @@ def required_secrets_for(target: Manifest) -> list[str]:
     """
     from memrank.secrets import requirements
 
-    providers = {role: comp.provider for role, comp in target.components.items()}
+    providers = requirements.keyed_providers(target.components)
     derived = requirements.required_secrets(
         target.adapter, embedder=providers.get("embedder"), llm=providers.get("llm"))
     return sorted(set(derived) | set(target.secrets))

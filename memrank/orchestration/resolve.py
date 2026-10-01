@@ -283,11 +283,10 @@ def _load_org_credentials(org: str) -> None:
     running an ordinary local benchmark must keep getting the wallet they already had. An
     implicit switch would change which key is billed based on invisible session state.
     """
-    import httpx
-
     from memrank import config as _config
     from memrank.accounts.credentials import CredentialError, CredentialStore
     from memrank.accounts.run_secrets import OrgSecretsError, load_org_secrets
+    from memrank.api_client import api_client
 
     try:
         token = CredentialStore().load()
@@ -298,8 +297,7 @@ def _load_org_credentials(org: str) -> None:
     if token is None:
         raise typer.BadParameter("--org needs a signed-in session; run `memrank auth login` first")
     try:
-        with httpx.Client(base_url=_config.memrank_api_url(), timeout=30,
-                          headers={"Authorization": f"Bearer {token}"}) as http:
+        with api_client(timeout=30, token=token) as http:
             _config.set_org_secrets(load_org_secrets(http, org))
     except OrgSecretsError as exc:
         raise typer.BadParameter(str(exc)) from exc

@@ -1,5 +1,7 @@
 # trace
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../../README.md).
+
 A **trace** records one [task](task.md) attempt: the context document IDs, response, timings
 and any error. Inspect it to understand the evidence behind a measured value.
 

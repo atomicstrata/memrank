@@ -51,6 +51,16 @@ CONDITIONS: dict[str, str] = {"service_healthy": "HEALTHY", "service_started": "
 #: key instead of producing a task that starts and then behaves differently.
 UNSUPPORTED: tuple[str, ...] = ("volumes", "build", "network_mode", "extends")
 
+#: Compose keys a graph declares for the local placement that Fargate has no way to honour, so
+#: the compiler leaves them out rather than refusing a graph every cloud run uses.
+#:
+#: `shm_size` sizes /dev/shm for the engines that run Postgres (hindsight.compose.yaml says why).
+#: ECS's counterpart, `linuxParameters.sharedMemorySize`, is not supported on Fargate, so a cloud
+#: task keeps Fargate's own /dev/shm. Refusing the key would stop every hindsight, atomicmemory and
+#: mem0 cloud run for a limit that bites only at scale; when it does, the engine's own error names
+#: it.
+LOCAL_ONLY: tuple[str, ...] = ("shm_size",)
+
 #: Under awsvpc a task is one network namespace, so every container addresses its neighbours here.
 LOCALHOST = "localhost"
 

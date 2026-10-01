@@ -136,9 +136,9 @@ def _imported_by(modules: tuple[str, ...]) -> set[str]:
 def _modules_after(script: str, tmp_path: Path) -> set[str]:
     """Every module name in sys.modules after running `script`, in a fresh process.
 
-    State dirs point into `tmp_path`: a run resolves the target catalog, which loads whatever
-    `adapters.plugins` this machine happens to name, and a developer with a plugin configured
-    would otherwise see this fail on their own settings rather than on the import graph.
+    State dirs point into `tmp_path`: a run resolves the target catalog, which reads whatever
+    `targets.path` this machine happens to name, and a developer with one configured would
+    otherwise see this fail on their own settings rather than on the import graph.
     """
     env = {**os.environ,
            "MEMRANK_CONFIG_DIR": str(tmp_path / "cfg"),

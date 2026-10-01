@@ -18,6 +18,7 @@ from memrank.placement.base import CloudRenderError
 from memrank.placement.cloud import AwsContext, render_taskdef
 from memrank.placement.ecs_compile import (
     HEALTH_CHECK_LIMITS,
+    LOCAL_ONLY,
     UNSUPPORTED,
     compile_service,
     duration_seconds,
@@ -53,6 +54,13 @@ def test_every_unsupported_key_is_covered_by_the_test_above():
     """The parametrize list is a literal; this is what keeps it honest as UNSUPPORTED grows."""
     covered = {"volumes", "build", "network_mode", "extends"}
     assert set(UNSUPPORTED) == covered
+
+
+def test_a_local_only_key_is_left_out_of_the_container_rather_than_refused():
+    """`shm_size` has no Fargate counterpart; refusing it would stop hindsight, atomicmemory and
+    mem0 in the cloud, so the compiled container simply carries nothing for it."""
+    assert LOCAL_ONLY == ("shm_size",)
+    assert _compiled({"image": "i", "shm_size": "2g"}) == _compiled({"image": "i"})
 
 
 def test_a_service_naming_no_image_is_refused_rather_than_raising_keyerror():

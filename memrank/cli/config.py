@@ -24,7 +24,7 @@ import typer
 from memrank import settings
 from memrank.term import fmt, style, table
 
-config_app = typer.Typer(help="Standing defaults (org, placement, API address).")
+config_app = typer.Typer(help="Standing defaults (organisation, API address).")
 
 
 @config_app.command("set")

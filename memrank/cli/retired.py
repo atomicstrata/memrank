@@ -36,7 +36,6 @@ RETIRED: dict[str, str] = {
     "whoami": "auth status",
     "list-benchmarks": "evals ls",
     "list-runs": "runs ls",
-    "run": "submit",
     "secrets list": "secrets ls",
     # A fifth flat alias the model never had, and one word two planes owned: `auth status` is
     # the session's, and this one meant one run's record.

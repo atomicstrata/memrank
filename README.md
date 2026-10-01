@@ -1,142 +1,150 @@
 # Memrank
 
-[![PyPI release](https://img.shields.io/pypi/v/memrank)](https://pypi.org/project/memrank/)
+[![public-ci workflow status on main](https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml/badge.svg?branch=main)](https://github.com/atomicstrata/memrank/actions/workflows/public-ci.yml)
 [![Code license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/atomicstrata/memrank/blob/main/LICENSE)
 
-**Status:** v0.4, in active development. Interfaces still move between releases.
+**Find the memory that works best for your agent.**
 
-Memrank is a tool for reproducible, auditable evaluation of memory systems.
+Memrank is a command-line tool that evaluates your agent end to end, so you can see which memory
+engine, version or setup actually answers its questions better. It is for people building agents:
+evaluate your agent on your tasks, put the result beside other versions and baselines, and choose
+with evidence. Memrank provides both the evaluation framework and the evaluations.
 
-Compare memory systems and their versions on tasks that matter to your agent or application.
-You choose the tasks and success criteria; Memrank runs the evaluation, reports scores and timings,
-and records responses and errors so you can investigate differences.
+[Documentation](https://memrank.ai/docs) |
+[Quick start](https://memrank.ai/docs/quickstart) |
+[Connect your agent](https://memrank.ai/docs/connect-your-agent) |
+[Command reference](https://memrank.ai/docs/reference/commands)
 
-[Start here](https://github.com/atomicstrata/memrank/blob/main/docs/getting-started.md) |
-[Compare memory systems and their versions](https://github.com/atomicstrata/memrank/blob/main/docs/comparing.md) |
-[Understand results](https://github.com/atomicstrata/memrank/blob/main/docs/results.md)
+## How it works
 
-## Quick start
+Memrank treats your agent as a black box. Your agent needs no Memrank code and keeps running
+where it already runs.
 
-Check the installation with a small local retrieval evaluation. Installation needs the network;
-the Python block below needs no key, service or network. This checks that Memrank works in your
-project; it does not establish how a memory system will perform on your workload.
+1. **Connect your agent.** A small [agent file](https://memrank.ai/docs/reference/agent-file)
+   says how Memrank reaches it: a command, an OpenAI-compatible URL, or any HTTP API.
+2. **Run an evaluation.** For every case, Memrank starts a fresh conversation, feeds the agent
+   the past conversations, asks questions about them, and judges every answer. Before it asks
+   anything, it checks that your agent keeps conversations separate.
+3. **Compare runs.** Each run reports the score, the failures and the latency. Put it beside an
+   earlier version of your agent, another memory setup, or a reference agent Memrank ships, such
+   as `full-context`, which answers from the whole history with no memory engine. Runs with the
+   same evaluation, sample and seed ask the same questions.
 
-### Do it yourself
+Answers are judged by Claude with your organisation's own Anthropic key, on your machine. Each
+score comes with a 95% interval, so you can tell a real difference from noise. Results land in
+the terminal, in a `results/<run-id>/` folder on your machine, and in your organisation's run
+history on memrank.ai, where every question, answer and verdict can be read.
 
-Use Python >= 3.10 and an existing project or virtualenv.
-[Installation instructions](https://github.com/atomicstrata/memrank/blob/main/docs/install.md)
-cover creating one.
+## Evaluations included
+
+- [LoCoMo](https://memrank.ai/docs/benchmarks/locomo): long conversations between two people,
+  over weeks of dated sessions.
+- [LongMemEval](https://memrank.ai/docs/benchmarks/longmemeval): five hundred questions, each with
+  its own haystack of dated chat sessions.
+- [BEAM](https://memrank.ai/docs/benchmarks/beam): very long conversations from one user, at 100K,
+  500K and 1M tokens, testing ten memory abilities.
+- [Your own cases](https://memrank.ai/docs/benchmarks/your-own-cases): an evaluation file with the
+  conversations, questions and reference answers that matter to you, graded by exact match,
+  choice, number, the judge, a rubric, or your own program.
+
+`memrank evals ls` lists every shipped evaluation and its smaller slices.
+
+## Install
+
+Requires macOS on Apple Silicon, a [memrank.ai](https://memrank.ai) account, and an
+[Anthropic API key](https://console.anthropic.com/settings/keys).
 
 ```bash
-uv add memrank                  # or, into a virtualenv you already have: pip install memrank
+curl -fsSL https://memrank.ai/install.sh | sh
+memrank --version
 ```
 
-```python
-from memrank.evaluations import SQuAD
-from memrank.systems import TFIDF
+The installer puts Memrank, with its own Python, under `~/.local/share/memrank` and links
+`~/.local/bin/memrank`. It does not touch your Python, your shell startup files, or anything that
+needs `sudo`. If it says `~/.local/bin` is not on `PATH`, run the `export` line it prints.
 
-evaluation = SQuAD()
-result = evaluation.run(system=TFIDF())
+## First run
 
-print(result)
+Every run is recorded in your organisation's run history, so `memrank run` needs you to sign in
+first. Judging spends your own Anthropic credit; this run asks 15 questions.
+
+```bash
+memrank auth login
+export ANTHROPIC_API_KEY=sk-ant-...
+memrank run locomo --agent full-context --cases 3 --questions 5
 ```
 
-[`TFIDF`](https://github.com/atomicstrata/memrank/blob/main/docs/systems/tfidf.md) is keyword search
-weighted by how rare each word is.
-[`SQuAD`](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations/squad.md) supplies
-32 bundled passages and 64 questions. The `squad-score` measures full-passage retrieval recall,
-not answer-span or end-to-end answer correctness. Check that the output names the expected system
-and evaluation and says `64 recorded, 0 with errors`.
-[Read the output](https://github.com/atomicstrata/memrank/blob/main/docs/getting-started.md#read-the-installation-check).
-
-Or paste this to your coding agent:
+This evaluates `full-context`, a reference agent Memrank ships, on three LoCoMo conversations.
+The first judged run asks for your organisation's Anthropic key and saves it for later runs. While
+it runs, Memrank prints a link to watch it live and one line per step. It ends with a `Done` line
+followed by a summary like this (your numbers will differ):
 
 ```text
-Install memrank in this project and run its smoke evaluation, following
-https://github.com/atomicstrata/memrank/blob/main/docs/install.md. Check the prerequisites
-that page lists before you change anything, install into this project only, and do not
-install anything globally or edit my shell configuration. When the run finishes, show me the
-`system:`, `evaluation:` and `traces:` lines it printed. Stop and ask me if any step fails.
+  Score         53.3% correct: 8 of 15 questions, from 3 conversations
+  Likely range  27%-80%: on other conversations like these, the score would usually land here
+  Not answered  none
+  Judged by     claude-haiku-4-5
+Saved locally: results/20260928-182017__locomo__f11cd7/
+View results: https://memrank.ai/acme/runs/20260928-182017__locomo__f11cd7
 ```
 
-## Use cases
+Open the `View results` link to see every question with the agent's answer, the reference answer
+and the judge's verdict. If the run stops instead, its last block says what happened and the exact
+command to run next. Three conversations only check that everything works; comparing two agents
+needs more, as [Compare results](https://memrank.ai/docs/results) explains.
 
-<a id="compare-two-systems"></a>
-### Compare two memory systems
+To evaluate your own agent, write an [agent file](https://memrank.ai/docs/connect-your-agent) and
+pass its path instead of `full-context`.
 
-Run candidates on the same evaluation, inspect coverage and failures, and read each measure's
-meaning before interpreting a gap. The [memory systems comparison guide](https://github.com/atomicstrata/memrank/blob/main/docs/comparing.md)
-shows how to read the differences, with an offline toy example of task-level pairing.
-It also explains when to compare summaries: `memrank.paired` does not compare aggregate
-scores such as `squad-score`.
+### Hand the setup to a coding agent
 
-<a id="evaluate-a-system-of-your-own"></a>
-### Evaluate a memory system of your own
+To have Claude Code, Codex or Cursor set Memrank up and evaluate your agent, paste this into it,
+in the folder where your agent lives:
 
-Use a [shipped client](https://github.com/atomicstrata/memrank/blob/main/docs/systems/README.md)
-or [connect your own system](https://github.com/atomicstrata/memrank/blob/main/docs/systems.md).
-A memory implements `prepare`, `ingest`, `retrieve` and `cleanup` so Memrank can give it context,
-ask questions and clear state between independent cases. An external
-[engine](https://github.com/atomicstrata/memrank/blob/main/docs/reference/system.md#system-and-engine)
-may need a configured service and credentials.
+```text
+Evaluate my agent with Memrank, then show me its score and the link to the result. First set
+Memrank up:
 
-### Ask your own questions
+1. Run: curl -fsSL https://memrank.ai/install.sh | sh
+2. Ensure `memrank` resolves in a new shell; if it does not, add ~/.local/bin to PATH in the
+   shell startup file and report the change you made.
+3. Run: memrank auth login; it opens the sign-in page, prints its link and waits. Give that link
+   to me to open in my browser on this laptop (do not fetch it yourself), and keep the command
+   waiting until it prints signed in.
+4. Run: memrank skills install --agent codex|claude|cursor, choosing the one that names your own
+   harness, then reload yourself so the Memrank skill loads (or read the SKILL.md it prints), and
+   follow it.
+```
 
-[Express your evaluation](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations.md)
-as tasks, expected outcomes and measures. You decide which cases represent your problem and what
-counts as success; Memrank applies those rules and records the evidence.
+[For coding agents](https://memrank.ai/docs/coding-agents) is the same procedure as a page.
 
-### Find out why a value is what it is
+## Common tasks
 
-[Understand results](https://github.com/atomicstrata/memrank/blob/main/docs/results.md) shows how
-to inspect a task's trace, distinguish missing values from zero, and save a result for later use.
-[Write a measure](https://github.com/atomicstrata/memrank/blob/main/docs/measures.md) to read
-something new from stored traces without rerunning the system.
-
-### Check the instrument
-
-[Control examples](https://github.com/atomicstrata/memrank/blob/main/examples/05-against-a-baseline/README.md)
-show what happens when retrieval returns no documents or all documents. These checks help expose
-what a measure rewards; they do not prove that the evaluation represents your workload.
-[Methodology](https://github.com/atomicstrata/memrank/blob/main/docs/methodology.md) states the
-measurement rules and limits on claims.
-
-## Where to read more
-
-| Guide | Task |
+| Task | Guide |
 |---|---|
-| [Start here](https://github.com/atomicstrata/memrank/blob/main/docs/getting-started.md) | Start using Memrank |
-| [Memory systems comparison guide](https://github.com/atomicstrata/memrank/blob/main/docs/comparing.md) | Compare memory systems or their versions |
-| [Understand results](https://github.com/atomicstrata/memrank/blob/main/docs/results.md) | Interpret and save measurements |
-| [Systems](https://github.com/atomicstrata/memrank/blob/main/docs/systems/README.md) | Find available integrations |
-| [Evaluations](https://github.com/atomicstrata/memrank/blob/main/docs/evaluations/README.md) | Find available task sets |
-| [Reference](https://github.com/atomicstrata/memrank/blob/main/docs/reference/README.md) | Look up Python contracts |
-| [Documentation index](https://github.com/atomicstrata/memrank/blob/main/docs/README.md) | Find every guide |
+| Connect an agent through a command, an OpenAI-compatible URL or an HTTP API | [Connect your agent](https://memrank.ai/docs/connect-your-agent) |
+| Ask your agent your own questions | [Your own cases](https://memrank.ai/docs/benchmarks/your-own-cases) |
+| Read a run and compare two runs | [Compare results](https://memrank.ai/docs/results) |
+| Understand how answers are judged | [Evaluation methodology](https://memrank.ai/docs/methodology/evaluation-methodology) |
+| Know what a run does not tell you | [Limitations](https://memrank.ai/docs/methodology/limitations) |
+| Look up a command or option | [Command reference](https://memrank.ai/docs/reference/commands) |
 
-The guides above use Python. Memrank also provides a
-[command line](https://github.com/atomicstrata/memrank/blob/main/docs/misc/command-line.md) for
-tracked and placed runs, and a
-[translator contract](https://github.com/atomicstrata/memrank/blob/main/docs/system-contract.md)
-for memory systems implemented in other languages.
+## Contributing
 
-## Help and contribution
+You can add a connector or preset for an agent stack Memrank does not reach easily yet, an
+evaluation, a reference agent to use as a baseline, fixes to how answers are graded, or
+improvements to the command line and the run report.
+The [contributing guide](https://github.com/atomicstrata/memrank/blob/main/docs/contributing.md)
+covers the development setup and where each of these lives in the code.
 
-[Contributing and getting help](https://github.com/atomicstrata/memrank/blob/main/docs/contributing.md)
-links the issue tracker and development checks. Questions about your setup are easier to reproduce
-with the package version, a small example and the error text. Do not include keys or private data.
+## Help
 
-## Governance
+Report a bug or ask a question in [GitHub issues](https://github.com/atomicstrata/memrank/issues).
+Include the Memrank version (`memrank --version`), the command you ran and the block the run ended
+with. Never include API keys or private data. Do not report a security problem in a public issue;
+email hello@atomicstrata.ai instead.
 
-Memrank is maintained by [AtomicStrata](https://atomicstrata.ai) under a vendor-neutral charter:
-anyone may submit a system, results are published as measured, and methodology changes go through
-public proposal and comment. The commitments are in
-[SPEC.md section 7](https://github.com/atomicstrata/memrank/blob/main/docs/SPEC.md#7-governance----the-vendor-neutral-charter).
-AtomicStrata also develops AtomicMemory, one of the engines Memrank can evaluate. Comparisons
-should be assessed through their method, configuration and recorded evidence.
-
-## Licences
+## License
 
 Memrank's code is [Apache-2.0](https://github.com/atomicstrata/memrank/blob/main/LICENSE).
-The bundled SQuAD subset is [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/);
-its [notice](https://github.com/atomicstrata/memrank/blob/main/memrank/benchmarks/data/SQUAD-NOTICE.md)
-credits the creators and passage sources and records the selection and reformatting.
+Datasets that download on first use keep their own licences.

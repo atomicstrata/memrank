@@ -47,6 +47,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from memrank.benchmarks.answer_prompts import LOCOMO_READER
 from memrank.core import AdapterResponse, Benchmark, BenchmarkUnit, Document, EvalInfo
 
 _DATA_URL = "https://raw.githubusercontent.com/snap-research/locomo/main/data/locomo10.json"
@@ -106,6 +107,7 @@ class LoCoMoBenchmark(Benchmark):
     substring_recall_supported = False
     composite_rankable = False
     quality_metric = "judged_answer_correctness"
+    answer_prompt = LOCOMO_READER
 
     def __init__(self, slice: str | None = None, k: int = 10) -> None:
         self.slice = slice  # "smoke" | "mini" | None (full)

@@ -97,7 +97,8 @@ def test_org_ls_with_an_empty_vault_names_the_fix(org_api):
     assert "secrets set" in result.stderr and "--org acme" in result.stderr
 
 
-def test_logged_out_org_ls_errors_and_names_the_fix(monkeypatch):
+def test_logged_out_org_ls_is_a_sign_in_step_not_an_error(monkeypatch, capsys):
+    from memrank import runner as memrank_runner
     from memrank.placement import run_api_client
 
     def refuse():
@@ -105,9 +106,12 @@ def test_logged_out_org_ls_errors_and_names_the_fix(monkeypatch):
                                          code="no_session")
 
     monkeypatch.setattr(run_api_client, "authenticated_client", refuse)
-    result = runner.invoke(app, ["secrets", "ls", "--org", "acme"])
-    assert result.exit_code == 1
-    assert "auth login" in result.output
+    monkeypatch.setattr("sys.argv", ["memrank", "secrets", "ls", "--org", "acme"])
+    with pytest.raises(SystemExit) as exited:
+        memrank_runner.main()
+    shown = capsys.readouterr().err
+    assert exited.value.code == 1
+    assert "\n  memrank auth login" in shown and "error:" not in shown
 
 
 def test_org_rm_reports_removal_and_the_ssm_retention_note(org_api):

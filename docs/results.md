@@ -1,5 +1,7 @@
 # Understand results
 
+> **Deprecated:** this page describes memrank's older, pre-agent surface, which still ships but will be removed. To evaluate an agent, use `memrank run`; see the [README](../README.md).
+
 A result records what happened when a system ran an evaluation, plus the values produced by its
 measures. Start with the identity and coverage, then read each measure in its own terms. There
 is no overall score across measures.
@@ -16,8 +18,8 @@ is no overall score across measures.
 | `value.why` | The rationale, sample count or reason a value is missing, when supplied. |
 | `result.traces` | The recorded task attempts, including responses, timings and errors. |
 
-The [installation check](install.md) reports `squad-score`: full-passage retrieval recall.
-Higher means more questions had their source passage retrieved. It does not measure answer-span
+The [installation check](install.md) reports `demo-score`: evidence recall. Higher means more
+questions had the session holding their answer retrieved. It does not measure answer
 correctness, answer quality or precision. `word-match` in the toy examples is a different
 measure: a deterministic span-matching proxy. Read each [evaluation's page](evaluations/README.md)
 and [measure definition](measures.md) before comparing numbers with similar ranges.

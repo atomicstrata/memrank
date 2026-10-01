@@ -22,3 +22,11 @@ services:
     # Target-only: the daemon binds port 0 and the kernel assigns. Never a chosen host port --
     # two runs of the same target must be able to proceed at once.
     ports: ["127.0.0.1::8888"]
+    # hindsight embeds its own Postgres (pg0), which runs index builds with
+    # maintenance_work_mem=512MB and up to 4 parallel workers, allocating that memory as a dynamic
+    # shared memory segment in /dev/shm. Docker's default /dev/shm is 64 MB, and a beam:100k run
+    # failed five cases on it: `could not resize shared memory segment ... to 533794944 bytes: No
+    # space left on device` (2026-09-29). 2g holds about three such builds at once -- one per case
+    # a concurrent run feeds -- and costs nothing until used, since /dev/shm is a tmpfs.
+    # Local only: Fargate cannot size /dev/shm (see ecs_compile.LOCAL_ONLY).
+    shm_size: 2g

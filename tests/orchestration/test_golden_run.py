@@ -222,6 +222,8 @@ def test_stderr_narrates_the_run_and_stdout_stays_silent(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert result.stdout == ""
     assert _normalized(result.stderr, tmp_path) == [
+        "warning: `memrank submit` is deprecated and will be removed; evaluate an agent with "
+        "`memrank run` instead (see the README).",
         "preparing tokenizer 'o200k_base' (first run downloads ~4 MB, cached afterwards) ...",
         "tokenizer ready",
         "run r1  (word-overlap × demo)",

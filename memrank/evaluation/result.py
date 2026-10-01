@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
+#
+# Used by the current path (runs/registry): it sits in a deprecated package but is not
+# deprecated itself, and it must not warn.
 """The typed result of one evaluated cell -- and the artifact schema's single owner.
 
 ``EvalResult.to_dict()`` emits the per-cell artifact dict byte-for-byte as the pre-split

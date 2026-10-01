@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
-"""`memrank.evaluation("squad")` and `memrank.system("tfidf")` -- the shipped names.
+"""`memrank.evaluation("demo")` and `memrank.system("tfidf")` -- the shipped names.
 
 Two constructors, one idea: the things memrank ships are reached by the catalog name they are
 printed under, so the first line a person copies stays inside the seven words. `system` hands
@@ -175,9 +175,9 @@ class ShippedSystem:
 class ShippedEvaluation:
     """One evaluation memrank ships, as `memrank.catalog()` reports it."""
 
-    #: What to type in Python: `memrank.evaluations.SQuAD`.
+    #: What to type in Python: `memrank.evaluations.Demo`.
     python_name: str
-    #: What to type as a string: `memrank.evaluation("squad")`.
+    #: What to type as a string: `memrank.evaluation("demo")`.
     name: str
     #: What comes out of a run of it without a judge.
     measures: str
@@ -200,7 +200,7 @@ class QuickStart:
 #: holds every published page and every docstring that names the pair to it. A demotion -- the
 #: way `WordOverlap` and `Demo` stopped being the pair in 0.4.4 -- is this one edit, and the
 #: guard then names every sentence still giving the role to the old pair.
-QUICK_START = QuickStart(system="TFIDF", evaluation="SQuAD")
+QUICK_START = QuickStart(system="TFIDF", evaluation="Demo")
 
 
 def _named(entries: Sequence[Any], python_name: str) -> Any:

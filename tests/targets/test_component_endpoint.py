@@ -62,7 +62,7 @@ def test_an_unstated_endpoint_is_omitted_rather_than_blanked():
 
 def test_an_endpoint_an_adapter_cannot_name_is_refused():
     """Silent drift: the manifest would promise an address the engine never received."""
-    target = from_dict({"name": "t", "kind": "stack", "adapter": "hindsight",
+    target = from_dict({"name": "t", "kind": "stack", "adapter": "supermemory",
                         "components": {"llm": {"provider": "anthropic", "model": "x",
                                                "endpoint": SLM}}})
 
@@ -87,3 +87,32 @@ def test_adding_the_field_did_not_change_the_digest_of_targets_without_one():
     assert definition_digest(atomicmemory()) == (
         "b6ddd86948120857f3a492d4cefca183e8c9264da0bed0f3349c0647339c2d7a")
     assert stated != definition_digest(atomicmemory())
+
+
+def _hindsight(**llm):
+    return from_dict({"name": "t", "kind": "stack", "adapter": "hindsight",
+                      "components": {"llm": {"provider": "openai", "model": "m", **llm}},
+                      "secrets": {"ROUTER_TOKEN": ["HINDSIGHT_API_LLM_API_KEY"]}})
+
+
+def test_a_component_with_its_own_endpoint_spends_no_provider_key():
+    """Its provider's key would otherwise be handed to whatever the endpoint is."""
+    from memrank.targets.engine_env import engine_secret_vars
+
+    assert engine_secret_vars(_hindsight(endpoint=SLM)) == {
+        "ROUTER_TOKEN": ["HINDSIGHT_API_LLM_API_KEY"]}
+
+
+def test_without_an_endpoint_the_provider_key_is_still_required():
+    from memrank.targets.catalog import required_secrets_for
+
+    assert required_secrets_for(_hindsight()) == ["OPENAI_API_KEY", "ROUTER_TOKEN"]
+
+
+def test_hindsight_and_mem0_endpoints_reach_the_variables_their_servers_read():
+    assert component_env(_hindsight(endpoint=SLM))["HINDSIGHT_API_LLM_BASE_URL"] == SLM
+    mem0 = from_dict({"name": "t", "kind": "stack", "adapter": "mem0", "components": {
+        "llm": {"provider": "openai", "model": "m", "endpoint": SLM},
+        "embedder": {"provider": "openai", "model": "e", "dims": 1536, "endpoint": SLM}}})
+    env = component_env(mem0)
+    assert (env["MEM0_LLM_ENDPOINT"], env["MEM0_EMBEDDER_ENDPOINT"]) == (SLM, SLM)

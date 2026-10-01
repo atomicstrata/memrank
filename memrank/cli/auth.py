@@ -28,10 +28,11 @@ import webbrowser
 import httpx
 import typer
 
-from memrank import config, settings
+from memrank import settings
 from memrank.accounts import login_flow
 from memrank.accounts.credentials import CredentialError, CredentialStore
 from memrank.accounts.loopback import LoginError
+from memrank.api_client import api_client
 from memrank.term import detail, style, table
 
 app = typer.Typer(help="Who you are signed in as, and which orgs you can act on.")
@@ -39,13 +40,12 @@ app = typer.Typer(help="Who you are signed in as, and which orgs you can act on.
 
 def _client() -> httpx.Client:
     """An HTTP client bound to the configured API."""
-    return httpx.Client(base_url=config.memrank_api_url(), timeout=30)
+    return api_client(timeout=30)
 
 
 def _authenticated_client(token: str) -> httpx.Client:
     """An HTTP client carrying the caller's bearer token."""
-    return httpx.Client(base_url=config.memrank_api_url(), timeout=30,
-                        headers={"Authorization": f"Bearer {token}"})
+    return api_client(timeout=30, token=token)
 
 
 def _default_org(orgs: list[dict]) -> str | None:
@@ -147,6 +147,18 @@ def _announce_verification_url(url: str) -> None:
               f"\n      {url}\n")
 
 
+def _open_and_announce(url: str) -> None:
+    """Open the sign-in page here, and print its link for when the browser does not come up.
+
+    The link matters to a coding agent running the login for a person: the agent cannot see
+    whether a browser window appeared, so it hands the printed link on instead. The page calls
+    back to a port on this computer, so the link only works in a browser on this computer.
+    """
+    style.say("Opening your browser to sign in. If it did not open, open this link in a "
+              f"browser on this computer:\n\n      {url}\n\nWaiting for you to sign in...")
+    webbrowser.open(url)
+
+
 def _browserless_login(http) -> dict[str, str]:
     """Sign in by URL and polling, for a machine with no browser of its own."""
     return login_flow.perform_device_login(
@@ -166,12 +178,10 @@ def login(no_browser: bool = typer.Option(
     """
     store = CredentialStore()
     browserless = no_browser or not _has_browser()
-    if not browserless:
-        style.say("Opening your browser to sign in...")
     try:
         with _client() as http:
             result = (_browserless_login(http) if browserless
-                      else login_flow.perform_login(http, open_browser=webbrowser.open))
+                      else login_flow.perform_login(http, open_browser=_open_and_announce))
     except LoginError as exc:
         style.error(str(exc))
         raise typer.Exit(code=1) from exc
